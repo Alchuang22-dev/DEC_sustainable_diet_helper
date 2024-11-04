@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>食物排放计算器</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f4f7;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            justify-content: space-between;
+        }
+
+        .header .back-button {
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+        }
+
+        .button {
+            padding: 10px 20px;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #ffffff;
+        }
+
+        .add-food {
+            background-color: #4CAF50;
+        }
+
+        .save-food {
+            background-color: #009688;
+        }
+
+        .food-list {
+            margin: 20px;
+            padding: 15px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .food-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 10px 0;
+        }
+
+        .food-item:last-child {
+            border-bottom: none;
+        }
+
+        .food-item p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .food-item button {
+            border: none;
+            background-color: transparent;
+            font-size: 20px;
+            cursor: pointer;
+            color: #f44336;
+        }
+
+        .calculate-section {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .calculate-button {
+            padding: 10px 40px;
+            border-radius: 25px;
+            background-color: #FF9800;
+            border: none;
+            color: #ffffff;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .result {
+            margin: 20px;
+            padding: 15px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            font-size: 16px;
+        }
+
+        .useful-tools {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin: 20px;
+        }
+
+        .tool {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .tool img {
+            width: 80px;
+            height: 80px;
+            margin-right: 15px;
+            border-radius: 5px;
+        }
+
+        .tool-description h4 {
+            font-size: 18px;
+            margin: 0;
+            color: #4CAF50;
+        }
+
+        .tool-description p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="back-button" onclick="window.location.href='index.html';">&larr;</span>
+        <h1 class="title">食物排放计算器</h1>
+    </div>
+
+    <div class="buttons">
+        <button class="button add-food" onclick="window.location.href='putin.html';">添加食品</button>
+        <button class="button save-food" onclick="saveData();">保存添加</button>
+    </div>
+
+    <div class="food-list">
+        <h3>您已添加</h3>
+        <div id="foodItems"></div>
+    </div>
+
+    <div class="calculate-section">
+        <button class="calculate-button">计算排放</button>
+    </div>
+
+    <div class="result">
+        <p>您本次的碳足迹是：</p>
+        <p>CO2: 0mg</p>
+        <p>NO2: 0mg</p>
+    </div>
+
+    <div class="useful-tools">
+        <div class="tool" onclick="window.location.href='tofu.html';">
+            <img src="images/toufu.png" alt="Carbon Calculator">
+            <div class="tool-description">
+                <h4>推荐菜单</h4>
+                <p>试试我们的可持续推荐菜单！</p>
+            </div>
+    </div>
+
+    <script>
+        function saveData() {
+            const foodList = JSON.parse(localStorage.getItem('foodDetails')) || [];
+            const foodItemsContainer = document.getElementById('foodItems');
+            foodItemsContainer.innerHTML = '';
+
+            foodList.forEach((food, index) => {
+                const foodItemDiv = document.createElement('div');
+                foodItemDiv.className = 'food-item';
+                foodItemDiv.innerHTML = `
+                    <p>${food.name} - 重量: ${food.weight}g, 价格: ${food.price}元, 运输方式: ${food.transportMethod}, 来源: ${food.foodSource}</p>
+                    <button onclick="deleteFood(${index})">&times;</button>
+                `;
+                foodItemsContainer.appendChild(foodItemDiv);
+            });
+        }
+
+        function deleteFood(index) {
+            let foodList = JSON.parse(localStorage.getItem('foodDetails')) || [];
+            foodList.splice(index, 1);
+            localStorage.setItem('foodDetails', JSON.stringify(foodList));
+            saveData();
+        }
+
+        window.onload = function () {
+            saveData();
+        }
+    </script>
+</body>
+</html>

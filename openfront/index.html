@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sustainable Diet Page</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            background-color: #ffffff;
+            padding: 10px 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            height: 40px;
+            margin-right: 10px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .banner {
+            position: relative;
+            text-align: center;
+            color: #ffffff;
+        }
+
+        .banner-image {
+            width: 100%;
+            height: auto;
+            filter: brightness(0.7);
+        }
+
+        .banner-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            font-weight: bold;
+        }
+
+        .carbon-info {
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background-color: #e8f5e9;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+
+        .carbon-progress {
+            text-align: center;
+        }
+
+        .carbon-progress h3 {
+            font-size: 48px;
+            color: #4CAF50;
+        }
+
+        .charts {
+            display: flex;
+        }
+
+        .chart {
+            margin: 0 20px;
+        }
+
+        .chart h4 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .useful-tools {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin: 20px;
+        }
+
+        .tool {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .tool img {
+            width: 80px;
+            height: 80px;
+            margin-right: 15px;
+            border-radius: 5px;
+        }
+
+        .tool-description h4 {
+            font-size: 18px;
+            margin: 0;
+            color: #4CAF50;
+        }
+
+        .tool-description p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .view-more {
+            display: block;
+            text-align: center;
+            text-decoration: none;
+            color: #4CAF50;
+            font-weight: bold;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+
+        .view-more-content {
+            display: none;
+            padding-top: 20px;
+        }
+
+        .footer {
+            background-color: #ffffff;
+            padding: 10px 0;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .footer-nav {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .nav-item {
+            text-decoration: none;
+            color: #333;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+
+        .nav-item:hover {
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="images/index/logo_wide.png" alt="DEC logo" class="logo">
+        <h1 class="title">welcome to our station!</h1>
+    </div>
+
+    <div class="banner">
+        <img src="images/index/login.png" alt="Sustainable food" class="banner-image">
+        <h2 class="banner-text">view more.</h2>
+    </div>
+
+    <div class="carbon-info">
+        <div class="carbon-progress">
+            <h3>9</h3>
+            <p>您已和我们一起保护地球9天</p>
+        </div>
+        <div class="charts">
+            <div class="chart history">
+                <h4>碳排放历史曲线</h4>
+                <canvas id="carbonHistoryChart"></canvas>
+            </div>
+            <div class="chart today">
+                <h4>今日碳排放</h4>
+                <canvas id="carbonTodayChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="useful-tools">
+        <h3>实用工具</h3>
+        <div class="tool" onclick="window.location.href='calculator.html';">
+            <img src="images/index/caculator.png" alt="Carbon Calculator">
+            <div class="tool-description">
+                <h4>碳计算器</h4>
+                <p>您想知道您的饮食产生了多少碳足迹吗？我们的计算器或许能提供参考</p>
+            </div>
+        </div>
+        <div class="tool" onclick="window.location.href='recommend.html';">
+            <img src="images/index/food.png" alt="Diet Recommendation">
+            <div class="tool-description">
+                <h4>饮食推荐</h4>
+                <p>查看适合您地区的饮食推荐，帮助您更好地规划每日饮食</p>
+            </div>
+        </div>
+        <a class="view-more" onclick="toggleMoreContent()">查看更多</a>
+        <div class="view-more-content">
+            <div class="tool" onclick="window.location.href='nutrition.html';">
+                <img src="images/index/nutrition.png" alt="Nutrition Calculator">
+                <div class="tool-description">
+                    <h4>营养计算</h4>
+                    <p>缺的营养这一块在这里补：</p>
+                </div>
+            </div>
+            <div class="tool" onclick="window.location.href='family.html';">
+                <img src="images/index/family.jpg" alt="Family Recipe">
+                <div class="tool-description">
+                    <h4>家庭菜谱</h4>
+                    <p>家人今天吃什么？</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-nav">
+            <a href="#" class="nav-item">主页</a>
+            <a href="#" class="nav-item">资讯</a>
+            <a href="#" class="nav-item">我的</a>
+        </div>
+    </div>
+
+    <script>
+        function toggleMoreContent() {
+            const moreContent = document.querySelector('.view-more-content');
+            moreContent.style.display = moreContent.style.display === 'none' || moreContent.style.display === '' ? 'block' : 'none';
+        }
+    </script>
+</body>
+</html>

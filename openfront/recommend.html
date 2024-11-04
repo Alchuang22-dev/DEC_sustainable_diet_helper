@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今日您的地区适宜</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            background-color: #ffffff;
+            padding: 10px 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .back-button {
+            font-size: 24px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .home-button {
+            font-size: 24px;
+            margin-left: auto;
+            cursor: pointer;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .recommendation-section {
+            text-align: center;
+            padding: 20px;
+            background-image: url('background-image.jpg');
+            background-size: cover;
+            color: #ffffff;
+        }
+
+        .recommendation-section h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .dishes {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .dish {
+            width: 200px;
+            margin: 10px;
+            background-color: #ffffff;
+            color: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .dish img {
+            width: 100%;
+            height: auto;
+        }
+
+        .dish-title {
+            padding: 10px;
+            font-size: 18px;
+            background-color: #ffe082;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .generate-button {
+            background-color: #4CAF50;
+            color: #ffffff;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 20px;
+        }
+
+        .no-data {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .no-data img {
+            width: auto;
+            height: auto;
+        }
+
+        .no-data p {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #999;
+        }
+
+        .recipe_boxes {
+            display: none;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin: 20px;
+        }
+
+        .box {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .box img {
+            width: 80px;
+            height: 80px;
+            margin-right: 15px;
+            border-radius: 5px;
+        }
+
+        .box-description h4 {
+            font-size: 18px;
+            margin: 0;
+            color: #4CAF50;
+        }
+
+        .box-description p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="back-button" onclick="window.location.href='index.html';">&larr;</span>
+        <h1 class="title">今日您的地区适宜</h1>
+        <span class="home-button">&#8962;</span>
+    </div>
+
+    <div class="recommendation-section">
+        <img src="images/index/recommand.png" alt="蒸白菜">
+        <h2>今日您的地区适宜</h2>
+        <div class="dishes">
+            <div class="dish">
+                
+                <div class="dish-title">蒸白菜</div>
+            </div>
+            <div class="dish">
+                
+                <div class="dish-title">大地锅</div>
+            </div>
+            <div class="dish">
+                
+                <div class="dish-title">大盘鸡</div>
+            </div>
+            <div class="dish">
+                
+                <div class="dish-title">通心粉</div>
+            </div>
+        </div>
+        <button class="generate-button", onclick="generateRecipe()">生成菜谱</button>
+    </div>
+
+    <div class="no-data", id = "no-data">
+        <img src="images/no_data.png" alt="No Data">
+    </div>
+
+    <div class="recipe_boxes", id = "recipe_boxes">
+        <div class="box" onclick="window.location.href='tofu.html';">
+            <img src="images/toufu.png" alt="Recipe">
+            <div class="tool-description">
+                <h4>推荐菜谱</h4>
+                <p>根据您所在的地区，推荐大盘鸡！</p>
+            </div>
+    </div>
+
+    <script>
+        function generateRecipe() {
+            document.getElementById('no-data').style.display = 'none';
+            document.getElementById('recipe_boxes').style.display = 'block';
+        }
+    </script>
+
+</body>
+</html>

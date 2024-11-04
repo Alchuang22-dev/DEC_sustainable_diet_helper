@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>营养获取概览</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f4f7;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            justify-content: space-between;
+        }
+
+        .header .back-button, .header .menu-button {
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .nutrition-summary {
+            text-align: center;
+            margin: 20px;
+        }
+
+        .nutrition-summary h2 {
+            background-color: #4CAF50;
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .chart-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px;
+        }
+
+        .chart-container {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+        }
+
+        .chart {
+            width: 50%;
+            height: auto;
+        }
+
+        .nutrition-table {
+            width: 50%;
+            padding-left: 20px;
+        }
+
+        .nutrition-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .nutrition-table th, .nutrition-table td {
+            border: 1px solid #e0e0e0;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .nutrition-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+
+        .daily-nutrition-target {
+            margin: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .nutrition-item {
+            border-bottom: 1px solid #e0e0e0;
+            padding: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nutrition-item:last-child {
+            border-bottom: none;
+        }
+
+        .nutrition-item span {
+            font-weight: bold;
+        }
+
+        .toggle-button {
+            cursor: pointer;
+            background-color: #ffffff;
+            border: none;
+            font-size: 20px;
+            color: #4CAF50;
+        }
+
+        .target-input-container {
+            display: flex;
+            margin-top: 20px;
+        }
+
+        .target-input-container input[type="text"], .target-input-container input[type="number"], .target-input-container select {
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        .target-input-container button {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: #ffffff;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .delete-target {
+            cursor: pointer;
+            background-color: transparent;
+            border: none;
+            font-size: 20px;
+            color: #f44336;
+        }
+
+        .box {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .box img {
+            width: 80px;
+            height: 80px;
+            margin-right: 15px;
+            border-radius: 5px;
+        }
+
+        .box-description h4 {
+            font-size: 18px;
+            margin: 0;
+            color: #4CAF50;
+        }
+
+        .box-description p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="back-button" onclick="window.location.href='index.html';">&larr;</span>
+        <h1 class="title">营养获取概览</h1>
+        <span class="menu-button">&#9776;</span>
+    </div>
+
+    <div class="nutrition-summary">
+        <h2>您刚刚一餐获取的营养</h2>
+        <div class="chart-container">
+            <canvas id="nutritionChart" class="chart"></canvas>
+            <div class="nutrition-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>营养成分</th>
+                            <th>数值 (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>蛋白质</td>
+                            <td>20.4%</td>
+                        </tr>
+                        <tr>
+                            <td>碳水化合物</td>
+                            <td>20.4%</td>
+                        </tr>
+                        <tr>
+                            <td>脂肪</td>
+                            <td>20.4%</td>
+                        </tr>
+                        <tr>
+                            <td>能量</td>
+                            <td>30.6%</td>
+                        </tr>
+                        <tr>
+                            <td>脂固醇</td>
+                            <td>4.1%</td>
+                        </tr>
+                        <tr>
+                            <td>钠</td>
+                            <td>2%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="daily-nutrition-target">
+        <button class="toggle-button">查看您的一日营养目标</button>
+        <div id="nutrition-target-list">
+            <div class="nutrition-item">
+                <span>蛋白质</span>
+                <span>113g/968g</span>
+                <button class="delete-target">&times;</button>
+            </div>
+            <div class="nutrition-item">
+                <span>碳水化合物</span>
+                <span>880g/1120g</span>
+                <button class="delete-target">&times;</button>
+            </div>
+            <div class="nutrition-item">
+                <span>脂肪</span>
+                <span>16g/32g</span>
+                <button class="delete-target">&times;</button>
+            </div>
+        </div>
+        <div class="target-input-container">
+            <input id="target-name" type="text" placeholder="营养成分">
+            <input id="target-value" type="number" placeholder="目标值">
+            <select id="unit-select">
+                <option value="g">g</option>
+                <option value="mg">mg</option>
+            </select>
+            <button id="add-target-button">添加/修改目标</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('nutritionChart').getContext('2d');
+        const nutritionChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['蛋白质', '碳水化合物', '脂肪', '能量', '脂固醇', '钠'],
+                datasets: [{
+                    data: [20.4, 20.4, 20.4, 30.6, 4.1, 2],
+                    backgroundColor: ['#42a5f5', '#66bb6a', '#ffca28', '#ef5350', '#ab47bc', '#29b6f6'],
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                }
+            }
+        });
+
+        const addTargetButton = document.getElementById('add-target-button');
+        const targetNameInput = document.getElementById('target-name');
+        const targetValueInput = document.getElementById('target-value');
+        const unitSelect = document.getElementById('unit-select');
+        const nutritionTargetList = document.getElementById('nutrition-target-list');
+
+        addTargetButton.addEventListener('click', function () {
+            const targetName = targetNameInput.value.trim();
+            const targetValue = targetValueInput.value.trim();
+            const unit = unitSelect.value;
+
+            if (targetName === '' || targetValue === '') {
+                alert('请填写营养成分和目标值');
+                return;
+            }
+
+            // Check if the target already exists
+            let existingItem = null;
+            const items = nutritionTargetList.querySelectorAll('.nutrition-item');
+            items.forEach(item => {
+                if (item.querySelector('span').textContent === targetName) {
+                    existingItem = item;
+                }
+            });
+
+            if (existingItem) {
+                // Update existing item
+                existingItem.querySelectorAll('span')[1].textContent = `0${unit}/${targetValue}${unit}`;
+            } else {
+                // Create new item
+                const newItem = document.createElement('div');
+                newItem.className = 'nutrition-item';
+                newItem.innerHTML = `
+                    <span>${targetName}</span>
+                    <span>0${unit}/${targetValue}${unit}</span>
+                    <button class="delete-target">&times;</button>
+                `;
+
+                nutritionTargetList.appendChild(newItem);
+
+                // Add event listener to delete button
+                newItem.querySelector('.delete-target').addEventListener('click', function () {
+                    nutritionTargetList.removeChild(newItem);
+                });
+            }
+
+            // Clear inputs
+            targetNameInput.value = '';
+            targetValueInput.value = '';
+        });
+
+        // Add delete functionality for initial items
+        document.querySelectorAll('.delete-target').forEach(button => {
+            button.addEventListener('click', function () {
+                const item = this.closest('.nutrition-item');
+                nutritionTargetList.removeChild(item);
+            });
+        });
+    </script>
+</body>
+</html>

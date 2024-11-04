@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>推荐菜谱</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f4f7;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            justify-content: space-between;
+        }
+
+        .header .back-button, .header .menu-button {
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .header .exit-button {
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .content {
+            text-align: center;
+            margin: 20px;
+        }
+
+        .recipe-image {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+        }
+
+        .video-button {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            background: url('images/index/video.png') no-repeat center;
+            background-size: cover;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+            padding: 30px;
+            color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="exit-button" onclick="history.back()">&larr;</span>
+        <h1 class="title">推荐菜谱</h1>
+    </div>
+
+    <div class="content">
+        <img src="images/recipe.png" alt="麻婆豆腐" class="recipe-image">
+        <button class="video-button">video</button>
+    </div>
+</body>
+</html>

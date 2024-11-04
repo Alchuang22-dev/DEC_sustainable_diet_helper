@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Details Form</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f4f7;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            justify-content: space-between;
+        }
+
+        .header .back-button {
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .form-container {
+            margin: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .submit-button {
+            padding: 15px;
+            border: none;
+            background-color: #4CAF50;
+            color: #ffffff;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="back-button" onclick="window.location.href='calculator.html';">&larr;</span>
+        <h1 class="title">食物排放详细信息</h1>
+    </div>
+
+    <div class="form-container">
+        <div class="form-group">
+            <label for="food-name">名称</label>
+            <input type="text" id="food-name" placeholder="请输入食品名称">
+        </div>
+        <div class="form-group">
+            <label for="food-weight">总重量 (g)</label>
+            <input type="number" id="food-weight" placeholder="请输入食品重量">
+        </div>
+        <div class="form-group">
+            <label for="food-price">总价格 (元)</label>
+            <input type="number" id="food-price" placeholder="请输入食品价格">
+        </div>
+        <div class="form-group">
+            <label for="transport-method">请选择运输方式</label>
+            <select id="transport-method">
+                <option value="陆运">陆运</option>
+                <option value="海运">海运</option>
+                <option value="空运">空运</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="food-source">请选择食品来源</label>
+            <select id="food-source">
+                <option value="本地">本地</option>
+                <option value="进口">进口</option>
+            </select>
+        </div>
+        <button class="submit-button" onclick="submitFoodDetails()">提交</button>
+    </div>
+
+    <script>
+        function submitFoodDetails() {
+            const name = document.getElementById('food-name').value;
+            const weight = document.getElementById('food-weight').value;
+            const price = document.getElementById('food-price').value;
+            const transportMethod = document.getElementById('transport-method').value;
+            const foodSource = document.getElementById('food-source').value;
+
+            if (!name || !weight || !price || !transportMethod || !foodSource) {
+                alert('请填写所有字段');
+                return;
+            }
+
+            const foodDetails = {
+                name,
+                weight,
+                price,
+                transportMethod,
+                foodSource
+            };
+
+            let foodList = JSON.parse(localStorage.getItem('foodDetails')) || [];
+            foodList.push(foodDetails);
+            localStorage.setItem('foodDetails', JSON.stringify(foodList));
+
+            window.location.href = 'calculator.html';
+        }
+    </script>
+</body>
+</html>

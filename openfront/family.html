@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家庭共享食谱</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f4f7;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            justify-content: space-between;
+        }
+
+        .header .back-button, .header .menu-button {
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .recipe-container {
+            margin: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .input-container input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        .input-container button {
+            padding: 10px;
+            border: none;
+            border-radius: 50%;
+            background-color: #4CAF50;
+            color: #ffffff;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .priority-container {
+            margin-bottom: 20px;
+        }
+
+        .priority-container select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+            font-size: 16px;
+        }
+
+        .recipe-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .recipe-item:last-child {
+            border-bottom: none;
+        }
+
+        .recipe-item button {
+            border: none;
+            background: none;
+            font-size: 20px;
+            color: #f44336;
+            cursor: pointer;
+        }
+
+        .daily-recipes {
+            margin: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .daily-recipes h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .daily-recipe-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .daily-recipe-item:last-child {
+            border-bottom: none;
+        }
+
+        .daily-recipe-item select {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+            font-size: 16px;
+        }
+
+        .daily-recipe-item button {
+            border: none;
+            background: none;
+            font-size: 20px;
+            color: #f44336;
+            cursor: pointer;
+        }
+
+        .move-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .move-buttons button {
+            border: none;
+            background: none;
+            font-size: 20px;
+            cursor: pointer;
+            margin: 5px 0;
+        }
+
+        .sort-button-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .sort-button {
+            padding: 10px 20px;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            border: none;
+            color: #ffffff;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <span class="back-button" onclick="window.location.href='index.html';">&larr;</span>
+        <h1 class="title">家庭共享食谱</h1>
+        <span class="menu-button">&#9776;</span>
+    </div>
+
+    <div class="recipe-container">
+        <div class="input-container">
+            <input id="recipe-input" type="text" placeholder="和你家人说一下你今天想吃什么吧~">
+            <button id="add-recipe-button">+</button>
+        </div>
+
+        <div class="priority-container">
+            <select id="priority-select">
+                <option value="low">低优先级</option>
+                <option value="medium">中优先级</option>
+                <option value="high">高优先级</option>
+            </select>
+        </div>
+
+        <div id="recipe-list"></div>
+    </div>
+
+    <div class="daily-recipes">
+        <h2>当日家庭菜谱</h2>
+        <div class="sort-button-container">
+            <button id="sort-button" class="sort-button">按优先级排序</button>
+        </div>
+        <div id="daily-recipe-list"></div>
+    </div>
+
+    <script>
+        const addRecipeButton = document.getElementById('add-recipe-button');
+        const recipeInput = document.getElementById('recipe-input');
+        const prioritySelect = document.getElementById('priority-select');
+        const dailyRecipeList = document.getElementById('daily-recipe-list');
+        const sortButton = document.getElementById('sort-button');
+
+        addRecipeButton.addEventListener('click', function () {
+            const recipeName = recipeInput.value;
+            const priority = prioritySelect.value;
+
+            if (recipeName.trim() === '') {
+                alert('请输入食谱名称');
+                return;
+            }
+
+            const dailyRecipeItem = document.createElement('div');
+            dailyRecipeItem.className = 'daily-recipe-item';
+            dailyRecipeItem.setAttribute('data-priority', priority);
+            dailyRecipeItem.innerHTML = `
+                <span>${recipeName}</span>
+                <select>
+                    <option>中</option>
+                    <option>小</option>
+                    <option>大</option>
+                </select>
+                <div class="move-buttons">
+                    <button class="move-up">&#8593;</button>
+                    <button class="move-down">&#8595;</button>
+                </div>
+                <button class="delete-item">&times;</button>
+            `;
+
+            dailyRecipeList.appendChild(dailyRecipeItem);
+
+            // Add event listeners for the new item
+            dailyRecipeItem.querySelector('.move-up').addEventListener('click', function () {
+                if (dailyRecipeItem.previousElementSibling) {
+                    dailyRecipeList.insertBefore(dailyRecipeItem, dailyRecipeItem.previousElementSibling);
+                }
+            });
+
+            dailyRecipeItem.querySelector('.move-down').addEventListener('click', function () {
+                if (dailyRecipeItem.nextElementSibling) {
+                    dailyRecipeList.insertBefore(dailyRecipeItem.nextElementSibling, dailyRecipeItem);
+                }
+            });
+
+            dailyRecipeItem.querySelector('.delete-item').addEventListener('click', function () {
+                dailyRecipeList.removeChild(dailyRecipeItem);
+            });
+
+            recipeInput.value = '';
+        });
+
+        sortButton.addEventListener('click', function () {
+            const items = Array.from(dailyRecipeList.children);
+            items.sort((a, b) => {
+                const priorityOrder = {
+                    'high': 1,
+                    'medium': 2,
+                    'low': 3
+                };
+                return priorityOrder[a.getAttribute('data-priority')] - priorityOrder[b.getAttribute('data-priority')];
+            });
+            items.forEach(item => dailyRecipeList.appendChild(item));
+        });
+    </script>
+</body>
+</html>
