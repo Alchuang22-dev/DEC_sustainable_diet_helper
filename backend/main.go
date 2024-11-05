@@ -1,0 +1,47 @@
+// main.go
+package main
+
+import (
+    "log"
+
+    "github.com/gin-gonic/gin"
+    "gorm.io/driver/mysql"
+    "gorm.io/gorm"
+
+    "github.com/shenlayu/se-backend/config"
+    "github.com/shenlayu/se-backend/models"
+    "github.com/shenlayu/se-backend/routes"
+)
+
+func main() {
+    // 加载配置
+    cfg := config.GetConfig()
+
+    // 构建DSN (Data Source Name)
+    dsn := cfg.DBUser + ":" + cfg.DBPassword + "@tcp(" + cfg.DBHost + ":" + cfg.DBPort + ")/" + cfg.DBName + "?charset=utf8mb4&parseTime=True&loc=Local"
+
+    // 连接数据库
+    db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+    if err != nil {
+        log.Fatal("无法连接到数据库:", err)
+    }
+    log.Println("数据库连接成功！")
+
+    // 自动迁移
+    err = db.AutoMigrate(&models.User{})
+    if err != nil {
+        log.Fatal("自动迁移失败:", err)
+    }
+
+    // 初始化Gin引擎
+    router := gin.Default()
+
+    // 注册用户路由
+    routes.RegisterUserRoutes(router, db)
+
+    // 启动服务器
+    err = router.Run(":8080")
+    if err != nil {
+        log.Fatal("无法启动服务器:", err)
+    }
+}
