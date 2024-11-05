@@ -28,7 +28,14 @@ func main() {
     log.Println("数据库连接成功！")
 
     // 自动迁移
-    err = db.AutoMigrate(&models.User{})
+    err = db.AutoMigrate(
+        &models.User{},
+        &models.VideoNews{},
+        &models.RegularNews{},
+        &models.Resource{},
+        &models.Paragraph{},
+        &models.Comment{},
+    )
     if err != nil {
         log.Fatal("自动迁移失败:", err)
     }
@@ -38,6 +45,9 @@ func main() {
 
     // 注册用户路由
     routes.RegisterUserRoutes(router, db)
+
+    // 注册新闻路由
+    routes.RegisterNewsRoutes(router, db)
 
     // 启动服务器
     err = router.Run(":8080")
