@@ -1,0 +1,7 @@
+# .gitignore
+.env
+/vendor/
+*.exe
+*.dll
+*.so
+*.dylib
