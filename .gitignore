@@ -1,0 +1,9 @@
+# .gitignore
+.env
+/vendor/
+*.exe
+*.dll
+*.so
+*.dylib
+
+git_config.sh
