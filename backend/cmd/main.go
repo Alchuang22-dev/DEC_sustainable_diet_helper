@@ -8,7 +8,7 @@ import (
     "gorm.io/driver/mysql"
     "gorm.io/gorm"
 
-    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/config"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/config"
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/routes"
 )
