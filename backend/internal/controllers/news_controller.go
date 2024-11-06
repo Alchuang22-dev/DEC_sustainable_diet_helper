@@ -86,22 +86,6 @@ func (nc *NewsController) CreateNews(c *gin.Context) {
     c.JSON(http.StatusCreated, news)
 }
 
-// // 创建常规新闻
-// // XXX not checked yet
-// func (nc *NewsController) CreateRegularNews(c *gin.Context) {
-//     var regularNews models.News
-//     if err := c.ShouldBindJSON(&regularNews); err != nil {
-//         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-//         return
-//     }
-//     regularNews.NewsType = models.NewsTypeRegular // 设置新闻类型
-//     if err := nc.DB.Create(&regularNews).Error; err != nil {
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-//         return
-//     }
-//     c.JSON(http.StatusCreated, regularNews)
-// }
-
 // 获取新闻详情（包括评论、特定资源和关联用户列表）
 func (nc *NewsController) GetNewsDetail(c *gin.Context) {
     id, err := strconv.Atoi(c.Param("id"))
@@ -279,8 +263,8 @@ func (nc *NewsController) LikeNews(c *gin.Context) {
     })
 }
 
-// 用户点踩新闻
-func (nc *NewsController) DislikeNews(c *gin.Context) {
+// 取消用户点赞新闻
+func (nc *NewsController) CancelLikeNews(c *gin.Context) {
     userID, err := strconv.Atoi(c.GetHeader("user_id"))
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -292,38 +276,38 @@ func (nc *NewsController) DislikeNews(c *gin.Context) {
         return
     }
 
-    // 检查用户和新闻是否存在
+    // 获取用户和新闻记录
     var user models.User
     if err := nc.DB.First(&user, userID).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        c.JSON(http.StatusBadRequest, gin.H{"error": "User not found"})
         return
     }
     var news models.News
     if err := nc.DB.First(&news, newsID).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+        c.JSON(http.StatusBadRequest, gin.H{"error": "News not found"})
         return
     }
 
-    // 使用原生 SQL 检查是否已点踩
-    var dislikeExists int64
-    nc.DB.Table("user_dislikes_news").Where("user_id = ? AND news_id = ?", userID, newsID).Count(&dislikeExists)
-    if dislikeExists > 0 {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "You have already disliked this news"})
+    // 使用原生 SQL 检查是否已点赞
+    var likeExists int64
+    nc.DB.Table("user_likes_news").Where("user_id = ? AND news_id = ?", userID, newsID).Count(&likeExists)
+    if likeExists == 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You have not liked this news"})
         return
     }
 
-    // 建立点踩关系
-    if err := nc.DB.Model(&user).Association("DislikedNews").Append(&news); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to dislike news"})
+    // 删除点赞关系
+    if err := nc.DB.Model(&user).Association("LikedNews").Delete(&news); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel like"})
         return
     }
 
-    // 获取最新的点踩数
-    dislikeCount := nc.DB.Model(&news).Association("DislikedByUsers").Count()
+    // 获取最新的点赞数
+    likeCount := nc.DB.Model(&news).Association("LikedByUsers").Count()
 
     c.JSON(http.StatusOK, gin.H{
-        "message": "News disliked successfully",
-        "dislike_count": dislikeCount,
+        "message": "News like canceled successfully",
+        "like_count": likeCount,
     })
 }
 
@@ -372,6 +356,150 @@ func (nc *NewsController) FavoriteNews(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{
         "message": "News favorited successfully",
         "favorite_count": favoriteCount,
+    })
+}
+
+// 取消用户收藏新闻
+func (nc *NewsController) CancelFavoriteNews(c *gin.Context) {
+    userID, err := strconv.Atoi(c.GetHeader("user_id"))
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+        return
+    }
+    newsID, err := strconv.Atoi(c.Param("id"))
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid news ID"})
+        return
+    }
+
+    // 检查用户和新闻是否存在
+    var user models.User
+    if err := nc.DB.First(&user, userID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+    var news models.News
+    if err := nc.DB.First(&news, newsID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+        return
+    }
+
+    // 检查是否已收藏
+    var favoriteExists int64
+    nc.DB.Table("user_favorites_news").Where("user_id = ? AND news_id = ?", userID, newsID).Count(&favoriteExists)
+    if favoriteExists == 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You have not favorited this news"})
+        return
+    }
+
+    // 删除收藏关系
+    if err := nc.DB.Model(&user).Association("FavoritedNews").Delete(&news); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel favorite"})
+        return
+    }
+
+    // 获取最新的收藏数
+    favoriteCount := nc.DB.Model(&news).Association("FavoritedByUsers").Count()
+
+    c.JSON(http.StatusOK, gin.H{
+        "message": "News favorite canceled successfully",
+        "favorite_count": favoriteCount,
+    })
+}
+
+// 用户点踩新闻
+func (nc *NewsController) DislikeNews(c *gin.Context) {
+    userID, err := strconv.Atoi(c.GetHeader("user_id"))
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+        return
+    }
+    newsID, err := strconv.Atoi(c.Param("id"))
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid news ID"})
+        return
+    }
+
+    // 检查用户和新闻是否存在
+    var user models.User
+    if err := nc.DB.First(&user, userID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+    var news models.News
+    if err := nc.DB.First(&news, newsID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+        return
+    }
+
+    // 使用原生 SQL 检查是否已点踩
+    var dislikeExists int64
+    nc.DB.Table("user_dislikes_news").Where("user_id = ? AND news_id = ?", userID, newsID).Count(&dislikeExists)
+    if dislikeExists > 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You have already disliked this news"})
+        return
+    }
+
+    // 建立点踩关系
+    if err := nc.DB.Model(&user).Association("DislikedNews").Append(&news); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to dislike news"})
+        return
+    }
+
+    // 获取最新的点踩数
+    dislikeCount := nc.DB.Model(&news).Association("DislikedByUsers").Count()
+
+    c.JSON(http.StatusOK, gin.H{
+        "message": "News disliked successfully",
+        "dislike_count": dislikeCount,
+    })
+}
+
+// 取消用户点踩新闻
+func (nc *NewsController) CancelDislikeNews(c *gin.Context) {
+    userID, err := strconv.Atoi(c.GetHeader("user_id"))
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+        return
+    }
+    newsID, err := strconv.Atoi(c.Param("id"))
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid news ID"})
+        return
+    }
+
+    // 检查用户和新闻是否存在
+    var user models.User
+    if err := nc.DB.First(&user, userID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+    var news models.News
+    if err := nc.DB.First(&news, newsID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+        return
+    }
+
+    // 检查是否已点踩
+    var dislikeExists int64
+    nc.DB.Table("user_dislikes_news").Where("user_id = ? AND news_id = ?", userID, newsID).Count(&dislikeExists)
+    if dislikeExists == 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You have not disliked this news"})
+        return
+    }
+
+    // 删除点踩关系
+    if err := nc.DB.Model(&user).Association("DislikedNews").Delete(&news); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel dislike"})
+        return
+    }
+
+    // 获取最新的点踩数
+    dislikeCount := nc.DB.Model(&news).Association("DislikedByUsers").Count()
+
+    c.JSON(http.StatusOK, gin.H{
+        "message": "News dislike canceled successfully",
+        "dislike_count": dislikeCount,
     })
 }
 
