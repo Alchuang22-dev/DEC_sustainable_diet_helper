@@ -5,6 +5,13 @@ import (
     "time"
 )
 
+type NewsType string
+
+const (
+    NewsTypeVideo   NewsType = "video"
+    NewsTypeRegular NewsType = "regular"
+)
+
 // 公共新闻结构
 type BaseNews struct {
     ID            uint           `gorm:"primaryKey" json:"id"`
@@ -16,6 +23,7 @@ type BaseNews struct {
     DislikeCount  int            `json:"dislike_count"`
     ViewCount     int            `json:"view_count"`
     Comments      []Comment      `gorm:"foreignKey:NewsID" json:"comments"`
+    NewsType      NewsType       `gorm:"size:10;not null" json:"news_type"`
 }
 
 // 视频新闻

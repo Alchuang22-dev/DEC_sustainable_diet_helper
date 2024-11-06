@@ -11,8 +11,8 @@ type Comment struct {
     PublishTime time.Time `json:"publish_time"`
     LikeCount  int       `json:"like_count"`
     UserID     uint      `json:"user_id"`
-    User       User      `json:"user"`
     NewsID     uint      `json:"news_id"`
     Replies    []Comment `gorm:"foreignKey:ParentID" json:"replies"`
     ParentID   *uint     `json:"parent_id"`
+    IsReply    bool      `json:"is_reply"`
 }
