@@ -5,6 +5,29 @@
 			"navigationBarTitleText": "uni-app"
 		}
 	}],
+	"subPackages": [{
+			"root": "pagesMy",
+			"pages": [{
+				"path": "my_index/my_index"
+			}]
+		},
+		{
+			"root": "pagesNews",
+			"pages": [{
+				"path": "news_index/news_index"
+			}]
+		},
+		{
+			"root": "pagesTool",
+			"pages": [{
+					"path": "carbon_calculator/carbon_calculator"
+				},
+				{
+					"path": "nutrition_calculator/nutrition_calculator"
+				}
+			]
+		}
+	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "uni-app",
