@@ -30,10 +30,10 @@ func main() {
     // 自动迁移
     err = db.AutoMigrate(
         &models.User{},
-        &models.VideoNews{},
-        &models.RegularNews{},
+        &models.News{},
         &models.Resource{},
         &models.Paragraph{},
+        &models.Video{},
         &models.Comment{},
     )
     if err != nil {
