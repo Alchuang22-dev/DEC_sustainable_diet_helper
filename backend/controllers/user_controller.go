@@ -8,7 +8,7 @@ import (
 
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
-    "github.com/shenlayu/se-backend/models"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/models"
 )
 
 type UserController struct {

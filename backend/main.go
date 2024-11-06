@@ -8,9 +8,9 @@ import (
     "gorm.io/driver/mysql"
     "gorm.io/gorm"
 
-    "github.com/shenlayu/se-backend/config"
-    "github.com/shenlayu/se-backend/models"
-    "github.com/shenlayu/se-backend/routes"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/config"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/models"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/routes"
 )
 
 func main() {

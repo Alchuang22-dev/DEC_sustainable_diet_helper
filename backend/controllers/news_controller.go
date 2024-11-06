@@ -7,7 +7,7 @@ import (
 
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
-    "github.com/shenlayu/se-backend/models"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/models"
 )
 
 type NewsController struct {
@@ -63,6 +63,7 @@ func (nc *NewsController) GetNewsDetail(c *gin.Context) {
     c.JSON(http.StatusOK, videoNews)
 }
 
+// TODO 这里好像没给 news 对应地方加？
 // 添加评论
 func (nc *NewsController) AddComment(c *gin.Context) {
     var comment models.Comment
