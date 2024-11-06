@@ -11,10 +11,13 @@ func RegisterNewsRoutes(router *gin.Engine, db *gorm.DB) {
     newsController := controllers.NewNewsController(db)
     newsGroup := router.Group("/news")
     {
-        // 创建视频新闻
-        newsGroup.POST("/video", newsController.CreateVideoNews)
-        // 创建常规新闻
-        newsGroup.POST("/regular", newsController.CreateRegularNews)
+        // // 创建视频新闻
+        // newsGroup.POST("/video", newsController.CreateVideoNews)
+        // // 创建常规新闻
+        // newsGroup.POST("/regular", newsController.CreateRegularNews)
+        
+        // 创建新闻
+        newsGroup.POST("/", newsController.CreateNews)
         // 获取新闻详情
         newsGroup.GET("/:id", newsController.GetNewsDetail)
         // 添加评论
@@ -24,5 +27,11 @@ func RegisterNewsRoutes(router *gin.Engine, db *gorm.DB) {
 		// 删除评论
 		// 删除新闻
 		// 更新新闻
+
+        // 点赞新闻
+        newsGroup.POST("/:id/like", newsController.LikeNews)
+        newsGroup.POST("/:id/favourite", newsController.FavoriteNews)
+        newsGroup.POST("/:id/dislike", newsController.DislikeNews)
+        newsGroup.POST("/:id/view", newsController.ViewNews)
     }
 }
