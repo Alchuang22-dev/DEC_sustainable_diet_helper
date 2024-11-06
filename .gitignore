@@ -5,7 +5,22 @@
 *.dll
 *.so
 *.dylib
+.idea/
+.DS_Store
+.hbuilderx/
+.project
+.vscode
+
+frontend/node_modules/
+frontend/unpackage/
+frontend/packages/lib
+frontend/temps/example_temps/
+frontend/dist/
+frontend/.hbuilderx/
+frontend/.project
+frontend/.DS_Store
+frontend/.vscode
+frontend/.idea/
 
 git_config.sh
-.DS_Store
-.vscode
+*.DS_Store
