@@ -7,7 +7,7 @@ import (
 
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
-    "github.com/shenlayu/se-backend/models"
+    "DEC/internal/models"
 )
 
 type NewsController struct {

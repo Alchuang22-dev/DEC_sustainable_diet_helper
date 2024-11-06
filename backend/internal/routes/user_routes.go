@@ -3,7 +3,7 @@ package routes
 
 import (
     "gorm.io/gorm"
-    "github.com/shenlayu/se-backend/controllers"
+    "DEC/internal/controllers"
 
     "github.com/gin-gonic/gin"
 )

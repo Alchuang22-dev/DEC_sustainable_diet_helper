@@ -5,5 +5,5 @@
 *.dll
 *.so
 *.dylib
-
+*.DS_Store
 git_config.sh

@@ -8,9 +8,9 @@ import (
     "gorm.io/driver/mysql"
     "gorm.io/gorm"
 
-    "github.com/shenlayu/se-backend/config"
-    "github.com/shenlayu/se-backend/models"
-    "github.com/shenlayu/se-backend/routes"
+    "DEC/config"
+    "DEC/internal/models"
+    "DEC/internal/routes"
 )
 
 func main() {
