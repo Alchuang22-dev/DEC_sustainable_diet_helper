@@ -9,8 +9,8 @@ import (
     "gorm.io/gorm"
 
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/config"
-    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/models"
-    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/routes"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/routes"
 )
 
 func main() {

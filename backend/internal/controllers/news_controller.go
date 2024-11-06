@@ -7,7 +7,7 @@ import (
 
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
-    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/models"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 )
 
 type NewsController struct {

@@ -23,4 +23,4 @@ frontend/.vscode
 frontend/.idea/
 
 git_config.sh
-.DS_Store
+*.DS_Store
