@@ -3,7 +3,7 @@ package routes
 
 import (
     "gorm.io/gorm"
-    "DEC/internal/controllers"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/controllers"
 
     "github.com/gin-gonic/gin"
 )

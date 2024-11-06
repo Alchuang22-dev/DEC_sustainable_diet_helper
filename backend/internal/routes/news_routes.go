@@ -4,7 +4,7 @@ package routes
 import (
     "gorm.io/gorm"
     "github.com/gin-gonic/gin"
-    "DEC/internal/controllers"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/controllers"
 )
 
 func RegisterNewsRoutes(router *gin.Engine, db *gorm.DB) {
