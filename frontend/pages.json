@@ -29,6 +29,10 @@
 			"root": "pagesNews",
 			"pages": [{
 				"path": "news_detail/news_detail"
+			},{
+				"path": "video_detail/video_detail"
+			},{
+				"path": "web_detail/web_detail"
 			}]
 		},
 		{
