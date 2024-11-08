@@ -7,7 +7,7 @@
 
     <!-- Video Header -->
     <view class="video-header">
-      <text class="content">test video</text>
+      <text class="content">{{videoTitle}}</text>
     </view>
 
     <!-- Video Content -->
@@ -85,6 +85,7 @@
 export default {
   data() {
     return {
+	  videoTitle: '',
       videoSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
       likeText: '点赞',
       favoriteText: '收藏',
@@ -113,6 +114,11 @@ export default {
         },
       ],
     };
+  },
+  onLoad(options) {
+    if (options.title) {
+      this.videoTitle = decodeURIComponent(options.title);
+    }
   },
   methods: {
     goBack() {
