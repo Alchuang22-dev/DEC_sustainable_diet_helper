@@ -1,5 +1,5 @@
 <template>
-  <view>
+  <view @touchstart="refreshPage">
     <!-- Header Section -->
     <image src="/static/images/index/background_img.jpg" class="background-image"></image>
     <view class="header">
@@ -21,6 +21,12 @@
       >
         环保要闻
       </button>
+	  <button
+	    @click="showSection('环保专栏')" 
+	    :class="{ active: selectedSection === '环保专栏' }"
+	  >
+	    环保专栏
+	  </button>
     </view>
 
     <!-- News Section -->
@@ -29,7 +35,7 @@
         v-for="(item, index) in newsItems"
         :key="index"
         :class="['news-item', { active: activeIndex === index }]"
-        @click="navigateTo(item.link)"
+        @click="navigateTo(item.link,item.title)"
         @touchstart="pressFeedback(index)"
         @touchend="releaseFeedback()"
       >
@@ -47,9 +53,47 @@
 	export default {
 	  data() {
 	    return {
+	      allNewsItems: [
+	        {
+	          title: "国际氢能联盟和麦肯锡联合发布《氢能洞察2024》",
+	          description: "环保要闻  |  双碳指挥  |  刚刚",
+	          link: "news_detail",
+	        },
+	        {
+	          title: "把自然讲给你听 | 什么是森林？",
+	          description: "环保科普  |  环保科普365  |  1小时前",
+	          image: "",
+	          link: "https://mp.weixin.qq.com/s/mzFR2d-17men_Lm297fweQ",
+	        },
+	        {
+	          title: "视频 | 垃圾分类",
+	          description: "环保科普  |  环保科普365  |  2024-10-14",
+	          video: true,
+	          link: "video_detail",
+	        },
+	        {
+	          title: "联合国发布2024气候计划",
+	          description: "环保要闻  |  环保科普365  |  2024-10-14",
+	          video: true,
+	          link: "news_detail",
+	        },
+			{
+			  title: "专栏 | 寂静的春天",
+			  description: "环保专栏  |  爱读夜  |  2024-10-14",
+			  video: true,
+			  link: "news_detail",
+			},
+			{
+			  title: "社团招新 | 根与芽2025",
+			  description: "环保专栏  |  公益事业  |  2024-6-16",
+			  video: true,
+			  link: "news_detail",
+			},
+	      ],
 	      newsItems: [],
 	      activeIndex: null,
 	      selectedSection: '全部', // 默认选择“全部”
+	      isRefreshing: false, // 用于显示正在更新的状态
 	    };
 	  },
 	  methods: {
@@ -57,53 +101,14 @@
 	    showSection(section) {
 	      this.selectedSection = section; // 更新选中的分类
 	      if (section === "全部") {
-	        this.newsItems = [
-	          {
-	            title: "国际氢能联盟和麦肯锡联合发布《氢能洞察2024》",
-	            description: "环保要闻  |  双碳指挥  |  刚刚",
-	            link: "news_detail",
-	          },
-	          {
-	            title: "把自然讲给你听 | 什么是森林？",
-	            description: "环保科普  |  环保科普365  |  1小时前",
-	            image: "",
-	            link: "https://mp.weixin.qq.com/s/mzFR2d-17men_Lm297fweQ",
-	          },
-	          {
-	            title: "视频 | 垃圾分类",
-	            description: "环保科普  |  环保科普365  |  2024-10-14",
-	            video: true,
-	            link: "video_detail",
-	          },
-	        ];
-	      } else if (section === "环保科普") {
-	        this.newsItems = [
-	          {
-	            title: "把自然讲给你听 | 什么是森林？",
-	            description: "环保科普  |  环保科普365  |  1小时前",
-	            image: "",
-	            link: "https://mp.weixin.qq.com/s/mzFR2d-17men_Lm297fweQ",
-	          },
-	          {
-	            title: "视频 | 垃圾分类",
-	            description: "环保科普  |  环保科普365  |  2024-10-14",
-	            video: true,
-	            link: "video_detail",
-	          },
-	        ];
-	      } else if (section === "环保要闻") {
-	        this.newsItems = [
-	          {
-	            title: "国际氢能联盟和麦肯锡联合发布《氢能洞察2024》",
-	            description: "环保要闻  |  双碳指挥  |  刚刚",
-	            link: "news_detail",
-	          },
-	        ];
+	        this.newsItems = this.allNewsItems;
+	      } else {
+	        this.newsItems = this.allNewsItems.filter(item => item.description.includes(section));
 	      }
 	    },
 	
 	    // 页面跳转方法
-	    navigateTo(link) {
+	    navigateTo(link,name) {
 	      setTimeout(() => {
 	        if (link.startsWith("http")) {
 	          // 外部链接跳转
@@ -113,7 +118,7 @@
 	        } else {
 	          // 内部页面跳转
 	          uni.navigateTo({
-	            url: `/pagesNews/${link}/${link}`,
+	            url: `/pagesNews/${link}/${link}?title=${name}`,
 	          });
 	        }
 	      }, 100); // 延迟 100 毫秒
@@ -128,7 +133,16 @@
 	    releaseFeedback() {
 	      console.log("Release feedback");
 	      this.activeIndex = null;
-	    }
+	    },
+	
+	    // 页面更新方法
+	    refreshPage() {
+	      this.isRefreshing = true;
+	      setTimeout(() => {
+	        this.newsItems = this.newsItems.sort(() => Math.random() - 0.5);
+	        this.isRefreshing = false;
+	      }, 1000); // 模拟1秒的加载时间
+	    },
 	  },
 	  mounted() {
 	    // 默认加载“全部”新闻
@@ -185,6 +199,22 @@ body {
 /* News Section */
 .news-section {
   padding: 20px;
+  position: relative;
+}
+
+.news-section::before {
+  content: "正在更新...";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  color: #333;
+  display: none;
+}
+
+.news-section[data-refreshing="true"]::before {
+  display: block;
 }
 
 .news-item {

@@ -10,7 +10,7 @@
       <!-- Main Content Section -->
       <view class="main-content">
         <view class="news-content">
-          <view class="news-title">国际氢能联盟和麦肯锡联合发布《氢能洞察2024》</view>
+          <view class="news-title">{{ webTitle }}</view>
           <view class="news-body">
             9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。
           </view>
@@ -80,6 +80,7 @@
 export default {
   data() {
     return {
+	  webTitle: '',
       comments: [
         { text: "这篇文章非常有用！", liked: false, replies: [] },
       ],
@@ -107,6 +108,11 @@ export default {
         }
       ]
     };
+  },
+  onLoad(options) {
+    if (options.title) {
+      this.webTitle = decodeURIComponent(options.title);
+    }
   },
   methods: {
     goBack() {
