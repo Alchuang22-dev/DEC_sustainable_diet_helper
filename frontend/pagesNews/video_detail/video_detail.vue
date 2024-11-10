@@ -14,7 +14,7 @@
     <view class="video-content">
       <video
         class="video-container"
-        :src="videoSrc"
+        :src="videoData[0].videoSrc"
         controls
         autoplay
         id="video"
@@ -40,16 +40,16 @@
         <view class="author-details">
           <view class="author-header">
 			<view class="author-avatar"></view>
-            <text class="author-username">user_test</text>
+            <text class="author-username">{{videoData[0].authorName}}</text>
           </view>
 		  <view class="video_content">
-			<view class="video_info"> 测试测试测试测试测试测试测试测试测试测试</view>
+			<view class="video_info"> {{videoData[0].videoinfo}}</view>
 		  </view>
           <view class="author-interactions">
-            <button @click="toggleInteraction('like')">👍 {{ likeText }}</button>
-            <button @click="toggleInteraction('favorite')">⭐ {{ favoriteText }}</button>
-            <button @click="toggleInteraction('follow')">👤 {{ followText }}</button>
-            <button @click="toggleInteraction('share')">🔄 {{ shareText }}</button>
+            <button @click="toggleInteraction('like')">👍 {{videoData[0].likeCount}}</button>
+            <button @click="toggleInteraction('favorite')">⭐ {{ videoData[0].favoriteCount }}</button>
+            <button @click="toggleInteraction('follow')">👤 {{ videoData[0].followCount }}</button>
+            <button @click="toggleInteraction('share')">🔄 {{ videoData[0].shareCount }}</button>
           </view>
         </view>
       </view>
@@ -106,92 +106,125 @@
 </template>
 
 <script>
-export default {
-  data() {
-    return {
-      videoTitle: '',
-      videoSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-      likeText: '1001',
-      favoriteText: '897',
-      followText: '189',
-      shareText: '37',
-      comments: [
-        { text: '作者推荐：DEC可持续饮食助手', liked: false, replies: [] },
-      ],
-      newComment: '',
-      replyingTo: null,
-      newReply: '',
-      recommendations: [
-        {
-          image: '',
-          title: '把自然讲给你听 | 什么是森林？',
-          info: '阅读量: 1234 | 点赞量: 456',
+    export default {
+      data() {
+        return {
+          videoTitle: '',
+          videoData: [],
+          recommendations: [],
+          comments: [
+            { text: '这个视频非常有用！', liked: false, replies: [] },
+          ],
+          newComment: '',
+          replyingTo: null,
+          newReply: '',
+          selectedTab: '简介',
+        };
+      },
+      async created() {
+        // 在组件创建时调用后端获取数据
+        await this.fetchData();
+      },
+	  onLoad(options) {
+	    if (options.title) {
+	      this.videoTitle = decodeURIComponent(options.title);
+	    }
+	  },
+      methods: {
+        async fetchData() {
+          try {
+            // 模拟从后端获取数据
+            // 可以将此部分替换为实际的后端 API 调用，例如通过 axios:
+            // const response = await axios.get('your-api-endpoint');
+            
+            // 假设从后端获取的数据如下：
+            this.videoData = [{
+              videoSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
+			  videoName: '垃圾分类',
+              authorName: 'user_test',
+              authorAvatar: '',
+              videoinfo: '测试测试测试测试测试', 
+              likeCount: 1001,
+              shareCount: 37,
+              favoriteCount: 897,
+              followCount: 189,
+			  type: 'main'
+            },
+			{
+			  videoSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
+			  videoName: '把自然讲给你听',
+			  authorName: '中野梓',
+			  authorAvatar: '',
+			  videoinfo: '测试测试测试测试测试', 
+			  likeCount: 1001,
+			  shareCount: 37,
+			  favoriteCount: 897,
+			  followCount: 189,
+			  type: 'reco'
+			}];
+			this.recommendations = [
+			  
+			];
+			this.videoData.forEach(video => this.convertVideoToRecommendation(video));
+          } catch (error) {
+            console.error('Error fetching data:', error);
+          }
         },
-        {
-          image: '',
-          title: '全球氢能发展最新动态',
-          info: '阅读量: 987 | 点赞量: 321',
+		convertVideoToRecommendation(video) {
+		  if (video.type === 'reco') {
+		    this.recommendations.push({
+			  id: video.videoSrc,
+		      image: '',
+		      title: video.authorName + ' | ' + video.videoName,
+		      info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount
+		    });
+		  }
+		},
+        goBack() {
+          uni.navigateBack();
         },
-        {
-          image: '',
-          title: '如何做好垃圾分类',
-          info: '阅读量: 789 | 点赞量: 123',
+        selectTab(tab) {
+          this.selectedTab = tab;
         },
-      ],
-      selectedTab: '简介',
+        toggleInteraction(type) {
+          if (type === 'like') {
+            this.videoData[0].likeCount++;
+          } else if (type === 'favorite') {
+            this.videoData[0].favoriteCount++;
+          } else if (type === 'follow') {
+            this.videoData[0].followCount++;
+          } else if (type === 'share') {
+            this.videoData[0].shareCount++;
+          }
+        },
+        toggleCommentLike(index) {
+          this.$set(this.comments[index], 'liked', !this.comments[index].liked);
+        },
+        replyToComment(index) {
+          this.replyingTo = index;
+          this.newReply = ''; // 清空之前的回复内容
+        },
+        addReply(index) {
+          if (this.newReply.trim()) {
+            this.comments[index].replies.push({ text: this.newReply });
+            this.newReply = '';
+            this.replyingTo = null; // 回复完成后取消回复状态
+          }
+        },
+        addComment() {
+          if (this.newComment.trim()) {
+            this.comments.push({ text: this.newComment, liked: false, replies: [] });
+            this.newComment = '';
+          }
+        },
+        onPlay() {
+          console.log('Video is playing');
+        },
+        onPause() {
+          console.log('Video is paused');
+        },
+      },
     };
-  },
-  onLoad(options) {
-    if (options.title) {
-      this.videoTitle = decodeURIComponent(options.title);
-    }
-  },
-  methods: {
-    goBack() {
-      uni.navigateBack();
-    },
-    selectTab(tab) {
-      this.selectedTab = tab;
-    },
-    toggleInteraction(type) {
-      if (type === 'like') {
-        this.likeText = this.likeText === '1001' ? '1002' : '1001';
-      } else if (type === 'favorite') {
-        this.favoriteText = this.favoriteText === '897' ? '898' : '897';
-      } else if (type === 'follow') {
-        this.followText = this.followText === '189' ? '190' : '189';
-      } else if (type === 'share') {
-        this.shareText = this.shareText === '37' ? '38' : '37';
-      }
-    },
-    toggleCommentLike(index) {
-      this.$set(this.comments[index], 'liked', !this.comments[index].liked);
-    },
-    replyToComment(index) {
-      this.replyingTo = index;
-      this.newReply = ''; // 清空之前的回复内容
-    },
-    addReply(index) {
-      if (this.newReply.trim()) {
-        this.comments[index].replies.push({ text: this.newReply });
-        this.newReply = '';
-        this.replyingTo = null; // 回复完成后取消回复状态
-      }
-    },
-    addComment() {
-      if (this.newComment.trim()) {
-        this.comments.push({ text: this.newComment, liked: false, replies: [] });
-        this.newComment = '';
-      }
-    },
-    onPlay() {
-      console.log('Video is playing');
-    },
-    onPause() {
-      console.log('Video is paused');
-    },
-  },
-};
 </script>
 
 <style scoped>
