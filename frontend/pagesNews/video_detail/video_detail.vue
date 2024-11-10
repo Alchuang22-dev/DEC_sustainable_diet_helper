@@ -24,58 +24,82 @@
       </video>
     </view>
 
-    <!-- Interaction Buttons -->
-    <view class="interaction-buttons">
-      <button @click="toggleInteraction('like')">👍 {{ likeText }}</button>
-      <button @click="toggleInteraction('favorite')">⭐ {{ favoriteText }}</button>
-      <button @click="toggleInteraction('share')">🔄 {{ shareText }}</button>
+    <!-- Tab Selection -->
+    <!-- Tab Selection -->
+    <view class="tab-selection">
+      <view class="tab-container">
+        <button @click="selectTab('简介')" :class="{ active: selectedTab === '简介' }">简介</button>
+        <button @click="selectTab('评论')" :class="{ active: selectedTab === '评论' }">评论</button>
+      </view>
+    </view>
+
+    <!-- Tab Content -->
+    <view v-if="selectedTab === '简介'">
+      <!-- Video Author Info and Interactions -->
+      <view class="author-info">
+        <view class="author-details">
+          <view class="author-header">
+			<view class="author-avatar"></view>
+            <text class="author-username">user_test</text>
+          </view>
+		  <view class="video_content">
+			<view class="video_info"> 测试测试测试测试测试测试测试测试测试测试</view>
+		  </view>
+          <view class="author-interactions">
+            <button @click="toggleInteraction('like')">👍 {{ likeText }}</button>
+            <button @click="toggleInteraction('favorite')">⭐ {{ favoriteText }}</button>
+            <button @click="toggleInteraction('follow')">👤 {{ followText }}</button>
+            <button @click="toggleInteraction('share')">🔄 {{ shareText }}</button>
+          </view>
+        </view>
+      </view>
+
+      <!-- Sidebar Section (Recommendations) -->
+      <view class="sidebar">
+        <view class="sidebar-header">相关推荐</view>
+        <view v-for="(recommendation, index) in recommendations" :key="index" class="recommendation-item">
+          <image :src="recommendation.image" mode="widthFix" />
+          <view class="recommendation-title">{{ recommendation.title }}</view>
+          <view class="recommendation-info">{{ recommendation.info }}</view>
+        </view>
+      </view>
     </view>
 
     <!-- Comments Section -->
-	<view class="comments-section">
-	  <view class="comments-header">评论</view>
-	  <view id="comments-container">
-	    <view v-for="(comment, index) in comments" :key="index" class="comment">
-	      <view class="comment-content">
-	        <view class="comment-avatar"></view>
-	        <view>
-	          <text class="comment-username">user_test:</text>
-	          <text class="comment-text">{{ comment.text }}</text>
-	        </view>
-	      </view>
-	      <view class="comment-interactions">
-	        <button @click="toggleCommentLike(index)">👍 {{ comment.liked ? '已点赞' : '点赞' }}</button>
-	        <button @click="replyToComment(index)">💬 回复</button>
-	      </view>
-	
-	      <!-- Reply Input Section -->
-	      <view v-if="replyingTo === index" class="add-reply">
-	        <input type="text" v-model="newReply" placeholder="回复..." />
-	        <button @click="addReply(index)">发送</button>
-	      </view>
-	
-	      <!-- Replies Section -->
-	      <view v-if="comment.replies.length > 0" class="replies">
-	        <view v-for="(reply, replyIndex) in comment.replies" :key="replyIndex" class="reply">
-	          <text class="comment-username">user_test:</text>
-	          <text class="comment-text">{{ reply.text }}</text>
-	        </view>
-	      </view>
-	    </view>
-	  </view>
-	  <view class="add-comment">
-	    <input type="text" v-model="newComment" placeholder="发表评论..." />
-	    <button @click="addComment">评论</button>
-	  </view>
-	</view>
+    <view v-if="selectedTab === '评论'" class="comments-section">
+      <view class="comments-header">评论</view>
+      <view id="comments-container">
+        <view v-for="(comment, index) in comments" :key="index" class="comment">
+          <view class="comment-content">
+            <view class="comment-avatar"></view>
+            <view>
+              <text class="comment-username">user_test:</text>
+              <text class="comment-text">{{ comment.text }}</text>
+            </view>
+          </view>
+          <view class="comment-interactions">
+            <button @click="toggleCommentLike(index)">👍 {{ comment.liked ? '已点赞' : '点赞' }}</button>
+            <button @click="replyToComment(index)">💬 回复</button>
+          </view>
 
-    <!-- Sidebar Section -->
-    <view class="sidebar">
-      <view class="sidebar-header">相关推荐</view>
-      <view v-for="(recommendation, index) in recommendations" :key="index" class="recommendation-item">
-        <image :src="recommendation.image" mode="widthFix" />
-        <view class="recommendation-title">{{ recommendation.title }}</view>
-        <view class="recommendation-info">{{ recommendation.info }}</view>
+          <!-- Reply Input Section -->
+          <view v-if="replyingTo === index" class="add-reply">
+            <input type="text" v-model="newReply" placeholder="回复..." />
+            <button @click="addReply(index)">发送</button>
+          </view>
+
+          <!-- Replies Section -->
+          <view v-if="comment.replies.length > 0" class="replies">
+            <view v-for="(reply, replyIndex) in comment.replies" :key="replyIndex" class="reply">
+              <text class="comment-username">user_test:</text>
+              <text class="comment-text">{{ reply.text }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="add-comment">
+        <input type="text" v-model="newComment" placeholder="才，才不是在等你的评论呢！" />
+        <button @click="addComment">评论</button>
       </view>
     </view>
   </view>
@@ -85,13 +109,14 @@
 export default {
   data() {
     return {
-	  videoTitle: '',
+      videoTitle: '',
       videoSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-      likeText: '点赞',
-      favoriteText: '收藏',
-      shareText: '分享',
+      likeText: '1001',
+      favoriteText: '897',
+      followText: '189',
+      shareText: '37',
       comments: [
-        { text: '这个视频非常有用！', liked: false, replies: [] },
+        { text: '作者推荐：DEC可持续饮食助手', liked: false, replies: [] },
       ],
       newComment: '',
       replyingTo: null,
@@ -113,6 +138,7 @@ export default {
           info: '阅读量: 789 | 点赞量: 123',
         },
       ],
+      selectedTab: '简介',
     };
   },
   onLoad(options) {
@@ -124,13 +150,18 @@ export default {
     goBack() {
       uni.navigateBack();
     },
+    selectTab(tab) {
+      this.selectedTab = tab;
+    },
     toggleInteraction(type) {
       if (type === 'like') {
-        this.likeText = this.likeText === '点赞' ? '已点赞' : '点赞';
+        this.likeText = this.likeText === '1001' ? '1002' : '1001';
       } else if (type === 'favorite') {
-        this.favoriteText = this.favoriteText === '收藏' ? '已收藏' : '收藏';
+        this.favoriteText = this.favoriteText === '897' ? '898' : '897';
+      } else if (type === 'follow') {
+        this.followText = this.followText === '189' ? '190' : '189';
       } else if (type === 'share') {
-        this.shareText = this.shareText === '分享' ? '已分享' : '分享';
+        this.shareText = this.shareText === '37' ? '38' : '37';
       }
     },
     toggleCommentLike(index) {
@@ -212,11 +243,81 @@ export default {
   overflow: hidden;
 }
 
+/* Tab Selection */
+.tab-selection {
+  display: flex;
+  justify-content: center;
+  margin: 20px;
+}
+
+.tab-container {
+  display: flex;
+  width: 100%;
+  background-color: #f0f0f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.tab-container button {
+  flex: 1;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  background-color: #ffffff;
+  transition: background-color 0.3s;
+}
+
+.tab-container button.active {
+  background-color: #4caf50;
+  color: #ffffff;
+  font-weight: bold;
+}
+
+/* Author Info */
+.author-info {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background-color: #ffffff;
+  margin: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.author-avatar {
+  width: 50px;
+  height: 50px;
+  background-color: #ccc;
+  border-radius: 50%;
+  margin-bottom: 10px;
+}
+
+.author-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.author-header {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.author-username {
+  font-weight: bold;
+  margin-right: 20px;
+}
+
+.author-interactions {
+  display: flex;
+  gap: 10px;
+}
+
 /* Interaction Buttons */
 .interaction-buttons {
   display: flex;
   justify-content: space-around;
-  margin: 20px;
+  margin: 20px 20px 0 20px;
   padding: 10px;
   background-color: #ffffff;
   border-radius: 10px;
@@ -234,6 +335,19 @@ export default {
 
 .interaction-buttons button:hover {
   background-color: #f0f0f0;
+}
+
+/* Info Section */
+.video_content{
+	padding: 10px;
+	background-color: #ffffff;
+	margin-bottom: 20px;
+}
+
+.video_info {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #555;
 }
 
 /* Comments Section */
