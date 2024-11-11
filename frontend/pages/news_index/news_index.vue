@@ -3,26 +3,26 @@
     <!-- Header Section -->
     <image src="/static/images/index/background_img.jpg" class="background-image"></image>
     <view class="header">
-      <button 
-        @click="showSection('全部')" 
+      <button
+        @click="showSection('全部')"
         :class="{ active: selectedSection === '全部' }"
       >
         全部
       </button>
-      <button 
-        @click="showSection('环保科普')" 
+      <button
+        @click="showSection('环保科普')"
         :class="{ active: selectedSection === '环保科普' }"
       >
         环保科普
       </button>
-      <button 
-        @click="showSection('环保要闻')" 
+      <button
+        @click="showSection('环保要闻')"
         :class="{ active: selectedSection === '环保要闻' }"
       >
         环保要闻
       </button>
 	  <button
-	    @click="showSection('环保专栏')" 
+	    @click="showSection('环保专栏')"
 	    :class="{ active: selectedSection === '环保专栏' }"
 	  >
 	    环保专栏
@@ -106,7 +106,7 @@
 	        this.newsItems = this.allNewsItems.filter(item => item.description.includes(section));
 	      }
 	    },
-	
+
 	    // 页面跳转方法
 	    navigateTo(link,name) {
 	      setTimeout(() => {
@@ -123,18 +123,18 @@
 	        }
 	      }, 100); // 延迟 100 毫秒
 	    },
-	
+
 	    // 触摸反馈
 	    pressFeedback(index) {
 	      console.log("Press feedback:", index);
 	      this.activeIndex = index;
 	    },
-	    
+
 	    releaseFeedback() {
 	      console.log("Release feedback");
 	      this.activeIndex = null;
 	    },
-	
+
 	    // 页面更新方法
 	    refreshPage() {
 	      this.isRefreshing = true;

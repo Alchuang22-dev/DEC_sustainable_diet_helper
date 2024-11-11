@@ -159,8 +159,14 @@
 
 	// 页面跳转方法
 	const navigateTo = (page) => {
+
+		if (page === 'recommend') {
+			uni.navigateTo({
+				url: "/pagesTool/food_recommend/food_recommend"
+			})
+		}
 		uni.navigateTo({
-			url: `/pages/${page}/${page}`
+			url: "/pagesTool/carbon_calculator/carbon_calculator"
 		})
 	}
 
