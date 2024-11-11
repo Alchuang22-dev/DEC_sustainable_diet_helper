@@ -1,189 +1,278 @@
 <template>
-	<view class="container">
-		<!-- 头部导航 -->
-		<view class="header">
-			<button class="header-button" @click="showSection('全部')">全部</button>
-			<button class="header-button" @click="showSection('环保科普')">环保科普</button>
-			<button class="header-button" @click="showSection('环保要闻')">环保要闻</button>
-		</view>
+  <view @touchstart="refreshPage">
+    <!-- Header Section -->
+    <image src="/static/images/index/background_img.jpg" class="background-image"></image>
+    <view class="header">
+      <button
+        @click="showSection('全部')"
+        :class="{ active: selectedSection === '全部' }"
+      >
+        全部
+      </button>
+      <button
+        @click="showSection('环保科普')"
+        :class="{ active: selectedSection === '环保科普' }"
+      >
+        环保科普
+      </button>
+      <button
+        @click="showSection('环保要闻')"
+        :class="{ active: selectedSection === '环保要闻' }"
+      >
+        环保要闻
+      </button>
+	  <button
+	    @click="showSection('环保专栏')"
+	    :class="{ active: selectedSection === '环保专栏' }"
+	  >
+	    环保专栏
+	  </button>
+    </view>
 
-		<!-- 新闻列表 -->
-		<scroll-view class="news-section" scroll-y :scroll-top="scrollTop">
-			<view v-for="(item, index) in filteredNews" :key="index" class="news-item" @click="navigateToDetail(item)">
-				<image v-if="item.image" :src="item.image" class="news-image"></image>
-				<view class="news-content">
-					<text class="news-title">{{ item.title }}</text>
-					<text class="news-description">{{ item.category }} | {{ item.source }} | {{ item.time }}</text>
-				</view>
-			</view>
-		</scroll-view>
-
-	</view>
+    <!-- News Section -->
+    <view class="news-section">
+      <view
+        v-for="(item, index) in newsItems"
+        :key="index"
+        :class="['news-item', { active: activeIndex === index }]"
+        @click="navigateTo(item.link,item.title)"
+        @touchstart="pressFeedback(index)"
+        @touchend="releaseFeedback()"
+      >
+        <view class="news-title">{{ item.title }}</view>
+        <view v-if="item.image" class="news-image">
+          <image :src="item.image" :alt="item.title" mode="widthFix" />
+        </view>
+        <view class="news-description">{{ item.description }}</view>
+      </view>
+    </view>
+  </view>
 </template>
 
-<script setup>
-	import {
-		ref,
-		computed
-	} from 'vue';
+<script>
+	export default {
+	  data() {
+	    return {
+	      allNewsItems: [
+	        {
+	          title: "国际氢能联盟和麦肯锡联合发布《氢能洞察2024》",
+	          description: "环保要闻  |  双碳指挥  |  刚刚",
+	          link: "news_detail",
+	        },
+	        {
+	          title: "把自然讲给你听 | 什么是森林？",
+	          description: "环保科普  |  环保科普365  |  1小时前",
+	          image: "",
+	          link: "https://mp.weixin.qq.com/s/mzFR2d-17men_Lm297fweQ",
+	        },
+	        {
+	          title: "视频 | 垃圾分类",
+	          description: "环保科普  |  环保科普365  |  2024-10-14",
+	          video: true,
+	          link: "video_detail",
+	        },
+	        {
+	          title: "联合国发布2024气候计划",
+	          description: "环保要闻  |  环保科普365  |  2024-10-14",
+	          video: true,
+	          link: "news_detail",
+	        },
+			{
+			  title: "专栏 | 寂静的春天",
+			  description: "环保专栏  |  爱读夜  |  2024-10-14",
+			  video: true,
+			  link: "news_detail",
+			},
+			{
+			  title: "社团招新 | 根与芽2025",
+			  description: "环保专栏  |  公益事业  |  2024-6-16",
+			  video: true,
+			  link: "news_detail",
+			},
+	      ],
+	      newsItems: [],
+	      activeIndex: null,
+	      selectedSection: '全部', // 默认选择“全部”
+	      isRefreshing: false, // 用于显示正在更新的状态
+	    };
+	  },
+	  methods: {
+	    // 控制新闻分类的显示
+	    showSection(section) {
+	      this.selectedSection = section; // 更新选中的分类
+	      if (section === "全部") {
+	        this.newsItems = this.allNewsItems;
+	      } else {
+	        this.newsItems = this.allNewsItems.filter(item => item.description.includes(section));
+	      }
+	    },
 
-	const newsList = ref([{
-			title: '国际氢能联盟和麦肯锡联合发布《氢能洞察2024》',
-			category: '环保要闻',
-			source: '双碳指挥',
-			time: '刚刚',
-			image: '',
-			section: '环保要闻',
-			url: '/pages/newsDetail/newsDetail?id=1',
-		},
-		{
-			title: '把自然讲给你听 | 什么是森林？',
-			category: '环保科普',
-			source: '环保科普365',
-			time: '1小时前',
-			image: '/static/images/nature.jpg',
-			section: '环保科普',
-			url: '/pages/newsDetail/newsDetail?id=2',
-		},
-		{
-			title: '视频 | 垃圾分类',
-			category: '环保科普',
-			source: '环保科普365',
-			time: '2024-10-14',
-			image: '',
-			section: '环保科普',
-			url: '/pages/videoDetail/videoDetail?id=3',
-		},
-		// 可以继续添加更多新闻项
-	]);
+	    // 页面跳转方法
+	    navigateTo(link,name) {
+	      setTimeout(() => {
+	        if (link.startsWith("http")) {
+	          // 外部链接跳转
+	          uni.navigateTo({
+	            url: `/pagesNews/web_detail/web_detail?url=${encodeURIComponent(link)}`,
+	          });
+	        } else {
+	          // 内部页面跳转
+	          uni.navigateTo({
+	            url: `/pagesNews/${link}/${link}?title=${name}`,
+	          });
+	        }
+	      }, 100); // 延迟 100 毫秒
+	    },
 
-	const currentSection = ref('全部');
-	const scrollTop = ref(0);
+	    // 触摸反馈
+	    pressFeedback(index) {
+	      console.log("Press feedback:", index);
+	      this.activeIndex = index;
+	    },
 
-	const showSection = (section) => {
-		currentSection.value = section;
-		scrollTop.value = 0; // 回到顶部
-	};
+	    releaseFeedback() {
+	      console.log("Release feedback");
+	      this.activeIndex = null;
+	    },
 
-	const filteredNews = computed(() => {
-		if (currentSection.value === '全部') {
-			return newsList.value;
-		} else {
-			return newsList.value.filter((item) => item.section === currentSection.value);
-		}
-	});
-
-	const navigateToDetail = (item) => {
-		uni.navigateTo({
-			url: item.url,
-		});
+	    // 页面更新方法
+	    refreshPage() {
+	      this.isRefreshing = true;
+	      setTimeout(() => {
+	        this.newsItems = this.newsItems.sort(() => Math.random() - 0.5);
+	        this.isRefreshing = false;
+	      }, 1000); // 模拟1秒的加载时间
+	    },
+	  },
+	  mounted() {
+	    // 默认加载“全部”新闻
+	    this.showSection("全部");
+	  },
 	};
 </script>
 
 <style scoped>
-	/* 全局样式变量 */
-	:root {
-		--primary-color: #4CAF50;
-		--background-color: #f0f4f7;
-		--text-color: #333;
-		--secondary-text-color: #777;
-		--border-color: #e0e0e0;
-		--font-family: 'Arial', sans-serif;
-	}
+/* Body */
+body {
+  font-family: 'Arial', sans-serif;
+  background: url('/static/images/index/background_img.jpg') no-repeat center center fixed;
+  background-size: cover;
+  background-color: #f0f4f7;
+  margin: 0;
+  padding: 0;
+}
 
-	/* 容器 */
-	.container {
-		display: flex;
-		flex-direction: column;
-		min-height: 100vh;
-		background-color: var(--background-color);
-		font-family: var(--font-family);
-	}
+.background-image {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  opacity: 0.1;
+}
 
-	/* 头部导航 */
-	.header {
-		display: flex;
-		align-items: center;
-		padding: 20rpx;
-		background-color: #ffffff;
-		border-bottom: 1rpx solid var(--border-color);
-		justify-content: space-around;
-	}
+/* Header Section */
+.header {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  justify-content: space-around;
+}
 
-	.header-button {
-		border: none;
-		background-color: transparent;
-		font-size: 32rpx;
-		cursor: pointer;
-		color: var(--text-color);
-	}
+.header button {
+  border: none;
+  background-color: transparent;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.3s;
+}
 
-	.header-button:active {
-		color: var(--primary-color);
-	}
+.header button.active {
+  color: #4caf50; /* 选中状态颜色 */
+  font-weight: bold; /* 选中状态加粗 */
+}
 
-	/* 新闻列表 */
-	.news-section {
-		flex: 1;
-		padding: 20rpx;
-	}
+/* News Section */
+.news-section {
+  padding: 20px;
+  position: relative;
+}
 
-	.news-item {
-		background-color: #ffffff;
-		border-radius: 20rpx;
-		box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.1);
-		padding: 20rpx;
-		margin-bottom: 20rpx;
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		cursor: pointer;
-	}
+.news-section::before {
+  content: "正在更新...";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  color: #333;
+  display: none;
+}
 
-	.news-image {
-		width: 160rpx;
-		height: 120rpx;
-		border-radius: 10rpx;
-		margin-right: 20rpx;
-	}
+.news-section[data-refreshing="true"]::before {
+  display: block;
+}
 
-	.news-content {
-		flex: 1;
-	}
+.news-item {
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+  position: relative;  /* 确保其层级设置有效 */
+  z-index: 1;          /* 确保点击事件可以被接收 */
+}
 
-	.news-title {
-		font-size: 36rpx;
-		font-weight: bold;
-		color: var(--text-color);
-		margin-bottom: 10rpx;
-	}
+.news-item.active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  background-color: #e6f7ff;
+}
 
-	.news-description {
-		font-size: 28rpx;
-		color: var(--secondary-text-color);
-	}
+.news-image {
+  pointer-events: none; /* 确保图片不会阻止父元素的点击事件 */
+}
 
-	/* 底部导航 */
-	.footer {
-		background-color: #ffffff;
-		padding: 20rpx 0;
-		box-shadow: 0 -4rpx 10rpx rgba(0, 0, 0, 0.1);
-	}
+.news-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
 
-	.footer-nav {
-		display: flex;
-		justify-content: space-around;
-	}
+.news-description {
+  font-size: 14px;
+  margin-bottom: 10px;
+}
 
-	.nav-item {
-		text-decoration: none;
-		color: var(--text-color);
-		font-weight: bold;
-		transition: color 0.3s;
-		font-size: 36rpx;
-	}
+/* Footer Section */
+.footer {
+  background-color: #ffffff;
+  padding: 10px 0;
+  border-top: 1px solid #e0e0e0;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+}
 
-	.nav-item:hover {
-		color: var(--primary-color);
-	}
+.footer-nav {
+  display: flex;
+  justify-content: space-around;
+}
+
+.nav-item {
+  text-decoration: none;
+  color: #333;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.nav-item:hover {
+  color: #4caf50;
+}
 </style>
