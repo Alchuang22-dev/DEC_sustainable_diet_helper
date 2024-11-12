@@ -14,10 +14,10 @@
     <view class="video-content">
       <video
         class="video-container"
-        :src="videoData[0].videoSrc"
+        :src="videoData[0].newsSrc"
         controls
         autoplay
-        id="video"
+        id=1
         @play="onPlay"
         @pause="onPause"
       >
@@ -43,7 +43,7 @@
             <text class="author-username">{{videoData[0].authorName}}</text>
           </view>
 		  <view class="video_content">
-			<view class="video_info"> {{videoData[0].videoinfo}}</view>
+			<view class="video_info"> {{videoData[0].newsinfo}}</view>
 		  </view>
           <view class="author-interactions">
             <button @click="toggleInteraction('like')">👍 {{videoData[0].likeCount}}</button>
@@ -59,7 +59,7 @@
         <view class="sidebar-header">相关推荐</view>
         <view v-for="(recommendation, index) in recommendations" :key="index" class="recommendation-item">
           <image :src="recommendation.image" mode="widthFix" />
-          <view class="recommendation-title">{{ recommendation.title }}</view>
+          <view class="recommendation-title" @click="goRecommend(recommendation.title, recommendation.form, recommendation.id)">{{ recommendation.title }}</view>
           <view class="recommendation-info">{{ recommendation.info }}</view>
         </view>
       </view>
@@ -139,29 +139,41 @@
             
             // 假设从后端获取的数据如下：
             this.videoData = [{
-              videoSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-			  videoName: '垃圾分类',
-              authorName: 'user_test',
+				        id: 1,
+            	  form: 'news',
+                newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
+				        imgsSrc: '',
+				        tabs: ['环境保护','环保要闻'],
+				        time: '2024-4-17',
+            	  newsName: '垃圾分类',
+                authorName: 'user_test',
+                authorAvatar: '',
+                newsinfo: '测试测试测试测试测试', 
+            	  newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。',
+                likeCount: 1001,
+                shareCount: 37,
+                favoriteCount: 897,
+                followCount: 189,
+            	  type: 'main'
+              },
+            {
+			        id:2,
+              form: 'news',
+              newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
+			        imgsSrc: '',
+			        tabs: ['环境保护','环保要闻'],
+			        time: '2024-4-17',
+              newsName: '把自然讲给你听',
+              authorName: '中野梓',
               authorAvatar: '',
-              videoinfo: '测试测试测试测试测试', 
+              newsinfo: '测试测试测试测试测试', 
+              newsbody: '',
               likeCount: 1001,
               shareCount: 37,
               favoriteCount: 897,
               followCount: 189,
-			  type: 'main'
-            },
-			{
-			  videoSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-			  videoName: '把自然讲给你听',
-			  authorName: '中野梓',
-			  authorAvatar: '',
-			  videoinfo: '测试测试测试测试测试', 
-			  likeCount: 1001,
-			  shareCount: 37,
-			  favoriteCount: 897,
-			  followCount: 189,
-			  type: 'reco'
-			}];
+              type: 'reco'
+            }];
 			this.recommendations = [
 			  
 			];
@@ -173,10 +185,12 @@
 		convertVideoToRecommendation(video) {
 		  if (video.type === 'reco') {
 		    this.recommendations.push({
-			  id: video.videoSrc,
+			  id: video.id,
+			  src: video.newsSrc,
 		      image: '',
-		      title: video.authorName + ' | ' + video.videoName,
-		      info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount
+		      title: video.authorName + ' | ' + video.newsName,
+		      info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount,
+			  form: video.form,
 		    });
 		  }
 		},
@@ -223,6 +237,26 @@
         onPause() {
           console.log('Video is paused');
         },
+		goRecommend(title, form, id) {
+		  setTimeout(() => {
+		    if (form === 'news') {
+		      // 图文页面跳转
+		      uni.navigateTo({
+		        url: `/pagesNews/news_detail/news_detail?title=${title}}`,
+		      });
+		    } else if(form === 'video'){
+		      // 视频页面跳转
+		      uni.navigateTo({
+		        url: `/pagesNews/video_detail/video_detail?title=${name}`,
+		      });
+		    }
+			else{
+				uni.navigateTo({
+				  url: `/pagesNews/web_detail/web_detail?url=${encodeURIComponent(id)}`,
+				});
+			}
+		  }, 100); // 延迟 100 毫秒
+		},
       },
     };
 </script>

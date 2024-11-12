@@ -96,7 +96,97 @@
 	      isRefreshing: false, // 用于显示正在更新的状态
 	    };
 	  },
+	  async created() {
+	    // 在组件创建时调用后端获取数据
+	    await this.fetchData();
+	  },
 	  methods: {
+		async fetchData() {
+		  try {
+		    // 模拟从后端获取数据
+		    // 可以将此部分替换为实际的后端 API 调用，例如通过 axios:
+		    // const response = await axios.get('your-api-endpoint');
+		    
+		    // 假设从后端获取的数据如下：
+		    this.videoData = [{
+				id: 1,
+		    	form: 'news',
+		        newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
+				imgsSrc: '',
+				tabs: ['环境保护','环保要闻'],
+				time: '2024-4-17',
+		    	newsName: '图文|后端连接测试',
+		        authorName: 'user_test',
+		        authorAvatar: '',
+		        newsinfo: '测试测试测试测试测试', 
+		    	newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。',
+		        likeCount: 1001,
+		        shareCount: 37,
+		        favoriteCount: 897,
+		        followCount: 189,
+		    	type: 'main'
+		      },
+		    {
+			  id: 2,
+		      form: 'news',
+		      newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
+			  imgsSrc: '',
+			  tabs: ['公益事业'],
+			  time: '2024-5-17',
+		      newsName: '呱唧呱唧|前端新闻系统大更新',
+		      authorName: '中野梓',
+		      authorAvatar: '',
+		      newsinfo: '测试测试测试测试测试', 
+		      newsbody: '',
+		      likeCount: 1001,
+		      shareCount: 37,
+		      favoriteCount: 897,
+		      followCount: 189,
+		      type: 'main'
+		    }];
+			this.allnewsItems = [];
+			this.videoData.forEach(video => this.convertVideoToItems(video));
+		  } catch (error) {
+		    console.error('Error fetching data:', error);
+		  }
+		},
+		convertVideoToItems(video) {
+		  if (video.type === 'main') {
+			if(video.form === 'web') {
+				this.allNewsItems.push({
+				  id: video.id,
+				  link: video.newsSrc,
+				  image: '',
+				  title: video.newsName,
+				  description: video.tabs.join(' | ') + ' | '+ video.time,
+				  info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount,
+				  form: video.form,
+				});
+			}
+			else if(video.form === 'news') {
+				this.allNewsItems.push({
+				  id: video.id,
+				  link: 'news_detail',
+				  image: '',
+				  title: video.newsName,
+				  description: video.tabs.join(' | ') + ' | '+ video.time,
+				  info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount,
+				  form: video.form,
+				});
+			}
+			else if(video.form === 'video') {
+				this.allNewsItems.push({
+				  id: video.id,
+				  link: 'video_detail',
+				  image: '',
+				  title: video.newsName,
+				  description: video.tabs.join(' | ') + ' | '+ video.time,
+				  info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount,
+				  form: video.form,
+				});
+			}
+		  }
+		},
 	    // 控制新闻分类的显示
 	    showSection(section) {
 	      this.selectedSection = section; // 更新选中的分类
