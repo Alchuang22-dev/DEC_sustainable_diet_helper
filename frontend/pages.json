@@ -17,7 +17,6 @@
 				"navigationBarTitleText": "资讯"
 			}
 		}
-
 	],
 	"subPackages": [{
 			"root": "pagesMy",
@@ -38,10 +37,27 @@
 		{
 			"root": "pagesTool",
 			"pages": [{
-					"path": "carbon_calculator/carbon_calculator"
+					"path": "carbon_calculator/carbon_calculator",
+					"style": {
+						"navigationBarTitleText": "碳排放计算器"
+					}
 				},
 				{
 					"path": "nutrition_calculator/nutrition_calculator"
+				},
+				{
+					"path" : "add_food/add_food",
+					"style" : 
+					{
+						"navigationBarTitleText" : "添加食品"
+					}
+				},
+				{
+					"path" : "food_recommend/food_recommend",
+					"style" : 
+					{
+						"navigationBarTitleText" : "今日推荐"
+					}
 				}
 			]
 		}
