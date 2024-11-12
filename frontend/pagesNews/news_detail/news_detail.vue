@@ -11,15 +11,19 @@
       <view class="main-content">
         <view class="news-content">
           <view class="news-title">{{ webTitle }}</view>
+		  <view class="author-header">
+		  	<view class="author-avatar"></view>
+		    <text class="author-username">{{newsData[0].authorName}}</text>
+		  </view>
           <view class="news-body">
-            9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。
+            {{newsData[0].newsbody}}
           </view>
 
           <!-- Interaction Buttons - Merged into News Content -->
           <view class="inline-interaction-buttons">
-            <button @click="toggleInteraction('like')">👍 {{ likeText }}</button>
-            <button @click="toggleInteraction('favorite')">⭐ {{ favoriteText }}</button>
-            <button @click="toggleInteraction('share')">🔄 {{ shareText }}</button>
+            <button @click="toggleInteraction('like')">👍 {{ newsData[0].likeCount }}</button>
+            <button @click="toggleInteraction('favorite')">⭐ {{ newsData[0].favoriteCount }}</button>
+            <button @click="toggleInteraction('share')">🔄 {{ newsData[0].shareCount}}</button>
           </view>
         </view>
 
@@ -67,7 +71,7 @@
         <view class="sidebar-header">相关推荐</view>
         <view v-for="(recommendation, index) in recommendations" :key="index" class="recommendation-item">
           <image :src="recommendation.image" mode="widthFix" />
-          <view class="recommendation-title">{{ recommendation.title }}</view>
+          <view class="recommendation-title" @click="goRecommend(recommendation.title, recommendation.form, recommendation.id)">{{ recommendation.title }}</view>
           <view class="recommendation-info">{{ recommendation.info }}</view>
         </view>
       </view>
@@ -81,6 +85,7 @@ export default {
   data() {
     return {
 	  webTitle: '',
+	  newsData: [],
       comments: [
         { text: "这篇文章非常有用！", liked: false, replies: [] },
       ],
@@ -90,24 +95,12 @@ export default {
       likeText: '点赞',
       favoriteText: '收藏',
       shareText: '分享',
-      recommendations: [
-        {
-          image: "",
-          title: "把自然讲给你听 | 什么是森林？",
-          info: "阅读量: 1234 | 点赞量: 456"
-        },
-        {
-          image: "",
-          title: "全球氢能发展最新动态",
-          info: "阅读量: 987 | 点赞量: 321"
-        },
-        {
-          image: "",
-          title: "如何做好垃圾分类",
-          info: "阅读量: 789 | 点赞量: 123"
-        }
-      ]
+      recommendations: []
     };
+  },
+  async created() {
+    // 在组件创建时调用后端获取数据
+    await this.fetchData();
   },
   onLoad(options) {
     if (options.title) {
@@ -115,16 +108,81 @@ export default {
     }
   },
   methods: {
+	async fetchData() {
+	    try {
+	      // 模拟从后端获取数据
+	      // 可以将此部分替换为实际的后端 API 调用，例如通过 axios:
+	      // const response = await axios.get('your-api-endpoint');
+	      
+	      // 假设从后端获取的数据如下：
+	      this.newsData = [{
+			id: 1,
+			form: 'news',
+	        newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
+			imgsSrc: '',
+			tabs: ['环境保护','环保要闻'],
+			time: '2024-4-17',
+			newsName: '垃圾分类',
+	        authorName: 'user_test',
+	        authorAvatar: '',
+	        newsinfo: '测试测试测试测试测试', 
+			newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。',
+	        likeCount: 1001,
+	        shareCount: 37,
+	        favoriteCount: 897,
+	        followCount: 189,
+			type: 'main'
+	      },
+	  	{
+		  id: 2,
+		  form: 'news',
+	  	  newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
+		  imgsSrc: '',
+		  tabs: ['环境保护','环保要闻'],
+		  time: '2024-4-17',
+	  	  newsName: '把自然讲给你听',
+	  	  authorName: '中野梓',
+	  	  authorAvatar: '',
+	  	  newsinfo: '测试测试测试测试测试', 
+		  newsbody: '',
+	  	  likeCount: 1001,
+	  	  shareCount: 37,
+	  	  favoriteCount: 897,
+	  	  followCount: 189,
+	  	  type: 'reco'
+	  	}];
+	  	this.recommendations = [
+	  	  
+	  	];
+	  	this.newsData.forEach(news => this.convertnewsToRecommendation(news));
+	    } catch (error) {
+	      console.error('Error fetching data:', error);
+	    }
+	  },
+	  convertnewsToRecommendation(news) {
+	    if (news.type === 'reco') {
+	      this.recommendations.push({
+			id: news.id,
+			src: news.newsSrc,
+	        image: '',
+	        title: news.authorName + ' | ' + news.newsName,
+	        info: '阅读量: ' + news.followCount + ' | 点赞量: ' + news.likeCount,
+			form: news.form,
+	      });
+	    }
+	  },
     goBack() {
       uni.navigateBack();
     },
     toggleInteraction(type) {
       if (type === 'like') {
-        this.likeText = this.likeText === '点赞' ? '已点赞' : '点赞';
+        this.newsData[0].likeCount++;
       } else if (type === 'favorite') {
-        this.favoriteText = this.favoriteText === '收藏' ? '已收藏' : '收藏';
+        this.newsData[0].favoriteCount++;
+      } else if (type === 'follow') {
+        this.newsData[0].followCount++;
       } else if (type === 'share') {
-        this.shareText = this.shareText === '分享' ? '已分享' : '分享';
+        this.newsData[0].shareCount++;
       }
     },
     toggleCommentLike(index) {
@@ -146,7 +204,28 @@ export default {
         this.comments.push({ text: this.newComment, liked: false, replies: [] });
         this.newComment = '';
       }
-    }
+    },
+	// 页面跳转方法
+	goRecommend(title, form, id) {
+	  setTimeout(() => {
+	    if (form === 'news') {
+	      // 图文页面跳转
+	      uni.navigateTo({
+	        url: `/pagesNews/news_detail/news_detail?title=${title}}`,
+	      });
+	    } else if(form === 'video'){
+	      // 视频页面跳转
+	      uni.navigateTo({
+	        url: `/pagesNews/video_detail/video_detail?title=${name}`,
+	      });
+	    }
+		else{
+			uni.navigateTo({
+			  url: `/pagesNews/web_detail/web_detail?url=${encodeURIComponent(id)}`,
+			});
+		}
+	  }, 100); // 延迟 100 毫秒
+	},
   }
 };
 </script>
@@ -360,6 +439,29 @@ body {
 .recommendation-info {
   font-size: 14px;
   color: #555;
+}
+/*author part form video_detail*/
+.author-avatar {
+  width: 50px;
+  height: 50px;
+  background-color: #ccc;
+  border-radius: 50%;
+  margin-bottom: 10px;
+}
+
+.author-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.author-header {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.author-username {
+  font-weight: bold;
+  margin-right: 20px;
 }
 
 </style>
