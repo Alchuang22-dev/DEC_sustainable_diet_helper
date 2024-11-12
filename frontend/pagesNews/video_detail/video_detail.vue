@@ -154,6 +154,7 @@
                 shareCount: 37,
                 favoriteCount: 897,
                 followCount: 189,
+                dislikeCount: 100,
             	  type: 'main'
               },
             {
@@ -172,6 +173,7 @@
               shareCount: 37,
               favoriteCount: 897,
               followCount: 189,
+              dislikeCount: 100,
               type: 'reco'
             }];
 			this.recommendations = [

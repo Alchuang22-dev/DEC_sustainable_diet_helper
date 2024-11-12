@@ -110,29 +110,30 @@
 		    // 假设从后端获取的数据如下：
 		    this.videoData = [{
 				id: 1,
-		    	form: 'news',
+		    	  form: 'news',
 		        newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-				imgsSrc: '',
-				tabs: ['环境保护','环保要闻'],
-				time: '2024-4-17',
-		    	newsName: '图文|后端连接测试',
+				    imgsSrc: '',
+				    tabs: ['环境保护','环保要闻'],
+				    time: '2024-4-17',
+		    	  newsName: '图文|后端连接测试',
 		        authorName: 'user_test',
 		        authorAvatar: '',
 		        newsinfo: '测试测试测试测试测试', 
-		    	newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。',
+		    	  newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。',
 		        likeCount: 1001,
 		        shareCount: 37,
 		        favoriteCount: 897,
 		        followCount: 189,
-		    	type: 'main'
+            dislikeCount: 100,
+		    	  type: 'main'
 		      },
 		    {
 			  id: 2,
 		      form: 'news',
 		      newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-			  imgsSrc: '',
-			  tabs: ['公益事业'],
-			  time: '2024-5-17',
+			    imgsSrc: '',
+			    tabs: ['公益事业'],
+			    time: '2024-5-17',
 		      newsName: '呱唧呱唧|前端新闻系统大更新',
 		      authorName: '中野梓',
 		      authorAvatar: '',
@@ -142,6 +143,7 @@
 		      shareCount: 37,
 		      favoriteCount: 897,
 		      followCount: 189,
+          dislikeCount: 100,
 		      type: 'main'
 		    }];
 			this.allnewsItems = [];
