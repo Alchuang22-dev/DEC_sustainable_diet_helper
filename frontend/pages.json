@@ -43,7 +43,11 @@
 					}
 				},
 				{
-					"path": "nutrition_calculator/nutrition_calculator"
+					"path": "nutrition_calculator/nutrition_calculator",
+					"style" :
+					{
+						"navigationBarTitleText" : "营养目标"
+					}
 				},
 				{
 					"path" : "add_food/add_food",
@@ -57,6 +61,13 @@
 					"style" : 
 					{
 						"navigationBarTitleText" : "今日推荐"
+					}
+				},
+				{
+					"path" : "home_servant/home_servant",
+					"style" : 
+					{
+						"navigationBarTitleText" : "家庭管理"
 					}
 				}
 			]
