@@ -159,9 +159,25 @@
 
 	// 页面跳转方法
 	const navigateTo = (page) => {
-		uni.navigateTo({
-			url: `/pages/${page}/${page}`
-		})
+
+		if (page === 'recommend') {
+			uni.navigateTo({
+				url: "/pagesTool/food_recommend/food_recommend",
+			})}
+		if(page === 'nutrition') {
+			uni.navigateTo({
+				url: "/pagesTool/nutrition_calculator/nutrition_calculator",
+			})}
+		if(page === 'family') {
+			uni.navigateTo({
+				url: "/pagesTool/home_servant/home_servant",
+			})}
+		else{
+			uni.navigateTo({
+				url: "/pagesTool/carbon_calculator/carbon_calculator",
+			})
+		}
+		
 	}
 
 	// 引入动画库（假设使用 Animate.css）

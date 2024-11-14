@@ -1,16 +1,44 @@
 <template>
-  <view>
+  <view @touchstart="refreshPage">
     <!-- Header Section -->
-	<image src="/static/images/index/background_img.jpg" class="background-image"></image>
+    <image src="/static/images/index/background_img.jpg" class="background-image"></image>
     <view class="header">
-      <button @click="showSection('全部')">全部</button>
-      <button @click="showSection('环保科普')">环保科普</button>
-      <button @click="showSection('环保要闻')">环保要闻</button>
+      <button
+        @click="showSection('全部')"
+        :class="{ active: selectedSection === '全部' }"
+      >
+        全部
+      </button>
+      <button
+        @click="showSection('环保科普')"
+        :class="{ active: selectedSection === '环保科普' }"
+      >
+        环保科普
+      </button>
+      <button
+        @click="showSection('环保要闻')"
+        :class="{ active: selectedSection === '环保要闻' }"
+      >
+        环保要闻
+      </button>
+	  <button
+	    @click="showSection('环保专栏')"
+	    :class="{ active: selectedSection === '环保专栏' }"
+	  >
+	    环保专栏
+	  </button>
     </view>
 
     <!-- News Section -->
     <view class="news-section">
-      <view v-for="(item, index) in newsItems" :key="index" class="news-item" @click="navigateTo(item.link)">
+      <view
+        v-for="(item, index) in newsItems"
+        :key="index"
+        :class="['news-item', { active: activeIndex === index }]"
+        @click="navigateTo(item.link,item.title)"
+        @touchstart="pressFeedback(index)"
+        @touchend="releaseFeedback()"
+      >
         <view class="news-title">{{ item.title }}</view>
         <view v-if="item.image" class="news-image">
           <image :src="item.image" :alt="item.title" mode="widthFix" />
@@ -22,82 +50,197 @@
 </template>
 
 <script>
-export default {
-  data() {
-    return {
-      newsItems: [],
-    };
-  },
-  methods: {
-    // 控制新闻分类的显示
-    showSection(section) {
-      if (section === "全部") {
-        this.newsItems = [
-          {
-            title: "国际氢能联盟和麦肯锡联合发布《氢能洞察2024》",
-            description: "环保要闻  |  双碳指挥  |  刚刚",
-            link: "",
-          },
-          {
-            title: "把自然讲给你听 | 什么是森林？",
-            description: "环保科普  |  环保科普365  |  1小时前",
-            image: "",
-            link: "https://mp.weixin.qq.com/s/mzFR2d-17men_Lm297fweQ",
-          },
-          {
-            title: "视频 | 垃圾分类",
-            description: "环保科普  |  环保科普365  |  2024-10-14",
-            video: true,
-            link: "/pages/video_details/video_details",
-          },
-        ];
-      } else if (section === "环保科普") {
-        this.newsItems = [
-          {
-            title: "把自然讲给你听 | 什么是森林？",
-            description: "环保科普  |  环保科普365  |  1小时前",
-            image: "@/static/images/nature.jpg",
-            link: "https://mp.weixin.qq.com/s/mzFR2d-17men_Lm297fweQ",
-          },
-          {
-            title: "视频 | 垃圾分类",
-            description: "环保科普  |  环保科普365  |  2024-10-14",
-            video: true,
-            link: "/pages/video_details/video_details",
-          },
-        ];
-      } else if (section === "环保要闻") {
-        this.newsItems = [
-          {
-            title: "国际氢能联盟和麦肯锡联合发布《氢能洞察2024》",
-            description: "环保要闻  |  双碳指挥  |  刚刚",
-            link: "/pages/details/details",
-          },
-        ];
-      }
-    },
+	export default {
+	  data() {
+	    return {
+	      allNewsItems: [
+	        {
+	          title: "国际氢能联盟和麦肯锡联合发布《氢能洞察2024》",
+	          description: "环保要闻  |  双碳指挥  |  刚刚",
+	          link: "news_detail",
+	        },
+	        {
+	          title: "把自然讲给你听 | 什么是森林？",
+	          description: "环保科普  |  环保科普365  |  1小时前",
+	          image: "",
+	          link: "https://mp.weixin.qq.com/s/mzFR2d-17men_Lm297fweQ",
+	        },
+	        {
+	          title: "视频 | 垃圾分类",
+	          description: "环保科普  |  环保科普365  |  2024-10-14",
+	          video: true,
+	          link: "video_detail",
+	        },
+	        {
+	          title: "联合国发布2024气候计划",
+	          description: "环保要闻  |  环保科普365  |  2024-10-14",
+	          video: true,
+	          link: "news_detail",
+	        },
+			{
+			  title: "专栏 | 寂静的春天",
+			  description: "环保专栏  |  爱读夜  |  2024-10-14",
+			  video: true,
+			  link: "news_detail",
+			},
+			{
+			  title: "社团招新 | 根与芽2025",
+			  description: "环保专栏  |  公益事业  |  2024-6-16",
+			  video: true,
+			  link: "news_detail",
+			},
+	      ],
+	      newsItems: [],
+	      activeIndex: null,
+	      selectedSection: '全部', // 默认选择“全部”
+	      isRefreshing: false, // 用于显示正在更新的状态
+	    };
+	  },
+	  async created() {
+	    // 在组件创建时调用后端获取数据
+	    await this.fetchData();
+	  },
+	  methods: {
+		async fetchData() {
+		  try {
+		    // 模拟从后端获取数据
+		    // 可以将此部分替换为实际的后端 API 调用，例如通过 axios:
+		    // const response = await axios.get('your-api-endpoint');
+		    
+		    // 假设从后端获取的数据如下：
+		    this.videoData = [{
+				id: 1,
+		    	  form: 'news',
+		        newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
+				    imgsSrc: '',
+				    tabs: ['环境保护','环保要闻'],
+				    time: '2024-4-17',
+		    	  newsName: '图文|后端连接测试',
+		        authorName: 'user_test',
+		        authorAvatar: '',
+		        newsinfo: '测试测试测试测试测试', 
+		    	  newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。',
+		        likeCount: 1001,
+		        shareCount: 37,
+		        favoriteCount: 897,
+		        followCount: 189,
+            dislikeCount: 100,
+		    	  type: 'main'
+		      },
+		    {
+			  id: 2,
+		      form: 'news',
+		      newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
+			    imgsSrc: '',
+			    tabs: ['公益事业'],
+			    time: '2024-5-17',
+		      newsName: '呱唧呱唧|前端新闻系统大更新',
+		      authorName: '中野梓',
+		      authorAvatar: '',
+		      newsinfo: '测试测试测试测试测试', 
+		      newsbody: '',
+		      likeCount: 1001,
+		      shareCount: 37,
+		      favoriteCount: 897,
+		      followCount: 189,
+          dislikeCount: 100,
+		      type: 'main'
+		    }];
+			this.allnewsItems = [];
+			this.videoData.forEach(video => this.convertVideoToItems(video));
+		  } catch (error) {
+		    console.error('Error fetching data:', error);
+		  }
+		},
+		convertVideoToItems(video) {
+		  if (video.type === 'main') {
+			if(video.form === 'web') {
+				this.allNewsItems.push({
+				  id: video.id,
+				  link: video.newsSrc,
+				  image: '',
+				  title: video.newsName,
+				  description: video.tabs.join(' | ') + ' | '+ video.time,
+				  info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount,
+				  form: video.form,
+				});
+			}
+			else if(video.form === 'news') {
+				this.allNewsItems.push({
+				  id: video.id,
+				  link: 'news_detail',
+				  image: '',
+				  title: video.newsName,
+				  description: video.tabs.join(' | ') + ' | '+ video.time,
+				  info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount,
+				  form: video.form,
+				});
+			}
+			else if(video.form === 'video') {
+				this.allNewsItems.push({
+				  id: video.id,
+				  link: 'video_detail',
+				  image: '',
+				  title: video.newsName,
+				  description: video.tabs.join(' | ') + ' | '+ video.time,
+				  info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount,
+				  form: video.form,
+				});
+			}
+		  }
+		},
+	    // 控制新闻分类的显示
+	    showSection(section) {
+	      this.selectedSection = section; // 更新选中的分类
+	      if (section === "全部") {
+	        this.newsItems = this.allNewsItems;
+	      } else {
+	        this.newsItems = this.allNewsItems.filter(item => item.description.includes(section));
+	      }
+	    },
 
-    // 页面跳转方法
-    navigateTo(link) {
-      if (link.startsWith("http")) {
-        // 外部链接跳转
-        uni.navigateTo({
-          url: `/pages/webview/webview?url=${encodeURIComponent(link)}`,
-        });
-      } else {
-        // 内部页面跳转
-        uni.navigateTo({
-          url: link,
-        });
-      }
-    },
-  },
+	    // 页面跳转方法
+	    navigateTo(link,name) {
+	      setTimeout(() => {
+	        if (link.startsWith("http")) {
+	          // 外部链接跳转
+	          uni.navigateTo({
+	            url: `/pagesNews/web_detail/web_detail?url=${encodeURIComponent(link)}`,
+	          });
+	        } else {
+	          // 内部页面跳转
+	          uni.navigateTo({
+	            url: `/pagesNews/${link}/${link}?title=${name}`,
+	          });
+	        }
+	      }, 100); // 延迟 100 毫秒
+	    },
 
-  mounted() {
-    // 默认加载“全部”新闻
-    this.showSection("全部");
-  },
-};
+	    // 触摸反馈
+	    pressFeedback(index) {
+	      console.log("Press feedback:", index);
+	      this.activeIndex = index;
+	    },
+
+	    releaseFeedback() {
+	      console.log("Release feedback");
+	      this.activeIndex = null;
+	    },
+
+	    // 页面更新方法
+	    refreshPage() {
+	      this.isRefreshing = true;
+	      setTimeout(() => {
+	        this.newsItems = this.newsItems.sort(() => Math.random() - 0.5);
+	        this.isRefreshing = false;
+	      }, 1000); // 模拟1秒的加载时间
+	    },
+	  },
+	  mounted() {
+	    // 默认加载“全部”新闻
+	    this.showSection("全部");
+	  },
+	};
 </script>
 
 <style scoped>
@@ -111,18 +254,16 @@ body {
   padding: 0;
 }
 
-	.background-image {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		z-index: 0;
-		/* 将背景图片置于最底层 */
-		opacity: 0.1;
-		/* 调整透明度以不干扰内容 */
-	}
+.background-image {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  opacity: 0.1;
+}
 
 /* Header Section */
 .header {
@@ -139,11 +280,33 @@ body {
   background-color: transparent;
   font-size: 16px;
   cursor: pointer;
+  transition: color 0.3s;
+}
+
+.header button.active {
+  color: #4caf50; /* 选中状态颜色 */
+  font-weight: bold; /* 选中状态加粗 */
 }
 
 /* News Section */
 .news-section {
   padding: 20px;
+  position: relative;
+}
+
+.news-section::before {
+  content: "正在更新...";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  color: #333;
+  display: none;
+}
+
+.news-section[data-refreshing="true"]::before {
+  display: block;
 }
 
 .news-item {
@@ -153,12 +316,19 @@ body {
   padding: 15px;
   margin-bottom: 20px;
   cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+  position: relative;  /* 确保其层级设置有效 */
+  z-index: 1;          /* 确保点击事件可以被接收 */
 }
 
-.news-item image {
-  width: 100%;
-  height: auto;
-  border-radius: 5px;
+.news-item.active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  background-color: #e6f7ff;
+}
+
+.news-image {
+  pointer-events: none; /* 确保图片不会阻止父元素的点击事件 */
 }
 
 .news-title {
