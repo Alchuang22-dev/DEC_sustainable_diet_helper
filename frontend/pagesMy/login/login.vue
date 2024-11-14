@@ -24,7 +24,7 @@
       <span class="forgot-password">忘记密码?</span>
     </view>
     <view class="wechat-login">
-      <button class="wechat-button" @click="login">
+      <button class="wechat-button" @click="test_login">
         <img src="/static/logo.png" alt="WeChat" class="wechat-icon" />
         <span>用微信用户授权登录</span>
       </button>
@@ -37,6 +37,7 @@ export default {
   data() {
     return {
       phoneNumber: '',
+	  testUser: 'test_user',
       password: '',
       repeatPassword: '',
       showRepeatPassword: false
@@ -45,7 +46,13 @@ export default {
   methods: {
 	login() {
 		uni.switchTab({
-		  url: `/pages/my_index/my_index?uid=${this.phoneNumber}`,
+		  url: `/pages/my_index/my_index`,
+		});
+	},
+	test_login(){
+		uni.setStorageSync('uid', 'test');
+		uni.switchTab({
+		  url: `/pages/my_index/my_index`,
 		});
 	},
     check() {
