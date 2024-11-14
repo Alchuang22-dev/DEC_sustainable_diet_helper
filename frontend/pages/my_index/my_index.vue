@@ -12,7 +12,7 @@
 					<text class="login-prompt">登录以享受更多服务</text>
 				</view>
 			</view>
-			<button class="login-button">注册/登录</button>
+			<button class="login-button" @click="navigateTo('login')">注册/登录</button>
 		</view>
 
 		<!-- 菜单部分 -->
@@ -49,7 +49,7 @@
 
 	const navigateTo = (page) => {
 		uni.navigateTo({
-			url: `/pages/${page}/${page}`,
+			url: `/pagesMy/${page}/${page}`,
 		});
 	};
 </script>

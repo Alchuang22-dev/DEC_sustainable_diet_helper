@@ -22,6 +22,8 @@
 			"root": "pagesMy",
 			"pages": [{
 				"path": "my_home/my_home"
+			},{
+				"path": "login/login"
 			}]
 		},
 		{
