@@ -1,32 +1,32 @@
 <template>
   <view class="login-container">
-	<image src="/static/images/index/background_img.jpg" class="background-image"></image>
+    <image src="/static/images/index/background_img.jpg" class="background-image"></image>
     <view class="header">
-      <img src="/static/images/index/logo_wide.png" alt="DEC 可持续饮食助手" class="logo" />
+      <img src="/static/images/index/logo_wide.png" :alt="$t('appTitle')" class="logo" />
     </view>
     <view class="back-link">
       <span class="back-text"></span>
     </view>
     <view class="welcome">
-      <span>欢迎登录！</span>
+      <span>{{ $t('welcomeLogin') }}</span>
     </view>
     <view class="welcome-message">
-      <span>请输入手机号及密码</span>
+      <span>{{ $t('enterPhoneAndPassword') }}</span>
     </view>
     <view class="form">
-      <input v-model="phoneNumber" type="text" placeholder="请输入手机号" class="input" />
-      <input v-model="password" type="password" placeholder="请输入密码" class="input" />
-      <button class="login-button" @click="check">注册/登录</button>
-      <input v-if="showRepeatPassword" v-model="repeatPassword" type="password" placeholder="请重复输入密码" class="input" />
+      <input v-model="phoneNumber" type="text" :placeholder="$t('enterPhoneNumber')" class="input" />
+      <input v-model="password" type="password" :placeholder="$t('enterPassword')" class="input" />
+      <button class="login-button" @click="check">{{ $t('registerOrLogin') }}</button>
+      <input v-if="showRepeatPassword" v-model="repeatPassword" type="password" :placeholder="$t('repeatPassword')" class="input" />
     </view>
     <view class="links">
-      <span class="other-login">用验证码登录</span>
-      <span class="forgot-password">忘记密码?</span>
+      <span class="other-login">{{ $t('loginWithCode') }}</span>
+      <span class="forgot-password">{{ $t('forgotPassword') }}</span>
     </view>
     <view class="wechat-login">
       <button class="wechat-button" @click="test_login">
         <img src="/static/logo.png" alt="WeChat" class="wechat-icon" />
-        <span>用微信用户授权登录</span>
+        <span>{{ $t('loginWithWeChat') }}</span>
       </button>
     </view>
   </view>
@@ -35,6 +35,8 @@
 <script>
 export default {
   data() {
+	console.log('Current locale:', this.$i18n.locale);
+	console.log('Available messages:', this.$i18n.messages);
     return {
       phoneNumber: '',
 	  testUser: 'test_user',
@@ -44,6 +46,9 @@ export default {
     };
   },
   methods: {
+	switchLanguage(lang) {
+	    this.$i18n.locale = lang;
+	},
 	login() {
 		uni.switchTab({
 		  url: `/pages/my_index/my_index`,
