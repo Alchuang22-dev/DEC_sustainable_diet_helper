@@ -24,6 +24,22 @@
 				"path": "my_home/my_home"
 			},{
 				"path": "login/login"
+			},{
+				"path": "appSettings/appSettings"
+			},{
+				"path": "favorites/favorites"
+			},{
+				"path": "foodPreferences/foodPreferences"
+			},{
+				"path": "historyData/historyData"
+			},{
+				"path": "myFamily/myFamily"
+			},{
+				"path": "searchTools/searchTools"
+			},{
+				"path": "setGoals/setGoals"
+			},{
+				"path": "userSettings/userSettings"
 			}]
 		},
 		{
