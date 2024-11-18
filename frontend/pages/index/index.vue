@@ -6,26 +6,26 @@
 		<!-- 头部 -->
 		<view class="dec_header">
 			<image src="/static/images/index/logo_wide.png" alt="DEC logo" class="dec_logo" mode="aspectFit"></image>
-			<text class="title">欢迎来到我们的站点！</text>
+			<text class="title">{{$t('welcome_title')}}</text>
 		</view>
 
 		<!-- 碳排放信息 -->
 		<view class="carbon-info">
 			<view class="carbon-progress">
-				<text class="carbon-description">您已和我们一起保护地球</text>
-				<text class="carbon-number">{{ days }}天</text>
+				<text class="carbon-description">{{$t('carbon_description')}}</text>
+				<text class="carbon-number">{{ days }}{{$t('carbon_days')}}</text>
 			</view>
 			<view class="charts">
 
 				<view class="chart today">
-					<text class="chart-title">今日碳排放</text>
+					<text class="chart-title">{{$t('carbon_today')}}</text>
 					<view class="today-charts">
 						<qiun-data-charts :canvas2d="true" canvas-id="carbonTodayChart" type="ring" :opts="ringOpts"
 							:chartData="chartTodayData" />
 					</view>
 				</view>
 				<view class="chart history">
-					<text class="chart-title">碳排放历史曲线</text>
+					<text class="chart-title">{{$t('carbon_history')}}</text>
 					<qiun-data-charts :canvas2d="true" canvas-id="carbonHistoryChart" type="line"
 						:chartData="chartHistoryData" />
 				</view>
@@ -34,38 +34,38 @@
 
 		<!-- 实用工具 -->
 		<view class="useful-tools">
-			<text class="tools-title">实用工具</text>
+			<text class="tools-title">{{$t('tools_title')}}</text>
 			<view class="tools-grid">
 				<view class="tool" @click="navigateTo('calculator')" animation="fadeInUp">
 					<image src="https://cdn.pixabay.com/photo/2015/12/04/17/07/co2-1076817_1280.jpg"
 						alt="Carbon Calculator" class="tool-icon" mode="aspectFill"></image>
 					<view class="tool-description">
-						<text class="tool-name">碳计算器</text>
-						<text class="tool-info">计算您的碳足迹</text>
+						<text class="tool-name">{{$t('tool_carbon_calculator')}}</text>
+						<text class="tool-info">{{$t('tool_carbon_calculator_info')}}</text>
 					</view>
 				</view>
 				<view class="tool" @click="navigateTo('recommend')" animation="fadeInUp" animation-delay="0.2s">
 					<image src="https://cdn.pixabay.com/photo/2020/03/12/18/37/dish-4925892_1280.png"
 						alt="Diet Recommendation" class="tool-icon" mode="aspectFill"></image>
 					<view class="tool-description">
-						<text class="tool-name">饮食推荐</text>
-						<text class="tool-info">优化您的饮食计划</text>
+						<text class="tool-name">{{$t('tool_diet_recommendation')}}</text>
+						<text class="tool-info">{{$t('tool_diet_recommendation_info')}}</text>
 					</view>
 				</view>
 				<view class="tool" @click="navigateTo('nutrition')" animation="fadeInUp" animation-delay="0.4s">
 					<image src="https://cdn.pixabay.com/photo/2017/07/06/17/13/calculator-2478633_1280.png"
 						alt="Nutrition Calculator" class="tool-icon"></image>
 					<view class="tool-description">
-						<text class="tool-name">营养计算</text>
-						<text class="tool-info">了解您的营养需求</text>
+						<text class="tool-name">{{$t('tool_nutrition_calculator')}}</text>
+						<text class="tool-info">{{$t('tool_nutrition_calculator_info')}}</text>
 					</view>
 				</view>
 				<view class="tool" @click="navigateTo('family')" animation="fadeInUp" animation-delay="0.6s">
 					<image src="https://cdn.pixabay.com/photo/2016/01/04/14/24/terminal-board-1120961_1280.png"
 						alt="Family Recipe" class="tool-icon"></image>
 					<view class="tool-description">
-						<text class="tool-name">家庭菜谱</text>
-						<text class="tool-info">规划家人饮食</text>
+						<text class="tool-name">{{$t('tool_family_recipe')}}</text>
+						<text class="tool-info">{{$t('tool_family_recipe_info')}}</text>
 					</view>
 				</view>
 			</view>
