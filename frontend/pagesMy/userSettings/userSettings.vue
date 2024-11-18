@@ -56,8 +56,10 @@ function goBack() {
   uni.navigateBack();
 }
 
-function navigateTo(url) {
-  uni.navigateTo({ url });
+function navigateTo(link) {
+  uni.navigateTo({
+    url: `/pagesSetting/${link}/${link}`,
+  });
 }
 </script>
 
