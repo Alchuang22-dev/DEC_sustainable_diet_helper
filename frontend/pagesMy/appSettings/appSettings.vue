@@ -17,7 +17,7 @@
         <text>字体大小</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('language')">
         <text>多语言</text>
         <text class="arrow">></text>
       </view>
@@ -63,10 +63,11 @@ function goBack() {
   uni.navigateBack();
 }
 
-function navigateTo(url) {
-  uni.navigateTo({ url });
+function navigateTo(link) {
+  uni.navigateTo({
+    url: `/pagesSetting/${link}/${link}`,
+  });
 }
-
 const dividerText = ""; // Set this to the desired text to add text to dividers
 </script>
 

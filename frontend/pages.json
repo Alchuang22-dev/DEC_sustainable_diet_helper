@@ -53,6 +53,12 @@
 			}]
 		},
 		{
+			"root": "pagesSetting",
+			"pages": [{
+				"path": "language/language"
+			}]
+		},
+		{
 			"root": "pagesTool",
 			"pages": [{
 					"path": "carbon_calculator/carbon_calculator",
