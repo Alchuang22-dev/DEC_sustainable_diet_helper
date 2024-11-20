@@ -104,7 +104,6 @@
 
 	"back": "Back",
 
-	// 新增的翻译键
 	"dec_logo_alt": "DEC Logo",
 	"target_value": "Target Value",
 	"actual_value": "Actual Value",
@@ -113,6 +112,11 @@
 	"fat": "Fat",
 	"carbohydrates": "Carbohydrates",
 	"sodium": "Sodium",
+	"energy_unit": "Energy (kcal)",
+	"protein_unit": "Protein (g)",
+	"fat_unit": "Fat (g)",
+	"carbohydrates_unit": "Carbohydrates (g)",
+	"sodium_unit": "Sodium (mg)",
 	"intake": "Intake",
 	"recommended": "Recommended",
 	"breakfast": "Breakfast",
@@ -120,11 +124,30 @@
 	"dinner": "Dinner",
 	"others": "Others",
 	"total": "Total",
-	
+
+	"more_than_recommended": "More Than Recommended",
+	"minutes_fast_walk": "minutes fast walk",
+	"steamed_bun": "Steamed Bun",
+	"rice": "Rice",
+	"calories": "Calories",
+	"nutrition_calendar": "Nutrition Calendar",
+
+	"sunday": "Sunday",
+	"monday": "Monday",
+	"tuesday": "Tuesday",
+	"wednesday": "Wednesday",
+	"thursday": "Thursday",
+	"friday": "Friday",
+	"saturday": "Saturday",
+	"nutrition\noverview": "Nutrition\nOverview",
+	"set_nutrition_goals": "Set Nutrition Goals",
+	"meal_detail_records": "Meal Detail Records"
+	"total": "Total",
+
 	//搜索页
 	"text_search": "Search",
 	"text_search_label": "Search for your interest...",
-	
+
 	//饮食偏好
     "preferences_title": "Manage Dietary Preferences",
     "delete_button": "Del",
