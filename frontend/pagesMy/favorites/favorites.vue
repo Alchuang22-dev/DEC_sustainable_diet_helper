@@ -2,33 +2,14 @@
   <view @touchstart="refreshPage">
     <!-- Header Section -->
     <image src="/static/images/index/background_img.jpg" class="background-image"></image>
-    <view class="header">
-      <button
-        @click="showSection('全部')"
-        :class="{ active: selectedSection === '全部' }"
-      >
-        全部
-      </button>
-      <button
-        @click="showSection('环保科普')"
-        :class="{ active: selectedSection === '环保科普' }"
-      >
-        环保科普
-      </button>
-      <button
-        @click="showSection('环保要闻')"
-        :class="{ active: selectedSection === '环保要闻' }"
-      >
-        环保要闻
-      </button>
-	  <button
-	    @click="showSection('环保专栏')"
-	    :class="{ active: selectedSection === '环保专栏' }"
-	  >
-	    环保专栏
-	  </button>
-    </view>
-
+	<view class="header">
+	  <view @click="goBack" class="back-icon">返回</view>
+	  <text class="title">我的收藏</text>
+	  <view class="header-actions">
+	    <button class="menu-icon"></button>
+	    <button class="camera-icon"></button>
+	  </view>
+	</view>
     <!-- News Section -->
     <view class="news-section">
       <view
@@ -122,7 +103,7 @@
 		                            authorName: 'user_test',
 		                            authorAvatar: '',
 		                            newsinfo: '测试测试测试测试测试',
-		                            newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。',
+		                            newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中承担了重要角色。',
 		                            likeCount: 1001,
 		                            shareCount: 37,
 		                            favoriteCount: 897,
@@ -138,7 +119,7 @@
 		                            tabs: ['环境保护', '环保要闻'],
 		                            time: '2024-4-17',
 		                            newsName: '测试新闻',
-		                            authorName: '中野梓',
+		                            authorName: '中野柏',
 		                            authorAvatar: '',
 		                            newsinfo: '测试测试测试测试测试',
 		                            newsbody: '',
@@ -168,7 +149,7 @@
 		                            authorName: 'user_test',
 		                            authorAvatar: '',
 		                            newsinfo: '测试测试测试测试测试',
-		                            newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。',
+		                            newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中承担了重要角色。',
 		                            likeCount: 1001,
 		                            shareCount: 37,
 		                            favoriteCount: 897,
@@ -193,7 +174,7 @@
 		                            favoriteCount: 897,
 		                            followCount: 189,
 		                            dislikeCount: 100,
-		                            type: 'reco'
+		                            type: 'main'
 		                        },
 		                    ]
 		                };
@@ -244,13 +225,8 @@
 		  }
 		},
 	    // 控制新闻分类的显示
-	    showSection(section) {
-	      this.selectedSection = section; // 更新选中的分类
-	      if (section === "全部") {
-	        this.newsItems = this.allNewsItems;
-	      } else {
-	        this.newsItems = this.allNewsItems.filter(item => item.description.includes(section));
-	      }
+	    showSection() {
+	      this.newsItems = this.allNewsItems;
 	    },
 
 	    // 页面跳转方法
@@ -285,14 +261,14 @@
 	    refreshPage() {
 	      this.isRefreshing = true;
 	      setTimeout(() => {
-	        this.newsItems = this.newsItems.sort(() => Math.random() - 0.5);
+	        this.newsItems = this.newsItems.sort((a, b) => new Date(b.description.split('|').pop().trim()) - new Date(a.description.split('|').pop().trim()));
 	        this.isRefreshing = false;
 	      }, 1000); // 模拟1秒的加载时间
 	    },
 	  },
 	  mounted() {
 	    // 默认加载“全部”新闻
-	    this.showSection("全部");
+	    this.showSection();
 	  },
 	};
 </script>
@@ -319,27 +295,22 @@ body {
   opacity: 0.1;
 }
 
-/* Header Section */
 .header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding: 10px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
-  justify-content: space-around;
+  padding: 0 16px;
+  height: 60px;
+  background-color: #fff;
+  border-bottom: 1px solid #ebebeb;
 }
-
-.header button {
+.title {
+  font-size: 18px;
+  font-weight: bold;
+}
+.header-actions button {
+  background: none;
   border: none;
-  background-color: transparent;
-  font-size: 16px;
-  cursor: pointer;
-  transition: color 0.3s;
-}
-
-.header button.active {
-  color: #4caf50; /* 选中状态颜色 */
-  font-weight: bold; /* 选中状态加粗 */
 }
 
 /* News Section */
