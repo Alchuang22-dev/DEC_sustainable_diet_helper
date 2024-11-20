@@ -37,11 +37,11 @@
 			<text class="tools-title">实用工具</text>
 			<view class="tools-grid">
 				<view class="tool" @click="navigateTo('calculator')" animation="fadeInUp">
-					<image src="https://cdn.pixabay.com/photo/2015/12/04/17/07/co2-1076817_1280.jpg"
+					<image src="https://cdn.pixabay.com/photo/2017/07/06/17/13/calculator-2478633_1280.png"
 						alt="Carbon Calculator" class="tool-icon" mode="aspectFill"></image>
 					<view class="tool-description">
-						<text class="tool-name">碳计算器</text>
-						<text class="tool-info">计算您的碳足迹</text>
+						<text class="tool-name">计算器</text>
+						<text class="tool-info">计算您的碳足迹和营养摄入</text>
 					</view>
 				</view>
 				<view class="tool" @click="navigateTo('recommend')" animation="fadeInUp" animation-delay="0.2s">
@@ -53,11 +53,11 @@
 					</view>
 				</view>
 				<view class="tool" @click="navigateTo('nutrition')" animation="fadeInUp" animation-delay="0.4s">
-					<image src="https://cdn.pixabay.com/photo/2017/07/06/17/13/calculator-2478633_1280.png"
+					<image src="https://cdn.pixabay.com/photo/2016/11/14/15/42/calendar-1823848_1280.png"
 						alt="Nutrition Calculator" class="tool-icon"></image>
 					<view class="tool-description">
-						<text class="tool-name">营养计算</text>
-						<text class="tool-info">了解您的营养需求</text>
+						<text class="tool-name">营养日历</text>
+						<text class="tool-info">查看您的营养计划</text>
 					</view>
 				</view>
 				<view class="tool" @click="navigateTo('family')" animation="fadeInUp" animation-delay="0.6s">
@@ -163,21 +163,23 @@
 		if (page === 'recommend') {
 			uni.navigateTo({
 				url: "/pagesTool/food_recommend/food_recommend",
-			})}
-		if(page === 'nutrition') {
+			})
+		}
+		if (page === 'nutrition') {
 			uni.navigateTo({
 				url: "/pagesTool/nutrition_calculator/nutrition_calculator",
-			})}
-		if(page === 'family') {
+			})
+		}
+		if (page === 'family') {
 			uni.navigateTo({
 				url: "/pagesTool/home_servant/home_servant",
-			})}
-		else{
+			})
+		} else {
 			uni.navigateTo({
 				url: "/pagesTool/carbon_calculator/carbon_calculator",
 			})
 		}
-		
+
 	}
 
 	// 引入动画库（假设使用 Animate.css）
