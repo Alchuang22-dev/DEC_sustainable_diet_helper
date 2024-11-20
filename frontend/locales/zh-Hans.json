@@ -104,7 +104,6 @@
 
 	"back": "返回",
 
-	// 新增的翻译键
 	"dec_logo_alt": "DEC 标志",
 	"target_value": "目标值",
 	"actual_value": "实际值",
@@ -113,6 +112,11 @@
 	"fat": "脂肪",
 	"carbohydrates": "碳水化合物",
 	"sodium": "钠",
+	"energy_unit": "能量 (kcal)",
+	"protein_unit": "蛋白质 (g)",
+	"fat_unit": "脂肪 (g)",
+	"carbohydrates_unit": "碳水化合物 (g)",
+	"sodium_unit": "钠 (mg)",
 	"intake": "摄入量",
 	"recommended": "推荐量",
 	"breakfast": "早餐",
@@ -121,5 +125,21 @@
 	"others": "其他",
 	"total": "总量",
 
-	"nutrition_calendar": "营养日历"
+	"nutrition_calendar": "营养日历",
+	"more_than_recommended": "超过推荐量",
+	"minutes_fast_walk": "分钟快走",
+	"steamed_bun": "包子",
+	"rice": "米饭",
+	"calories": "卡路里",
+	"sunday": "星期日",
+	"monday": "星期一",
+	"tuesday": "星期二",
+	"wednesday": "星期三",
+	"thursday": "星期四",
+	"friday": "星期五",
+	"saturday": "星期六",
+	"nutrition\noverview": "营养\n概览",
+	"set_nutrition_goals": "设置营养目标",
+	"meal_detail_records": "营养详细记录"
+
 }
