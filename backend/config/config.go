@@ -4,6 +4,7 @@ package config
 import (
     "log"
     "os"
+    "time"
 
     "github.com/joho/godotenv"
 )
@@ -30,4 +31,13 @@ func GetConfig() Config {
         DBHost:     os.Getenv("DB_HOST"),
         DBPort:     os.Getenv("DB_PORT"),
     }
+}
+
+var JWTSecretKey = []byte("your_secret_key") // JWT 签名密钥
+
+// JWT 配置
+var JWTConfig = struct {
+    Expiration time.Duration
+}{
+    Expiration: 24 * time.Hour, // 默认过期时间
 }
