@@ -8,11 +8,11 @@
 		<!-- 推荐区域 -->
 		<view class="recommendation-section">
 			<image src="/static/images/index/recommand.png" alt="蒸白菜" class="recommend-image"></image>
-			<text class="section-title">今日您的地区适宜</text>
+			<!-- <text class="section-title">今日您的地区适宜</text> -->
 			<view class="dishes">
 				<view class="dish" v-for="(dish, index) in dishes" :key="index">
-					<!-- 如果有图片，可以添加 <image> 标签 -->
-					<img src="https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg" alt="" />
+					<image src="https://cdn.pixabay.com/photo/2016/03/17/23/30/salad-1264107_1280.jpg" alt=""
+						class="dish-image"></image>
 					<view class="dish-title">{{ dish }}</view>
 				</view>
 			</view>
@@ -20,10 +20,10 @@
 		</view>
 
 		<!-- 无数据提示 -->
-		<view class="no-data" v-if="showNoData">
+		<!-- 		<view class="no-data" v-if="showNoData">
 			<image src="/static/images/no_data.png" alt="No Data" class="no-data-image"></image>
 			<text class="no-data-text">暂无推荐菜谱</text>
-		</view>
+		</view> -->
 
 		<!-- 推荐菜谱 -->
 		<view class="recipe-boxes" v-if="showRecipeBoxes">
@@ -46,7 +46,7 @@
 	// 响应式数据
 	const showNoData = ref(true);
 	const showRecipeBoxes = ref(false);
-	const dishes = ref(['蒸白菜', '大地锅', '大盘鸡', '通心粉']);
+	const dishes = ref(['蒸白菜', '大地瓜', '大盘鸡', '通心粉']);
 
 	// 方法
 	const navigateBack = () => {
@@ -95,32 +95,22 @@
 		box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.1);
 	}
 
-	.back-button {
-		font-size: 36rpx;
-		margin-right: 20rpx;
-		color: var(--primary-color);
-		cursor: pointer;
-	}
-
 	.title {
 		font-size: 36rpx;
 		font-weight: bold;
 		color: var(--text-color);
 		flex-grow: 1;
-	}
-
-	.home-button {
-		font-size: 36rpx;
-		color: var(--primary-color);
-		cursor: pointer;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	/* 推荐区域 */
 	.recommendation-section {
 		text-align: center;
 		padding: 30rpx;
-		/* 		background-image: url('/static/images/background-image.jpg');
-		background-size: cover; */
+		/* background-image: url('/static/images/background-image.jpg');
+    background-size: cover; */
 		color: #ffffff;
 	}
 
@@ -128,27 +118,47 @@
 		width: 200rpx;
 		height: 200rpx;
 		margin-bottom: 20rpx;
+		object-fit: cover;
 	}
 
 	.section-title {
-		font-size: 48rpx;
+		font-size: 36rpx;
 		margin-bottom: 20rpx;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
+	/* 菜品宫格布局 */
 	.dishes {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		/* 每行两个菜品 */
+		gap: 20rpx;
+		/* 网格间距 */
+		justify-items: center;
+		/* 网格项水平居中 */
 	}
 
 	.dish {
-		width: 200rpx;
-		margin: 10rpx;
+		width: 100%;
+		/* 使菜品项填满网格单元 */
+		max-width: 300rpx;
+		/* 设置最大宽度，防止过大 */
 		background-color: #ffffff;
 		color: #333;
 		border-radius: 10rpx;
 		overflow: hidden;
 		box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.1);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.dish-image {
+		width: 100%;
+		height: 150rpx;
+		object-fit: cover;
 	}
 
 	.dish-title {
@@ -157,6 +167,10 @@
 		background-color: #ffe082;
 		text-align: center;
 		font-weight: bold;
+		width: 100%;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	/* 生成菜谱按钮 */
@@ -180,6 +194,7 @@
 	.no-data-image {
 		width: 200rpx;
 		height: 200rpx;
+		object-fit: cover;
 	}
 
 	.no-data-text {
@@ -208,6 +223,7 @@
 		height: 160rpx;
 		margin-right: 30rpx;
 		border-radius: 10rpx;
+		object-fit: cover;
 	}
 
 	.box-description {
@@ -219,10 +235,48 @@
 		font-weight: bold;
 		color: var(--primary-color);
 		margin-bottom: 10rpx;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.box-text {
 		font-size: 28rpx;
 		color: var(--text-color);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	/* 响应式设计 */
+	@media (max-width: 600px) {
+		.title {
+			font-size: 28rpx;
+		}
+
+		.section-title,
+		.box-title {
+			font-size: 32rpx;
+		}
+
+		.dish-title {
+			font-size: 24rpx;
+		}
+
+		.generate-button {
+			font-size: 28rpx;
+			padding: 15rpx 30rpx;
+		}
+
+		.box-image {
+			width: 140rpx;
+			height: 140rpx;
+			margin-right: 20rpx;
+		}
+
+		/* 调整网格间距 */
+		.dishes {
+			gap: 15rpx;
+		}
 	}
 </style>
