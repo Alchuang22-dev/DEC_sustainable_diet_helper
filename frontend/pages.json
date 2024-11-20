@@ -41,7 +41,10 @@
 			}, {
 				"path": "myFamily/myFamily"
 			}, {
-				"path": "searchTools/searchTools"
+				"path": "searchTools/searchTools",
+				"style": {
+					"navigationBarTitleText": "搜索工具"
+				}
 			}, {
 				"path": "setGoals/setGoals"
 			}, {
@@ -124,7 +127,8 @@
 				"text": "工具",
 				"iconPath": "static/c2.png",
 				"selectedIconPath": "static/c2.png"
-			} {
+			},
+			{
 				"pagePath": "pages/news_index/news_index",
 				"text": "资讯",
 				"iconPath": "static/c3.png",
