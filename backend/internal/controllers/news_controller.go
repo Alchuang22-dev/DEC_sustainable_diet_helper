@@ -29,10 +29,18 @@ func (nc *NewsController) CreateNews(c *gin.Context) {
     news.LikedByUsers = []models.User{}
     news.FavoritedByUsers = []models.User{}
     news.DislikedByUsers = []models.User{}
+    news.Tags = []models.Tag{}
 
     // 检查 NewsType 是否为空
     if news.NewsType == "" {
         c.JSON(http.StatusBadRequest, gin.H{"error": "NewsType is required"})
+        return
+    }
+
+    // 检查 AuthorID 是否有效
+    var author models.User
+    if err := nc.DB.First(&author, news.AuthorID).Error; err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid author ID"})
         return
     }
 
@@ -48,9 +56,6 @@ func (nc *NewsController) CreateNews(c *gin.Context) {
             c.JSON(http.StatusBadRequest, gin.H{"error": "Paragraphs and Resources are not allowed for video news"})
             return
         }
-
-        // 插入 Video 表记录，确保 video 对应的 NewsID
-        news.Video.NewsID = news.ID
 
     case models.NewsTypeRegular:
         // 如果是常规新闻，需要 Paragraphs 或 Resources 字段，不应包含 Video
@@ -71,9 +76,51 @@ func (nc *NewsController) CreateNews(c *gin.Context) {
             news.Resources[i].NewsID = news.ID
         }
 
+    case models.NewsTypeExternal:
+        // 如果是外部新闻，需要 ExternalLink 字段
+        if news.ExternalLink == "" {
+            c.JSON(http.StatusBadRequest, gin.H{"error": "External link is required for external news"})
+            return
+        }
+        if len(news.Paragraphs) > 0 || len(news.Resources) > 0 || news.Video.VideoURL != "" {
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Paragraphs, Resources, and Video are not allowed for external news"})
+            return
+        }
+
     default:
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid NewsType"})
         return
+    }
+
+    // 处理 Tags
+    if len(news.Tags) > 0 {
+        var existingTags []models.Tag
+        var tagNames []string
+        for _, tag := range news.Tags {
+            tagNames = append(tagNames, tag.Name)
+        }
+
+        // 查找现有标签
+        nc.DB.Where("name IN ?", tagNames).Find(&existingTags)
+
+        // 创建不存在的标签
+        existingTagNames := map[string]bool{}
+        for _, tag := range existingTags {
+            existingTagNames[tag.Name] = true
+        }
+        for _, tagName := range tagNames {
+            if !existingTagNames[tagName] {
+                newTag := models.Tag{Name: tagName}
+                if err := nc.DB.Create(&newTag).Error; err != nil {
+                    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new tags"})
+                    return
+                }
+                existingTags = append(existingTags, newTag)
+            }
+        }
+
+        // 关联新闻和标签
+        news.Tags = existingTags
     }
 
     // 插入数据库
