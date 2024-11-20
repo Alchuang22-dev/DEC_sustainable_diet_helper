@@ -2,6 +2,7 @@
 package controllers
 
 import (
+    "time"
     "net/http"
     "strconv"
     "log"
@@ -20,77 +21,115 @@ func NewUserController(db *gorm.DB) *UserController {
     return &UserController{DB: db}
 }
 
-// 注册
+// 发送验证码
+func (uc *UserController) SendVerificationCode(c *gin.Context) {
+	var request struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email"})
+		return
+	}
+
+	// 检查是否已存在未过期的验证码
+	var existingVerification models.EmailVerification
+	if err := uc.DB.Where("email = ?", request.Email).First(&existingVerification).Error; err == nil {
+		if time.Now().Before(existingVerification.ExpiresAt) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Verification code already sent. Please wait."})
+			return
+		}
+	}
+
+	// 生成新的验证码
+	code := utils.GenerateVerificationCode()
+	verification := models.EmailVerification{
+		Email:     request.Email,
+		Code:      code,
+		ExpiresAt: time.Now().Add(5 * time.Minute), // 验证码5分钟有效
+	}
+
+	// 保存到数据库
+	if err := uc.DB.Save(&verification).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save verification code"})
+		return
+	}
+
+	// 发送验证码邮件
+	if err := utils.SendEmail(request.Email, code); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Verification code sent successfully"})
+}
+
+// 验证验证码并注册
 func (uc *UserController) Register(c *gin.Context) {
-    log.Println("Register 被调用")
+	var request struct {
+		Nickname string `json:"nickname"`
+		Email    string `json:"email" binding:"required,email"`
+		Password string `json:"password" binding:"required,min=6"`
+		Code     string `json:"code" binding:"required,len=6"` // 验证码
+	}
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
 
-    // 定义请求体结构
-    var registerRequest struct {
-        Nickname    string `json:"nickname"`                              // 昵称可选
-        PhoneNumber string `json:"phone_number" binding:"required"`       // 手机号必填
-        Password    string `json:"password" binding:"required,min=6"`     // 密码必填，长度至少 6 位
-    }
+	// 验证验证码
+	var verification models.EmailVerification
+	if err := uc.DB.Where("email = ? AND code = ?", request.Email, request.Code).First(&verification).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired verification code"})
+		return
+	}
+	if time.Now().After(verification.ExpiresAt) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Verification code expired"})
+		return
+	}
 
-    // 绑定请求体
-    if err := c.ShouldBindJSON(&registerRequest); err != nil {
-        log.Println("绑定JSON失败:", err)
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-        return
-    }
+	// 删除已使用的验证码
+	uc.DB.Delete(&verification)
 
-    // 验证手机号格式（简单示例）
-    if !utils.IsValidPhoneNumber(registerRequest.PhoneNumber) {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phone number"})
-        return
-    }
+	// 检查邮箱是否已注册
+	var existingUser models.User
+	if err := uc.DB.Where("email = ?", request.Email).First(&existingUser).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
+		return
+	}
 
-    // 检查手机号是否已注册
-    var existingUser models.User
-    if err := uc.DB.Where("phone_number = ?", registerRequest.PhoneNumber).First(&existingUser).Error; err == nil {
-        c.JSON(http.StatusConflict, gin.H{"error": "Phone number already registered"})
-        return
-    }
+	// 加密密码
+	hashedPassword, err := utils.HashPassword(request.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
+		return
+	}
 
-    // 加密密码
-    hashedPassword, err := utils.HashPassword(registerRequest.Password)
-    if err != nil {
-        log.Println("密码加密失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
-        return
-    }
+	// 如果未提供昵称，生成随机昵称
+	nickname := request.Nickname
+	if nickname == "" {
+		nickname = utils.GenerateRandomNickname()
+	}
 
-    // 如果未提供昵称，生成随机昵称
-    nickname := registerRequest.Nickname
-    if nickname == "" {
-        nickname = utils.GenerateRandomNickname()
-    }
+	// 创建新用户
+	user := models.User{
+		Nickname: nickname,
+		Email:    request.Email,
+		Password: hashedPassword,
+	}
 
-    // 创建新用户
-    user := models.User{
-        Nickname:    nickname,
-        PhoneNumber: registerRequest.PhoneNumber,
-        Password:    hashedPassword, // 存储加密后的密码
-        LikedNews:     []models.News{},
-        FavoritedNews: []models.News{},
-        DislikedNews:  []models.News{},
-        ViewedNews:    []models.News{},
-    }
+	if err := uc.DB.Create(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		return
+	}
 
-    if err := uc.DB.Create(&user).Error; err != nil {
-        log.Println("创建用户失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-        return
-    }
-
-    log.Println("用户创建成功:", user)
-    c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})
+	c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})
 }
 
 // 登录
 func (uc *UserController) Login(c *gin.Context) {
     var loginRequest struct {
-        PhoneNumber string `json:"phone_number" binding:"required"` // 必须提供手机号
-        Password    string `json:"password" binding:"required"`    // 必须提供密码
+        Email    string `json:"email" binding:"required,email"` // 必须提供邮箱
+        Password string `json:"password" binding:"required"`   // 必须提供密码
     }
 
     // 绑定请求体
@@ -99,15 +138,9 @@ func (uc *UserController) Login(c *gin.Context) {
         return
     }
 
-    // 验证手机号格式（可选）
-    if !utils.IsValidPhoneNumber(loginRequest.PhoneNumber) {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phone number format"})
-        return
-    }
-
     // 验证用户是否存在
     var user models.User
-    if err := uc.DB.Where("phone_number = ?", loginRequest.PhoneNumber).First(&user).Error; err != nil {
+    if err := uc.DB.Where("email = ?", loginRequest.Email).First(&user).Error; err != nil {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"}) // 用户不存在
         return
     }
@@ -162,9 +195,9 @@ func (uc *UserController) SetNickname(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{"message": "Nickname updated successfully", "nickname": user.Nickname})
 }
 
-// 设置手机号
-func (uc *UserController) SetPhoneNumber(c *gin.Context) {
-    log.Println("SetPhoneNumber 被调用")
+// 更新邮箱
+func (uc *UserController) SetEmail(c *gin.Context) {
+    log.Println("SetEmail 被调用")
     id, err := strconv.Atoi(c.Param("id"))
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -172,16 +205,10 @@ func (uc *UserController) SetPhoneNumber(c *gin.Context) {
     }
 
     var request struct {
-        PhoneNumber string `json:"phone_number" binding:"required"`
+        Email string `json:"email" binding:"required,email"`
     }
     if err := c.ShouldBindJSON(&request); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-        return
-    }
-
-    // 验证手机号格式
-    if !utils.IsValidPhoneNumber(request.PhoneNumber) {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phone number format"})
         return
     }
 
@@ -191,21 +218,21 @@ func (uc *UserController) SetPhoneNumber(c *gin.Context) {
         return
     }
 
-    // 检查手机号唯一性
+    // 检查邮箱唯一性
     var existingUser models.User
-    if err := uc.DB.Where("phone_number = ?", request.PhoneNumber).First(&existingUser).Error; err == nil && existingUser.ID != uint(id) {
-        c.JSON(http.StatusConflict, gin.H{"error": "Phone number already in use"})
+    if err := uc.DB.Where("email = ?", request.Email).First(&existingUser).Error; err == nil && existingUser.ID != uint(id) {
+        c.JSON(http.StatusConflict, gin.H{"error": "Email already in use"})
         return
     }
 
-    user.PhoneNumber = request.PhoneNumber
+    user.Email = request.Email
 
     if err := uc.DB.Save(&user).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update phone number"})
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update email"})
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{"message": "Phone number updated successfully", "phone_number": user.PhoneNumber})
+    c.JSON(http.StatusOK, gin.H{"message": "Email updated successfully", "email": user.Email})
 }
 
 // 设置密码
@@ -248,122 +275,3 @@ func (uc *UserController) SetPassword(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
 }
 
-
-
-// 获取所有用户
-func (uc *UserController) GetAllUsers(c *gin.Context) {
-    log.Println("GetAllUsers 被调用")
-    var users []models.User
-    if err := uc.DB.Preload("LikedNews").
-        Preload("FavoritedNews").
-        Preload("DislikedNews").
-        Preload("ViewedNews").
-        Find(&users).Error; err != nil {
-        log.Println("获取所有用户失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
-
-    // 初始化空列表，避免返回 null
-    for i := range users {
-        if users[i].LikedNews == nil {
-            users[i].LikedNews = []models.News{}
-        }
-        if users[i].FavoritedNews == nil {
-            users[i].FavoritedNews = []models.News{}
-        }
-        if users[i].DislikedNews == nil {
-            users[i].DislikedNews = []models.News{}
-        }
-        if users[i].ViewedNews == nil {
-            users[i].ViewedNews = []models.News{}
-        }
-    }
-
-    c.JSON(http.StatusOK, users)
-}
-
-// 根据ID获取用户
-func (uc *UserController) GetUserByID(c *gin.Context) {
-    log.Println("GetUserByID 被调用")
-    id, err := strconv.Atoi(c.Param("id"))
-    if err != nil {
-        log.Println("无效的用户ID:", c.Param("id"))
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-        return
-    }
-
-    var user models.User
-    if err := uc.DB.Preload("LikedNews").
-        Preload("FavoritedNews").
-        Preload("DislikedNews").
-        Preload("ViewedNews").
-        First(&user, id).Error; err != nil {
-        log.Println("用户未找到:", id)
-        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-        return
-    }
-
-    // 确保空列表初始化
-    if user.LikedNews == nil {
-        user.LikedNews = []models.News{}
-    }
-    if user.FavoritedNews == nil {
-        user.FavoritedNews = []models.News{}
-    }
-    if user.ViewedNews == nil {
-        user.ViewedNews = []models.News{}
-    }
-
-    c.JSON(http.StatusOK, user)
-}
-
-// 删除用户
-func (uc *UserController) DeleteUser(c *gin.Context) {
-    log.Println("DeleteUser 被调用")
-    id, err := strconv.Atoi(c.Param("id"))
-    if err != nil {
-        log.Println("无效的用户ID:", c.Param("id"))
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-        return
-    }
-
-    var user models.User
-    if err := uc.DB.First(&user, id).Error; err != nil {
-        log.Println("用户未找到:", id)
-        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-        return
-    }
-
-    // 删除用户的关联记录
-    if err := uc.DB.Model(&user).Association("LikedNews").Clear(); err != nil {
-        log.Println("清除点赞记录失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear liked news"})
-        return
-    }
-    if err := uc.DB.Model(&user).Association("FavoritedNews").Clear(); err != nil {
-        log.Println("清除收藏记录失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear favorited news"})
-        return
-    }
-    if err := uc.DB.Model(&user).Association("DislikedNews").Clear(); err != nil {
-        log.Println("清除点踩记录失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear disliked news"})
-        return
-    }
-    if err := uc.DB.Model(&user).Association("ViewedNews").Clear(); err != nil {
-        log.Println("清除浏览记录失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear viewed news"})
-        return
-    }
-
-    // 删除用户记录
-    if err := uc.DB.Delete(&user).Error; err != nil {
-        log.Println("删除用户失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
-
-    log.Println("用户删除成功:", id)
-    c.JSON(http.StatusOK, gin.H{"message": "User deleted"})
-}
