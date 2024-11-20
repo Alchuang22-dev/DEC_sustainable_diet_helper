@@ -5,7 +5,8 @@
 
 		<!-- 头部 -->
 		<view class="dec_header">
-			<image src="/static/images/index/logo_wide.png" alt="DEC logo" class="dec_logo" mode="aspectFit"></image>
+			<image src="/static/images/index/logo_wide.png" :alt="$t('dec_logo_alt')" class="dec_logo" mode="aspectFit">
+			</image>
 			<text class="title">{{$t('welcome_title')}}</text>
 		</view>
 
@@ -29,6 +30,16 @@
 					<qiun-data-charts :canvas2d="true" canvas-id="carbonHistoryChart" type="line"
 						:chartData="chartHistoryData" />
 				</view>
+
+				<!-- 新增今日营养情况图表 -->
+				<view class="chart nutrition">
+					<text class="chart-title">{{$t('nutrition_today')}}</text>
+					<view class="nutrition-charts">
+						<qiun-data-charts :canvas2d="true" canvas-id="nutritionChart" type="bar" :opts="nutritionOpts"
+							:chartData="chartNutritionData" />
+					</view>
+				</view>
+
 			</view>
 		</view>
 
@@ -37,8 +48,8 @@
 			<text class="tools-title">{{$t('tools_title')}}</text>
 			<view class="tools-grid">
 				<view class="tool" @click="navigateTo('calculator')" animation="fadeInUp">
-					<image src="https://cdn.pixabay.com/photo/2015/12/04/17/07/co2-1076817_1280.jpg"
-						alt="Carbon Calculator" class="tool-icon" mode="aspectFill"></image>
+					<image src="https://cdn.pixabay.com/photo/2017/07/06/17/13/calculator-2478633_1280.png"
+						:alt="$t('tool_carbon_calculator')" class="tool-icon" mode="aspectFill"></image>
 					<view class="tool-description">
 						<text class="tool-name">{{$t('tool_carbon_calculator')}}</text>
 						<text class="tool-info">{{$t('tool_carbon_calculator_info')}}</text>
@@ -46,15 +57,15 @@
 				</view>
 				<view class="tool" @click="navigateTo('recommend')" animation="fadeInUp" animation-delay="0.2s">
 					<image src="https://cdn.pixabay.com/photo/2020/03/12/18/37/dish-4925892_1280.png"
-						alt="Diet Recommendation" class="tool-icon" mode="aspectFill"></image>
+						:alt="$t('tool_diet_recommendation')" class="tool-icon" mode="aspectFill"></image>
 					<view class="tool-description">
 						<text class="tool-name">{{$t('tool_diet_recommendation')}}</text>
 						<text class="tool-info">{{$t('tool_diet_recommendation_info')}}</text>
 					</view>
 				</view>
 				<view class="tool" @click="navigateTo('nutrition')" animation="fadeInUp" animation-delay="0.4s">
-					<image src="https://cdn.pixabay.com/photo/2017/07/06/17/13/calculator-2478633_1280.png"
-						alt="Nutrition Calculator" class="tool-icon"></image>
+					<image src="https://cdn.pixabay.com/photo/2016/11/14/15/42/calendar-1823848_1280.png"
+						:alt="$t('tool_nutrition_calculator')" class="tool-icon"></image>
 					<view class="tool-description">
 						<text class="tool-name">{{$t('tool_nutrition_calculator')}}</text>
 						<text class="tool-info">{{$t('tool_nutrition_calculator_info')}}</text>
@@ -62,7 +73,7 @@
 				</view>
 				<view class="tool" @click="navigateTo('family')" animation="fadeInUp" animation-delay="0.6s">
 					<image src="https://cdn.pixabay.com/photo/2016/01/04/14/24/terminal-board-1120961_1280.png"
-						alt="Family Recipe" class="tool-icon"></image>
+						:alt="$t('tool_family_recipe')" class="tool-icon"></image>
 					<view class="tool-description">
 						<text class="tool-name">{{$t('tool_family_recipe')}}</text>
 						<text class="tool-info">{{$t('tool_family_recipe_info')}}</text>
@@ -79,6 +90,14 @@
 		ref,
 		onMounted
 	} from 'vue'
+	import {
+		useI18n
+	} from 'vue-i18n'
+
+	// 初始化 i18n
+	const {
+		t
+	} = useI18n()
 
 	// 控制查看更多内容的显示
 	const showMore = ref(false)
@@ -88,39 +107,91 @@
 		showMore.value = !showMore.value
 	}
 
-	// 示例的历史数据
-	const chartHistoryData = {
-		categories: ["七天前", "六天前", "五天前", "四天前", "三天前", "两天前", "昨天"],
+	// 历史碳排放数据，初始为空
+	const chartHistoryData = ref({
+		categories: [],
 		series: [{
-				name: "目标值",
+				name: t('target_value'),
 				data: [40, 36, 37, 38, 20, 88, 55]
 			},
 			{
-				name: "实际值",
+				name: t('actual_value'),
 				data: [39, 27, 22, 45, 68, 22, 19]
 			}
 		]
+	});
+
+	// 在组件挂载时生成从七天前到今天的日期
+	onMounted(() => {
+		const categories = [];
+		for (let i = 7; i >= 0; i--) {
+			const date = new Date();
+			date.setDate(date.getDate() - i);
+			const month = date.getMonth() + 1; // 月份从0开始
+			const day = date.getDate();
+			categories.push(`${month}/${day}`);
+		}
+		chartHistoryData.value.categories = categories;
+	});
+
+	// 今日营养数据的条形图
+	const chartNutritionData = ref({
+		categories: [t('energy'), t('protein'), t('fat'), t('carbohydrates'), t('sodium')],
+		series: [{
+				name: t('intake'),
+				data: [2000, 75, 70, 300, 2400]
+			},
+			{
+				name: t('recommended'),
+				data: [2500, 90, 80, 350, 2300]
+			}
+		]
+	});
+
+	// 营养条形图的配置选项
+	const nutritionOpts = {
+		color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE"],
+		padding: [15, 30, 0, 5],
+		enableScroll: false,
+		legend: {},
+		xAxis: {
+			disableGrid: false,
+			axisLine: true,
+		},
+		yAxis: {},
+		extra: {
+			bar: {
+				type: "group",
+				width: 30,
+				meterBorde: 1,
+				meterFillColor: "#FFFFFF",
+				activeBgColor: "#000000",
+				activeBgOpacity: 0.08,
+				categoryGap: 2
+			}
+		}
 	};
 
-	// 环形图配置
+	// 环形图数据
 	const chartTodayData = {
 		series: [{
 			data: [{
-				"name": "早餐",
+				"name": t('breakfast'),
 				"value": 50
 			}, {
-				"name": "午餐",
+				"name": t('lunch'),
 				"value": 30
 			}, {
-				"name": "晚餐",
+				"name": t('dinner'),
 				"value": 20
 			}, {
-				"name": "其他",
+				"name": t('others'),
 				"value": 18
 			}]
 		}]
-	}
+	};
 
+	// 环形图的配置选项
 	const ringOpts = {
 		rotate: false,
 		rotateLock: false,
@@ -134,7 +205,7 @@
 			lineHeight: 25
 		},
 		title: {
-			name: "总量",
+			name: t('total'),
 			fontSize: 15,
 			color: "#666666"
 		},
@@ -155,36 +226,33 @@
 				borderColor: "#FFFFFF"
 			}
 		}
-	}
+	};
 
 	// 页面跳转方法
 	const navigateTo = (page) => {
-
 		if (page === 'recommend') {
 			uni.navigateTo({
 				url: "/pagesTool/food_recommend/food_recommend",
-			})}
-		if(page === 'nutrition') {
+			});
+		} else if (page === 'nutrition') {
 			uni.navigateTo({
 				url: "/pagesTool/nutrition_calculator/nutrition_calculator",
-			})}
-		if(page === 'family') {
+			});
+		} else if (page === 'family') {
 			uni.navigateTo({
 				url: "/pagesTool/home_servant/home_servant",
-			})}
-		else{
+			});
+		} else {
 			uni.navigateTo({
 				url: "/pagesTool/carbon_calculator/carbon_calculator",
-			})
+			});
 		}
-		
-	}
+	};
 
-	// 引入动画库（假设使用 Animate.css）
-	// 如果使用其他动画库，请根据实际情况调整
+	// 动画初始化（如果需要）
 	onMounted(() => {
-		// 可在这里初始化动画
-	})
+		// 在这里初始化动画（如果需要）
+	});
 </script>
 
 <style scoped>
@@ -306,9 +374,11 @@
 		font-weight: bold;
 	}
 
-	.today-charts {
+	.today-charts,
+	.nutrition-charts {
 		align-items: center;
 		width: 100%;
+		height: 300px;
 	}
 
 	/* 实用工具 */
@@ -382,33 +452,6 @@
 	.tool-info {
 		font-size: 20rpx;
 		color: #666;
-	}
-
-	/* 底部导航（保留原样，如果需要可自行调整） */
-	.footer {
-		background-color: var(--card-background);
-		padding: 20rpx 0;
-		box-shadow: 0 -2rpx 5rpx var(--shadow-color);
-		position: fixed;
-		bottom: 0;
-		width: 100%;
-	}
-
-	.footer-nav {
-		display: flex;
-		justify-content: space-around;
-	}
-
-	.nav-item {
-		text-decoration: none;
-		color: #333;
-		font-weight: bold;
-		transition: color 0.3s;
-		font-size: 28rpx;
-	}
-
-	.nav-item:hover {
-		color: var(--primary-color);
 	}
 
 	/* 动画效果 */
