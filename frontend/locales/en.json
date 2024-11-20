@@ -142,4 +142,16 @@
 	"nutrition\noverview": "Nutrition\nOverview",
 	"set_nutrition_goals": "Set Nutrition Goals",
 	"meal_detail_records": "Meal Detail Records"
+	"total": "Total",
+
+	//搜索页
+	"text_search": "Search",
+	"text_search_label": "Search for your interest...",
+
+	//饮食偏好
+    "preferences_title": "Manage Dietary Preferences",
+    "delete_button": "Del",
+    "add_preference_button": "Add Preference",
+    "modal_title": "Select a Preference",
+    "close_button": "Close"
 }

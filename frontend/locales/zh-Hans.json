@@ -142,4 +142,17 @@
 	"set_nutrition_goals": "设置营养目标",
 	"meal_detail_records": "营养详细记录"
 
+	"nutrition_calendar": "营养日历",
+
+	//搜索页
+	"text_search": "搜索",
+	"text_search_label": "你所感兴趣的都在这里...",
+
+	//饮食偏好
+    "preferences_title": "饮食偏好管理",
+    "delete_button": "删除",
+    "add_preference_button": "新增偏好",
+    "modal_title": "选择一个偏好",
+    "close_button": "关闭"
+
 }
