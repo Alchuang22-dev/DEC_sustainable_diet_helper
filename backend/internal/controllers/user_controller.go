@@ -2,10 +2,11 @@
 package controllers
 
 import (
-    "time"
     "net/http"
     "strconv"
     "log"
+    "fmt"
+    "encoding/json"
 
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
@@ -21,133 +22,82 @@ func NewUserController(db *gorm.DB) *UserController {
     return &UserController{DB: db}
 }
 
-// 发送验证码
-func (uc *UserController) SendVerificationCode(c *gin.Context) {
-	var request struct {
-		Email string `json:"email" binding:"required,email"`
-	}
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email"})
-		return
-	}
+func (uc *UserController) WeChatAuth(c *gin.Context) {
+    log.Println("WeChatAuth 被调用")
 
-	// 检查是否已存在未过期的验证码
-	var existingVerification models.EmailVerification
-	if err := uc.DB.Where("email = ?", request.Email).First(&existingVerification).Error; err == nil {
-		if time.Now().Before(existingVerification.ExpiresAt) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Verification code already sent. Please wait."})
-			return
-		}
-	}
-
-	// 生成新的验证码
-	code := utils.GenerateVerificationCode()
-	verification := models.EmailVerification{
-		Email:     request.Email,
-		Code:      code,
-		ExpiresAt: time.Now().Add(5 * time.Minute), // 验证码5分钟有效
-	}
-
-	// 保存到数据库
-	if err := uc.DB.Save(&verification).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save verification code"})
-		return
-	}
-
-	// 发送验证码邮件
-	if err := utils.SendEmail(request.Email, code); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Verification code sent successfully"})
-}
-
-// 验证验证码并注册
-func (uc *UserController) Register(c *gin.Context) {
-	var request struct {
-		Nickname string `json:"nickname"`
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required,min=6"`
-		Code     string `json:"code" binding:"required,len=6"` // 验证码
-	}
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-		return
-	}
-
-	// 验证验证码
-	var verification models.EmailVerification
-	if err := uc.DB.Where("email = ? AND code = ?", request.Email, request.Code).First(&verification).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired verification code"})
-		return
-	}
-	if time.Now().After(verification.ExpiresAt) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Verification code expired"})
-		return
-	}
-
-	// 删除已使用的验证码
-	uc.DB.Delete(&verification)
-
-	// 检查邮箱是否已注册
-	var existingUser models.User
-	if err := uc.DB.Where("email = ?", request.Email).First(&existingUser).Error; err == nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
-		return
-	}
-
-	// 加密密码
-	hashedPassword, err := utils.HashPassword(request.Password)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
-		return
-	}
-
-	// 如果未提供昵称，生成随机昵称
-	nickname := request.Nickname
-	if nickname == "" {
-		nickname = utils.GenerateRandomNickname()
-	}
-
-	// 创建新用户
-	user := models.User{
-		Nickname: nickname,
-		Email:    request.Email,
-		Password: hashedPassword,
-	}
-
-	if err := uc.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})
-}
-
-// 登录
-func (uc *UserController) Login(c *gin.Context) {
-    var loginRequest struct {
-        Email    string `json:"email" binding:"required,email"` // 必须提供邮箱
-        Password string `json:"password" binding:"required"`   // 必须提供密码
+    // 定义请求体结构
+    var authRequest struct {
+        Code      string `json:"code" binding:"required"`        // 微信登录凭证
+        Nickname  string `json:"nickname"`                      // 可选用户昵称
+        AvatarURL string `json:"avatar_url"`                    // 可选用户头像
     }
 
     // 绑定请求体
-    if err := c.ShouldBindJSON(&loginRequest); err != nil {
+    if err := c.ShouldBindJSON(&authRequest); err != nil {
+        log.Println("绑定JSON失败:", err)
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
         return
     }
 
-    // 验证用户是否存在
-    var user models.User
-    if err := uc.DB.Where("email = ?", loginRequest.Email).First(&user).Error; err != nil {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"}) // 用户不存在
+    // 调用微信 API 获取 openid 和 session_key
+    wxAPI := fmt.Sprintf(
+        "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
+        "your_app_id", "your_app_secret", authRequest.Code,
+    )
+
+    resp, err := http.Get(wxAPI)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to call WeChat API"})
+        return
+    }
+    defer resp.Body.Close()
+
+    var wxResponse struct {
+        OpenID     string `json:"openid"`
+        SessionKey string `json:"session_key"`
+        ErrCode    int    `json:"errcode"`
+        ErrMsg     string `json:"errmsg"`
+    }
+    if err := json.NewDecoder(resp.Body).Decode(&wxResponse); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse WeChat API response"})
         return
     }
 
-    // 验证密码
-    if err := utils.CheckPassword(user.Password, loginRequest.Password); err != nil {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"}) // 密码不匹配
+    // 微信 API 错误
+    if wxResponse.ErrCode != 0 {
+        log.Println("微信API返回错误:", wxResponse.ErrMsg)
+        c.JSON(http.StatusUnauthorized, gin.H{"error": wxResponse.ErrMsg})
+        return
+    }
+
+    // 检查用户是否已存在
+    var user models.User
+    if err := uc.DB.Where("openid = ?", wxResponse.OpenID).First(&user).Error; err == nil {
+        // 用户已存在，更新 SessionKey
+        user.SessionKey = wxResponse.SessionKey
+        if err := uc.DB.Save(&user).Error; err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user session"})
+            return
+        }
+    } else if err == gorm.ErrRecordNotFound {
+        // 用户不存在，注册新用户
+        user = models.User{
+            OpenID:     wxResponse.OpenID,
+            SessionKey: wxResponse.SessionKey,
+            Nickname:   authRequest.Nickname,
+            AvatarURL:  authRequest.AvatarURL,
+        }
+        if user.Nickname == "" {
+            user.Nickname = utils.GenerateRandomNickname()
+        }
+
+        if err := uc.DB.Create(&user).Error; err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+            return
+        }
+    } else {
+        // 其他错误
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
         return
     }
 
@@ -159,7 +109,14 @@ func (uc *UserController) Login(c *gin.Context) {
     }
 
     // 返回成功响应
-    c.JSON(http.StatusOK, gin.H{"token": token})
+    c.JSON(http.StatusOK, gin.H{
+        "token": token,
+        "user": gin.H{
+            "id":         user.ID,
+            "nickname":   user.Nickname,
+            "avatar_url": user.AvatarURL,
+        },
+    })
 }
 
 // 设置用户名
@@ -194,84 +151,3 @@ func (uc *UserController) SetNickname(c *gin.Context) {
 
     c.JSON(http.StatusOK, gin.H{"message": "Nickname updated successfully", "nickname": user.Nickname})
 }
-
-// 更新邮箱
-func (uc *UserController) SetEmail(c *gin.Context) {
-    log.Println("SetEmail 被调用")
-    id, err := strconv.Atoi(c.Param("id"))
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-        return
-    }
-
-    var request struct {
-        Email string `json:"email" binding:"required,email"`
-    }
-    if err := c.ShouldBindJSON(&request); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-        return
-    }
-
-    var user models.User
-    if err := uc.DB.First(&user, id).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-        return
-    }
-
-    // 检查邮箱唯一性
-    var existingUser models.User
-    if err := uc.DB.Where("email = ?", request.Email).First(&existingUser).Error; err == nil && existingUser.ID != uint(id) {
-        c.JSON(http.StatusConflict, gin.H{"error": "Email already in use"})
-        return
-    }
-
-    user.Email = request.Email
-
-    if err := uc.DB.Save(&user).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update email"})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{"message": "Email updated successfully", "email": user.Email})
-}
-
-// 设置密码
-func (uc *UserController) SetPassword(c *gin.Context) {
-    log.Println("SetPassword 被调用")
-    id, err := strconv.Atoi(c.Param("id"))
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-        return
-    }
-
-    var request struct {
-        Password string `json:"password" binding:"required,min=6"`
-    }
-    if err := c.ShouldBindJSON(&request); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-        return
-    }
-
-    var user models.User
-    if err := uc.DB.First(&user, id).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-        return
-    }
-
-    // 加密密码
-    hashedPassword, err := utils.HashPassword(request.Password)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
-        return
-    }
-
-    user.Password = hashedPassword
-
-    if err := uc.DB.Save(&user).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
-}
-
