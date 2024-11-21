@@ -153,5 +153,17 @@
     "delete_button": "Del",
     "add_preference_button": "Add Preference",
     "modal_title": "Select a Preference",
-    "close_button": "Close"
+    "close_button": "Close",
+
+	//饮食推荐
+	"recommend_image_alt": "Recommended Image",
+	"dish_1": "Steamed Cabbage",
+	"dish_2": "Sweet Potato",
+	"dish_3": "Dapanji",
+	"dish_4": "Pasta",
+	"generate_recipe": "Generate Recipe",
+	"recommended_recipe": "Recommended Recipe",
+	"recommended_recipe_info": "Based on your region, we recommend Dapanji!",
+	"recommendation_title": "Suitable for Your Area Today",
+
 }
