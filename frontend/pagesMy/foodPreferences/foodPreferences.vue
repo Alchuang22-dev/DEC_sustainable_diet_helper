@@ -4,13 +4,13 @@
       <text class="title">{{$t('preferences_title')}}</text>
     </view>
 	<image src="/static/images/index/background_img.jpg" class="background-image"></image>
-    <draggable v-model="preferences" group="preferences" class="preferences">
+    <view group="preferences" class="preferences">
       <view v-for="(preference, index) in preferences" :key="index" :class="['preference-card', 'color-' + (index % 4)]">
         <image :src="preference.icon" class="preference-icon" />
         <text class="preference-name">{{ preference.name }}</text>
         <button class="delete-button" @click="removePreference(index)">{{$t('delete_button')}}</button>
       </view>
-    </draggable>
+    </view>
     <view class="add-preference">
       <button @click="showPreferenceOptions">{{$t('add_preference_button')}}</button>
     </view>
@@ -29,7 +29,6 @@
 
 <script setup>
 import { ref } from 'vue';
-// import draggable from 'vuedraggable';
 
 const preferences = ref([
   { name: '避免乳制品', icon: 'https://via.placeholder.com/50' },
