@@ -2,6 +2,9 @@ package utils
 
 import (
     "math/rand"
+    "fmt"
+    "os"
+    "io"
 
     "golang.org/x/crypto/bcrypt"
 )
@@ -25,4 +28,24 @@ func GenerateRandomNickname() string {
         hash[i] = letters[rand.Intn(len(letters))]
     }
     return "User" + string(hash)
+}
+
+// 复制文件
+func CopyFile(src, dst string) error {
+    sourceFile, err := os.Open(src)
+    if err != nil {
+        return fmt.Errorf("无法打开源文件: %v", err)
+    }
+    defer sourceFile.Close()
+
+    destinationFile, err := os.Create(dst)
+    if err != nil {
+        return fmt.Errorf("无法创建目标文件: %v", err)
+    }
+    defer destinationFile.Close()
+
+    if _, err := io.Copy(destinationFile, sourceFile); err != nil {
+        return fmt.Errorf("复制文件失败: %v", err)
+    }
+    return nil
 }

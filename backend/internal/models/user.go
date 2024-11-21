@@ -7,7 +7,7 @@ import (
 type User struct {
     ID          uint      `gorm:"primaryKey" json:"id"`           // 用户唯一标识
     Nickname    string    `gorm:"size:100;not null" json:"nickname"` // 用户昵称
-    OpenID      string    `gorm:"size:64;unique;not null" json:"openid"` // 微信 OpenID，用于标识微信用户
+    OpenID      string    `gorm:"size:64;unique;not null" json:"open_id"` // 微信 OpenID，用于标识微信用户
     SessionKey  string    `gorm:"size:64" json:"-"`              // 微信会话密钥（敏感信息，不返回给前端）
     AvatarURL   string    `gorm:"size:255" json:"avatar_url"`    // 用户头像 URL
     CreatedAt   time.Time `json:"created_at"`                   // 用户创建时间

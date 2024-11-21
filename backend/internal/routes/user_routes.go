@@ -21,7 +21,8 @@ func RegisterUserRoutes(router *gin.Engine, db *gorm.DB) {
         authGroup := userGroup.Group("")
         authGroup.Use(middleware.AuthMiddleware())
         {
-            authGroup.PUT("/:id/nickname", userController.SetNickname) // 更新用户名
+            authGroup.PUT("/:id/set_nickname", userController.SetNickname) // 更新用户名
+            authGroup.PUT("/:id/set_avator", userController.SetNickname) // 更新密码
         }
     }
 }
