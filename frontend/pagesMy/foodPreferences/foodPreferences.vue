@@ -29,7 +29,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import draggable from 'vuedraggable';
+// import draggable from 'vuedraggable';
 
 const preferences = ref([
   { name: '避免乳制品', icon: 'https://via.placeholder.com/50' },
