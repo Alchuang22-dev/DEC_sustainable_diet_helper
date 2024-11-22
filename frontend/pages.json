@@ -98,6 +98,13 @@
 					"style": {
 						"navigationBarTitleText": "家庭管理"
 					}
+				},
+				{
+					"path" : "modify_food/modify_food",
+					"style" : 
+					{
+						"navigationBarTitleText" : "修改食品"
+					}
 				}
 			]
 		}

@@ -1,4 +1,4 @@
-<!-- pagesTool/add_food/add_food.vue -->
+<!-- pagesTool/modify_food/modify_food.vue -->
 <template>
   <view class="container">
     <!-- 表单容器 -->
@@ -50,6 +50,7 @@
 import { ref, reactive } from 'vue';
 import { useI18n } from 'vue-i18n'; // Import useI18n
 import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
+import { onLoad } from '@dcloudio/uni-app'; // 引入 onLoad 钩子
 
 // 使用国际化
 const { t } = useI18n();
@@ -57,7 +58,12 @@ const { t } = useI18n();
 // 使用 Pinia Store
 const foodStore = useFoodListStore();
 
-// 食品数据
+// 初始化数据
+const options = ref({});
+const foodIndex = ref(null);
+const existingFood = ref(null);
+
+// 食品数据，初始化为空
 const food = reactive({
   name: '',
   weight: '',
@@ -131,7 +137,7 @@ const submitFoodDetails = () => {
     price,
     transportMethod,
     foodSource,
-    imagePath
+    imagePath,
   } = food;
 
   // 输入验证
@@ -161,27 +167,21 @@ const submitFoodDetails = () => {
     return;
   }
 
-  const newFood = {
+  const updatedFood = {
     name,
     weight: parseInt(weight),
     price: parseInt(price),
     transportMethod,
     foodSource,
     image: imagePath, // 保存图片路径
-    isAnimating: false,
-    emission: 0,
-    calories: 0,
-    protein: 0,
-    fat: 0,
-    carbohydrates: 0,
-    sodium: 0
+    // 保留其他字段不变
   };
 
-  // 使用 Store 添加新的食物项
-  foodStore.addFood(newFood);
+  // 使用 Store 更新指定的食物项
+  foodStore.updateFood(foodIndex.value, updatedFood);
 
   uni.showToast({
-    title: t('add_success'),
+    title: t('modify_success'),
     icon: 'success',
     duration: 2000,
   });
@@ -191,135 +191,172 @@ const submitFoodDetails = () => {
     uni.navigateBack();
   }, 2000);
 };
+
+// 使用 onLoad 获取路由参数并初始化数据
+onLoad((loadedOptions) => {
+  options.value = loadedOptions;
+  console.log('路由参数:', options.value);
+
+  // 获取传入的食物索引
+  foodIndex.value = parseInt(options.value.index);
+  console.log('食物索引:', foodIndex.value);
+  existingFood.value = foodStore.foodList[foodIndex.value];
+  console.log('现有食物:', existingFood.value);
+
+  // 错误处理：如果索引无效或食物项不存在，显示提示并返回
+  if (isNaN(foodIndex.value) || !existingFood.value) {
+    uni.showToast({
+      title: t('invalid_food_item'),
+      icon: 'none',
+      duration: 2000,
+    });
+    setTimeout(() => {
+      uni.navigateBack();
+    }, 2000);
+    return; // 记得加上 return，避免继续执行后续代码
+  }
+
+  // 初始化食品数据
+  food.name = existingFood.value.name || '';
+  food.weight = existingFood.value.weight || '';
+  food.price = existingFood.value.price || '';
+  food.transportMethod = existingFood.value.transportMethod || 'transport_land';
+  food.foodSource = existingFood.value.foodSource || 'source_local';
+  food.imagePath = existingFood.value.image || '';
+
+  // 初始化下拉选项索引
+  transportIndex.value = transportMethods.indexOf(t(existingFood.value.transportMethod));
+  sourceIndex.value = foodSources.indexOf(t(existingFood.value.foodSource));
+});
 </script>
 
 <style scoped>
-	/* 全局样式变量 */
-	:root {
-		--primary-color: #4caf50;
-		--secondary-color: #8bc34a;
-		--text-color: #333;
-		--background-color: #f5f5f5;
-		--border-color: #e0e0e0;
-		--font-family: 'Arial', sans-serif;
-	}
+/* 全局样式变量 */
+:root {
+  --primary-color: #4caf50;
+  --secondary-color: #8bc34a;
+  --text-color: #333;
+  --background-color: #f5f5f5;
+  --border-color: #e0e0e0;
+  --font-family: 'Arial', sans-serif;
+}
 
-	/* 容器 */
-	.container {
-		display: flex;
-		flex-direction: column;
-		min-height: 100vh;
-		background-color: var(--background-color);
-		font-family: var(--font-family);
-	}
+/* 容器 */
+.container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--background-color);
+  font-family: var(--font-family);
+}
 
-	/* 头部标题 */
-	.header {
-		display: flex;
-		align-items: center;
-		padding: 20rpx;
-		background-color: #ffffff;
-		border-bottom: 1rpx solid var(--border-color);
-		justify-content: flex-start;
-	}
+/* 头部标题 */
+.header {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  background-color: #ffffff;
+  border-bottom: 1rpx solid var(--border-color);
+  justify-content: flex-start;
+}
 
-	.back-button {
-		font-size: 36rpx;
-		margin-right: 20rpx;
-		color: var(--primary-color);
-		cursor: pointer;
-	}
+.back-button {
+  font-size: 36rpx;
+  margin-right: 20rpx;
+  color: var(--primary-color);
+  cursor: pointer;
+}
 
-	.title {
-		font-size: 36rpx;
-		font-weight: bold;
-		color: var(--text-color);
-	}
+.title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: var(--text-color);
+}
 
-	/* 表单容器 */
-	.form-container {
-		margin: 20rpx;
-		padding: 30rpx;
-		background-color: #ffffff;
-		border-radius: 20rpx;
-		box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.1);
-		flex-grow: 1;
-	}
+/* 表单容器 */
+.form-container {
+  margin: 20rpx;
+  padding: 30rpx;
+  background-color: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.1);
+  flex-grow: 1;
+}
 
-	.form-group {
-		margin-bottom: 30rpx;
-	}
+.form-group {
+  margin-bottom: 30rpx;
+}
 
-	.label {
-		display: block;
-		margin-bottom: 10rpx;
-		font-size: 28rpx;
-		font-weight: bold;
-		color: var(--text-color);
-	}
+.label {
+  display: block;
+  margin-bottom: 10rpx;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: var(--text-color);
+}
 
-	.input {
-		width: 100%;
-		padding: 20rpx;
-		border: 1rpx solid var(--border-color);
-		border-radius: 10rpx;
-		font-size: 28rpx;
-	}
+.input {
+  width: 100%;
+  padding: 20rpx;
+  border: 1rpx solid var(--border-color);
+  border-radius: 10rpx;
+  font-size: 28rpx;
+}
 
-	.picker {
-		width: 100%;
-		padding: 20rpx;
-		border: 1rpx solid var(--border-color);
-		border-radius: 10rpx;
-		font-size: 28rpx;
-		color: #666666;
-	}
+.picker {
+  width: 100%;
+  padding: 20rpx;
+  border: 1rpx solid var(--border-color);
+  border-radius: 10rpx;
+  font-size: 28rpx;
+  color: #666666;
+}
 
-	.upload-button {
-		width: 100%;
-		padding: 20rpx;
-		border: 1rpx solid var(--border-color);
-		border-radius: 10rpx;
-		background-color: #f0f0f0;
-		font-size: 28rpx;
-		color: var(--text-color);
-		cursor: pointer;
-		text-align: center;
-	}
+.upload-button {
+  width: 100%;
+  padding: 20rpx;
+  border: 1rpx solid var(--border-color);
+  border-radius: 10rpx;
+  background-color: #f0f0f0;
+  font-size: 28rpx;
+  color: var(--text-color);
+  cursor: pointer;
+  text-align: center;
+}
 
-	.upload-button:hover {
-		background-color: #e0e0e0;
-	}
+.upload-button:hover {
+  background-color: #e0e0e0;
+}
 
-	.uploaded-image {
-		width: 100%;
-		height: auto;
-		margin-top: 20rpx;
-		border-radius: 10rpx;
-	}
+.uploaded-image {
+  width: 100%;
+  height: auto;
+  margin-top: 20rpx;
+  border-radius: 10rpx;
+}
 
-	.submit-button {
-		padding: 20rpx;
-		border: none;
-		background-color: var(--primary-color);
-		color: #ffffff;
-		font-size: 32rpx;
-		border-radius: 30rpx;
-		cursor: pointer;
-		width: 100%;
-		text-align: center;
-		transition: background-color 0.3s ease, transform 0.2s ease;
-	}
+.submit-button {
+  padding: 20rpx;
+  border: none;
+  background-color: var(--primary-color);
+  color: #ffffff;
+  font-size: 32rpx;
+  border-radius: 30rpx;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
 
-	.submit-button:hover {
-		background-color: var(--secondary-color);
-		transform: translateY(-2rpx);
-		box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.2);
-	}
+.submit-button:hover {
+  background-color: var(--secondary-color);
+  transform: translateY(-2rpx);
+  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.2);
+}
 
-	.error-message {
-		color: #f44336;
-		font-size: 24rpx;
-		margin-top: 5rpx;
-	}
+.error-message {
+  color: #f44336;
+  font-size: 24rpx;
+  margin-top: 5rpx;
+}
 </style>
