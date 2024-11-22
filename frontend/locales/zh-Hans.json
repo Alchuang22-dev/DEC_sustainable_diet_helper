@@ -104,7 +104,6 @@
 
 	"back": "返回",
 
-	// 新增的翻译键
 	"dec_logo_alt": "DEC 标志",
 	"target_value": "目标值",
 	"actual_value": "实际值",
@@ -113,6 +112,11 @@
 	"fat": "脂肪",
 	"carbohydrates": "碳水化合物",
 	"sodium": "钠",
+	"energy_unit": "能量 (kcal)",
+	"protein_unit": "蛋白质 (g)",
+	"fat_unit": "脂肪 (g)",
+	"carbohydrates_unit": "碳水化合物 (g)",
+	"sodium_unit": "钠 (mg)",
 	"intake": "摄入量",
 	"recommended": "推荐量",
 	"breakfast": "早餐",
@@ -122,16 +126,44 @@
 	"total": "总量",
 
 	"nutrition_calendar": "营养日历",
-	
+	"more_than_recommended": "超过推荐量",
+	"minutes_fast_walk": "分钟快走",
+	"steamed_bun": "包子",
+	"rice": "米饭",
+	"calories": "卡路里",
+	"sunday": "星期日",
+	"monday": "星期一",
+	"tuesday": "星期二",
+	"wednesday": "星期三",
+	"thursday": "星期四",
+	"friday": "星期五",
+	"saturday": "星期六",
+	"nutrition\noverview": "营养\n概览",
+	"set_nutrition_goals": "设置营养目标",
+	"meal_detail_records": "营养详细记录"
+
+	"nutrition_calendar": "营养日历",
+
 	//搜索页
 	"text_search": "搜索",
 	"text_search_label": "你所感兴趣的都在这里...",
-	
+
 	//饮食偏好
     "preferences_title": "饮食偏好管理",
     "delete_button": "删除",
     "add_preference_button": "新增偏好",
     "modal_title": "选择一个偏好",
-    "close_button": "关闭"
-	
+    "close_button": "关闭",
+
+	//饮食推荐
+	"recommend_image_alt": "推荐图片",
+	"dish_1": "蒸白菜",
+	"dish_2": "大地瓜",
+	"dish_3": "大盘鸡",
+	"dish_4": "通心粉",
+	"generate_recipe": "生成菜谱",
+	"recommended_recipe": "推荐菜谱",
+	"recommended_recipe_info": "根据您所在的地区，推荐大盘鸡！",
+	"recommendation_title": "今日您的地区适宜"
+
 }

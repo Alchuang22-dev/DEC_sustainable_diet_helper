@@ -1,9 +1,10 @@
 package utils
 
 import (
-    "time"
-    "regexp"
     "math/rand"
+    "fmt"
+    "os"
+    "io"
 
     "golang.org/x/crypto/bcrypt"
 )
@@ -19,21 +20,32 @@ func CheckPassword(hashedPassword, password string) error {
     return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
-// TODO 验证手机号
-func IsValidPhoneNumber(phone string) bool {
-    // 简单正则示例，适配国际和国内手机号格式
-    regex := `^(\+?\d{1,4})?\d{7,10}$`
-    re := regexp.MustCompile(regex)
-    return re.MatchString(phone)
-}
-
 // 生成随机用户名
 func GenerateRandomNickname() string {
-    rand.Seed(time.Now().UnixNano())
     letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     hash := make([]byte, 6)
     for i := range hash {
         hash[i] = letters[rand.Intn(len(letters))]
     }
     return "User" + string(hash)
+}
+
+// 复制文件
+func CopyFile(src, dst string) error {
+    sourceFile, err := os.Open(src)
+    if err != nil {
+        return fmt.Errorf("无法打开源文件: %v", err)
+    }
+    defer sourceFile.Close()
+
+    destinationFile, err := os.Create(dst)
+    if err != nil {
+        return fmt.Errorf("无法创建目标文件: %v", err)
+    }
+    defer destinationFile.Close()
+
+    if _, err := io.Copy(destinationFile, sourceFile); err != nil {
+        return fmt.Errorf("复制文件失败: %v", err)
+    }
+    return nil
 }
