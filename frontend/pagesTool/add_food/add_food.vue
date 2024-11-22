@@ -1,190 +1,196 @@
+<!-- pagesTool/add_food/add_food.vue -->
 <template>
-	<view class="container">
+  <view class="container">
+    <!-- 表单容器 -->
+    <view class="form-container">
+      <view class="form-group">
+        <text class="label">{{ $t('name') }}</text>
+        <input class="input" type="text" v-model="food.name" :placeholder="$t('please_enter_food_name')" />
+      </view>
+      <view class="form-group">
+        <text class="label">{{ $t('total_weight') }}</text>
+        <input class="input" type="number" v-model="food.weight" :placeholder="$t('please_enter_food_weight')" :error="weightError" />
+        <text v-if="weightError" class="error-message">{{ $t('weight_must_be_positive_integer') }}</text>
+      </view>
+      <view class="form-group">
+        <text class="label">{{ $t('total_price') }}</text>
+        <input class="input" type="number" v-model="food.price" :placeholder="$t('please_enter_food_price')" :error="priceError" />
+        <text v-if="priceError" class="error-message">{{ $t('price_must_be_positive_integer') }}</text>
+      </view>
+      <view class="form-group">
+        <text class="label">{{ $t('select_transport_method') }}</text>
+        <picker mode="selector" :range="transportMethods" :value="transportIndex" @change="onTransportChange">
+          <view class="picker">
+            {{ transportMethods[transportIndex] }}
+          </view>
+        </picker>
+      </view>
+      <view class="form-group">
+        <text class="label">{{ $t('select_food_source') }}</text>
+        <picker mode="selector" :range="foodSources" :value="sourceIndex" @change="onSourceChange">
+          <view class="picker">
+            {{ foodSources[sourceIndex] }}
+          </view>
+        </picker>
+      </view>
 
-		<!-- 表单容器 -->
-		<view class="form-container">
-			<view class="form-group">
-				<text class="label">名称</text>
-				<input class="input" type="text" v-model="food.name" placeholder="请输入食品名称" />
-			</view>
-			<view class="form-group">
-				<text class="label">总重量 (g)</text>
-				<input class="input" type="number" v-model="food.weight" placeholder="请输入食品重量" :error="weightError" />
-				<text v-if="weightError" class="error-message">重量必须是正整数</text>
-			</view>
-			<view class="form-group">
-				<text class="label">总价格 (元)</text>
-				<input class="input" type="number" v-model="food.price" placeholder="请输入食品价格" :error="priceError" />
-				<text v-if="priceError" class="error-message">价格必须是正整数</text>
-			</view>
-			<view class="form-group">
-				<text class="label">请选择运输方式</text>
-				<picker mode="selector" :range="transportMethods" :value="transportIndex" @change="onTransportChange">
-					<view class="picker">
-						{{ transportMethods[transportIndex] }}
-					</view>
-				</picker>
-			</view>
-			<view class="form-group">
-				<text class="label">请选择食品来源</text>
-				<picker mode="selector" :range="foodSources" :value="sourceIndex" @change="onSourceChange">
-					<view class="picker">
-						{{ foodSources[sourceIndex] }}
-					</view>
-				</picker>
-			</view>
+      <!-- 图片上传按钮 -->
+      <view class="form-group">
+        <text class="label">{{ $t('upload_food_image') }}</text>
+        <button class="upload-button" @click="uploadImage">{{ $t('take_photo_upload') }}</button>
+        <image v-if="food.imagePath" :src="food.imagePath" class="uploaded-image"></image>
+      </view>
 
-			<!-- 图片上传按钮 -->
-			<view class="form-group">
-				<text class="label">上传食品图片</text>
-				<button class="upload-button" @click="uploadImage">拍照上传</button>
-				<image v-if="food.imagePath" :src="food.imagePath" class="uploaded-image"></image>
-			</view>
-
-			<button class="submit-button" @click="submitFoodDetails">提交</button>
-		</view>
-	</view>
+      <button class="submit-button" @click="submitFoodDetails">{{ $t('submit') }}</button>
+    </view>
+  </view>
 </template>
 
 <script setup>
-	import {
-		ref,
-		reactive
-	} from 'vue';
+import { ref, reactive } from 'vue';
+import { useI18n } from 'vue-i18n'; // Import useI18n
+import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
 
-	// 食品数据
-	const food = reactive({
-		name: '',
-		weight: '',
-		price: '',
-		transportMethod: '陆运',
-		foodSource: '本地',
-		imagePath: '', // 图片路径
-	});
+// 使用国际化
+const { t } = useI18n();
 
-	// 下拉选项数据
-	const transportMethods = ['陆运', '海运', '空运'];
-	const foodSources = ['本地', '进口'];
+// 使用 Pinia Store
+const foodStore = useFoodListStore();
 
-	// 当前选择的索引
-	const transportIndex = ref(0);
-	const sourceIndex = ref(0);
+// 食品数据
+const food = reactive({
+  name: '',
+  weight: '',
+  price: '',
+  transportMethod: 'transport_land',
+  foodSource: 'source_local',
+  imagePath: '', // 图片路径
+});
 
-	// 输入验证错误状态
-	const weightError = ref(false);
-	const priceError = ref(false);
+// 下拉选项数据
+const transportMethods = [t('transport_land'), t('transport_sea'), t('transport_air')];
+const foodSources = [t('source_local'), t('source_imported')];
 
-	// 返回上一页
-	const navigateBack = () => {
-		uni.navigateBack();
-	};
+// 当前选择的索引
+const transportIndex = ref(0);
+const sourceIndex = ref(0);
 
-	// 运输方式选择改变
-	const onTransportChange = (e) => {
-		transportIndex.value = e.detail.value;
-		food.transportMethod = transportMethods[transportIndex.value];
-	};
+// 输入验证错误状态
+const weightError = ref(false);
+const priceError = ref(false);
 
-	// 食品来源选择改变
-	const onSourceChange = (e) => {
-		sourceIndex.value = e.detail.value;
-		food.foodSource = foodSources[sourceIndex.value];
-	};
+// 运输方式选择改变
+const onTransportChange = (e) => {
+  transportIndex.value = e.detail.value;
+  food.transportMethod = transportMethods[transportIndex.value];
+};
 
-	// 上传图片
-	const uploadImage = () => {
-		uni.chooseImage({
-			count: 1, // 只选择一张图片
-			sizeType: ['original', 'compressed'], // 可以选择原图或压缩图
-			sourceType: ['camera'], // 只允许使用相机
-			success: (res) => {
-				const tempFilePath = res.tempFilePaths[0];
-				food.imagePath = tempFilePath;
+// 食品来源选择改变
+const onSourceChange = (e) => {
+  sourceIndex.value = e.detail.value;
+  food.foodSource = foodSources[sourceIndex.value];
+};
 
-				// TODO: 集成图像识别功能
-				// 您可以在这里调用图像识别 API，将 tempFilePath 发送到服务器进行识别
-				// 例如：
-				// recognizeFoodImage(tempFilePath).then(recognizedName => {
-				//   food.name = recognizedName;
-				// });
-			},
-			fail: (err) => {
-				uni.showToast({
-					title: '图片上传失败',
-					icon: 'none',
-					duration: 2000,
-				});
-				console.error('图片上传失败:', err);
-			},
-		});
-	};
+// 上传图片
+const uploadImage = () => {
+  uni.chooseImage({
+    count: 1, // 只选择一张图片
+    sizeType: ['original', 'compressed'], // 可以选择原图或压缩图
+    sourceType: ['camera'], // 只允许使用相机
+    success: (res) => {
+      const tempFilePath = res.tempFilePaths[0];
+      food.imagePath = tempFilePath;
 
-	// 提交表单
-	const submitFoodDetails = () => {
-		// 重置错误状态
-		weightError.value = false;
-		priceError.value = false;
+      // TODO: 集成图像识别功能
+      // 您可以在这里调用图像识别 API，将 tempFilePath 发送到服务器进行识别
+      // 例如：
+      // recognizeFoodImage(tempFilePath).then(recognizedName => {
+      //   food.name = recognizedName;
+      // });
+    },
+    fail: (err) => {
+      uni.showToast({
+        title: t('image_upload_failed'),
+        icon: 'none',
+        duration: 2000,
+      });
+      console.error('图片上传失败:', err);
+    },
+  });
+};
 
-		const {
-			name,
-			weight,
-			price,
-			transportMethod,
-			foodSource
-		} = food;
+// 提交表单
+const submitFoodDetails = () => {
+  // 重置错误状态
+  weightError.value = false;
+  priceError.value = false;
 
-		// 输入验证
-		let valid = true;
+  const {
+    name,
+    weight,
+    price,
+    transportMethod,
+    foodSource,
+    imagePath
+  } = food;
 
-		// 验证重量：必须是正整数
-		if (!/^\d+$/.test(weight) || parseInt(weight) <= 0) {
-			weightError.value = true;
-			valid = false;
-		}
+  // 输入验证
+  let valid = true;
 
-		// 验证价格：必须是正整数
-		if (!/^\d+$/.test(price) || parseInt(price) <= 0) {
-			priceError.value = true;
-			valid = false;
-		}
+  // 验证重量：必须是正整数
+  if (!/^\d+$/.test(weight) || parseInt(weight) <= 0) {
+    weightError.value = true;
+    valid = false;
+  }
 
-		if (!name || !weight || !price || !transportMethod || !foodSource) {
-			uni.showToast({
-				title: '请填写所有字段',
-				icon: 'none',
-			});
-			valid = false;
-		}
+  // 验证价格：必须是正整数
+  if (!/^\d+$/.test(price) || parseInt(price) <= 0) {
+    priceError.value = true;
+    valid = false;
+  }
 
-		if (!valid) {
-			return;
-		}
+  if (!name || !weight || !price || !transportMethod || !foodSource) {
+    uni.showToast({
+      title: t('please_fill_all_fields'),
+      icon: 'none',
+    });
+    valid = false;
+  }
 
-		const newFood = {
-			name,
-			weight: parseInt(weight),
-			price: parseInt(price),
-			transportMethod,
-			foodSource,
-			imagePath: food.imagePath, // 保存图片路径
-		};
+  if (!valid) {
+    return;
+  }
 
-		// 从本地存储获取已有的食物列表
-		let foodList = uni.getStorageSync('foodDetails') || [];
-		foodList.push(newFood);
-		uni.setStorageSync('foodDetails', foodList);
+  const newFood = {
+    name,
+    weight: parseInt(weight),
+    price: parseInt(price),
+    transportMethod,
+    foodSource,
+    image: imagePath, // 保存图片路径
+    isAnimating: false,
+    emission: 0,
+    calories: 0,
+    protein: 0,
+    fat: 0,
+    carbohydrates: 0,
+    sodium: 0
+  };
 
-		uni.showToast({
-			title: '添加成功',
-			icon: 'success',
-			duration: 2000,
-		});
+  // 使用 Store 添加新的食物项
+  foodStore.addFood(newFood);
 
-		// 返回上一页并刷新
-		setTimeout(() => {
-			uni.navigateBack();
-		}, 2000);
-	};
+  uni.showToast({
+    title: t('add_success'),
+    icon: 'success',
+    duration: 2000,
+  });
+
+  // 返回上一页并刷新
+  setTimeout(() => {
+    uni.navigateBack();
+  }, 2000);
+};
 </script>
 
 <style scoped>

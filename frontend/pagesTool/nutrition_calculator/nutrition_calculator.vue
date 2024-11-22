@@ -17,6 +17,7 @@
 				</view>
 			</scroll-view>
 		</view>
+		
 
 		<!-- 多重环形图 -->
 		<view class="charts-box">
