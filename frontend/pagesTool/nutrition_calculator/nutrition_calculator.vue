@@ -1,392 +1,299 @@
 <template>
-	<view class="container">
-		<!-- 全屏背景图片 -->
-		<image src="/static/images/index/background_img.jpg" class="background-image"></image>
+  <view class="container">
+    <!-- 全屏背景图片 -->
+    <image src="/static/images/index/background_img.jpg" class="background-image"></image>
 
-		<!-- 合并后的顶部导航和日期选择器 -->
-		<view class="header">
-			<text class="title">{{ $t('nutrition_calendar') }}</text>
-			<scroll-view class="date-selector" scroll-x="true" scroll-with-animation="true">
-				<view class="date-buttons">
-					<button v-for="(date, index) in dateTabs" :key="date.dateString"
-						:class="['date-button', { 'selected': currentDateIndex === index }]"
-						@click="onDateChange(index)">
-						<text class="day">{{ date.day }}</text>
-						<text class="date">{{ date.date }}</text>
-					</button>
-				</view>
-			</scroll-view>
-		</view>
-		
+    <!-- 合并后的顶部导航和日期选择器 -->
+    <view class="header">
+      <text class="title">{{ $t('nutrition_calendar') }}</text>
+      <scroll-view class="date-selector" scroll-x="true" scroll-with-animation="true">
+        <view class="date-buttons">
+          <button v-for="(date, index) in dateTabs" :key="date.dateString"
+                  :class="['date-button', { 'selected': currentDateIndex === index }]"
+                  @click="onDateChange(index)">
+            <text class="day">{{ date.day }}</text>
+            <text class="date">{{ date.date }}</text>
+          </button>
+        </view>
+      </scroll-view>
+    </view>
 
-		<!-- 多重环形图 -->
-		<view class="charts-box">
-			<qiun-data-charts type="arcbar" :opts="chartOpts" :chartData="chartData" :canvas2d="true"
-				canvasId="nutritionChart" />
-			<view class="chart-center-text">
-				<text class="center-title">{{ $t('nutrition\noverview') }}</text>
-			</view>
-		</view>
 
-		<!-- 五大营养详细信息 -->
-		<view class="nutrition-details">
-			<view class="nutrition-item" v-for="item in summaryNutrition" :key="item.label">
-				<view class="color-square"
-					:style="{ backgroundColor: item.over ? getRedShade(item.label) : item.color }"></view>
-				<view class="nutrition-text">
-					<text class="intake" :class="{ 'over': item.over }">
-						{{ item.label }}:
-						<text :class="{ 'over': item.over }">{{ item.intake }}</text> / {{ item.plan }}
-					</text>
-				</view>
-			</view>
-		</view>
+    <!-- 多重环形图 -->
+    <view class="charts-box">
+      <qiun-data-charts type="arcbar" :opts="chartOpts" :chartData="chartData" :canvas2d="true"
+                        canvasId="nutritionChart" />
+      <view class="chart-center-text">
+        <text class="center-title">{{ $t('nutrition\noverview') }}</text>
+      </view>
+    </view>
 
-		<!-- 设置营养目标按钮 -->
-		<view class="set-goals-button-wrapper">
-			<button class="set-goals-button" @click="navigateToSetGoals">
-				{{ $t('set_nutrition_goals') }}
-			</button>
-		</view>
+    <!-- 五大营养详细信息 -->
+    <view class="nutrition-details">
+      <view class="nutrition-item" v-for="item in summaryNutrition" :key="item.label">
+        <view class="color-square"
+              :style="{ backgroundColor: item.over ? getRedShade(item.label) : item.color }"></view>
+        <view class="nutrition-text">
+          <text class="intake" :class="{ 'over': item.over }">
+            {{ item.label }}:
+            <text :class="{ 'over': item.over }">{{ item.intake }}</text> / {{ item.plan }}
+          </text>
+        </view>
+      </view>
+    </view>
 
-		<!-- 饮食记录 -->
-		<view class="meal-records">
-			<uni-section :title="t('meal_detail_records')">
-				<uni-collapse ref="collapse" v-model="activeMeal" @change="onMealChange">
-					<uni-collapse-item :title="t('breakfast')" :name="'breakfast'">
-						<view class="content">
-							<view v-for="nutrient in breakfastNutrients" :key="nutrient.label" class="nutrient-item">
-								<text>{{ nutrient.label }}: {{ nutrient.intake }}</text>
-							</view>
-						</view>
-					</uni-collapse-item>
+    <!-- 设置营养目标按钮 -->
+    <view class="set-goals-button-wrapper">
+      <button class="set-goals-button" @click="navigateToSetGoals">
+        {{ $t('set_nutrition_goals') }}
+      </button>
+    </view>
 
-					<uni-collapse-item :title="t('lunch')" :name="'lunch'">
-						<view class="content">
-							<view v-for="nutrient in lunchNutrients" :key="nutrient.label" class="nutrient-item">
-								<text>{{ nutrient.label }}: {{ nutrient.intake }}</text>
-							</view>
-						</view>
-					</uni-collapse-item>
+    <!-- 饮食记录 -->
+    <view class="meal-records">
+      <uni-section :title="t('meal_detail_records')">
+        <uni-collapse ref="collapse" v-model="activeMeal" @change="onMealChange">
+          <uni-collapse-item :title="t('breakfast')" :name="'breakfast'">
+            <view class="content">
+              <view v-for="nutrient in breakfastNutrients" :key="nutrient.label" class="nutrient-item">
+                <text>{{ nutrient.label }}: {{ nutrient.intake }}</text>
+              </view>
+            </view>
+          </uni-collapse-item>
 
-					<uni-collapse-item :title="t('dinner')" :name="'dinner'">
-						<view class="content">
-							<view v-for="nutrient in dinnerNutrients" :key="nutrient.label" class="nutrient-item">
-								<text>{{ nutrient.label }}: {{ nutrient.intake }}</text>
-							</view>
-						</view>
-					</uni-collapse-item>
+          <uni-collapse-item :title="t('lunch')" :name="'lunch'">
+            <view class="content">
+              <view v-for="nutrient in lunchNutrients" :key="nutrient.label" class="nutrient-item">
+                <text>{{ nutrient.label }}: {{ nutrient.intake }}</text>
+              </view>
+            </view>
+          </uni-collapse-item>
 
-					<uni-collapse-item :title="t('others')" :name="'others'">
-						<view class="content">
-							<view v-for="nutrient in otherNutrients" :key="nutrient.label" class="nutrient-item">
-								<text>{{ nutrient.label }}: {{ nutrient.intake }}</text>
-							</view>
-						</view>
-					</uni-collapse-item>
-				</uni-collapse>
-			</uni-section>
-		</view>
-	</view>
+          <uni-collapse-item :title="t('dinner')" :name="'dinner'">
+            <view class="content">
+              <view v-for="nutrient in dinnerNutrients" :key="nutrient.label" class="nutrient-item">
+                <text>{{ nutrient.label }}: {{ nutrient.intake }}</text>
+              </view>
+            </view>
+          </uni-collapse-item>
+
+          <uni-collapse-item :title="t('others')" :name="'others'">
+            <view class="content">
+              <view v-for="nutrient in otherNutrients" :key="nutrient.label" class="nutrient-item">
+                <text>{{ nutrient.label }}: {{ nutrient.intake }}</text>
+              </view>
+            </view>
+          </uni-collapse-item>
+        </uni-collapse>
+      </uni-section>
+    </view>
+  </view>
 </template>
 
 <script setup>
-	import {
-		ref,
-		onMounted,
-		watch
-	} from 'vue'
-	import {
-		useI18n
-	} from 'vue-i18n'
+import { ref, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data.js'
 
-	// 国际化
-	const {
-		t
-	} = useI18n()
+// 国际化
+const { t } = useI18n()
 
-	// 当前日期索引，默认选中今天（中间索引为3）
-	const currentDateIndex = ref(3)
+// 当前日期索引，默认选中今天（索引为3）
+const currentDateIndex = ref(3)
 
-	// 生成日期标签：今天，前三天，后三天
-	const dateTabs = ref([])
+// 生成日期标签：三天前到三天后
+const dateTabs = ref([])
 
-	const generateDateTabs = () => {
-		const tabs = []
-		const today = new Date()
-		for (let i = -3; i <= 3; i++) {
-			const date = new Date()
-			date.setDate(today.getDate() + i)
-			const day = t(getWeekdayKey(date.getDay())) // 国际化后的星期
-			const dateNumber = date.getDate()
-			const dateString = date.toISOString().split('T')[0] // e.g., 2024-04-27
-			tabs.push({
-				day: day,
-				date: dateNumber,
-				dateString: dateString
-			})
-		}
-		dateTabs.value = tabs
-	}
+const generateDateTabs = () => {
+  const tabs = []
+  const today = new Date()
+  for (let i = -3; i <= 3; i++) {
+    const date = new Date()
+    date.setDate(today.getDate() + i)
+    const day = t(getWeekdayKey(date.getDay())) // 国际化后的星期
+    const dateNumber = date.getDate()
+    const dateString = date.toISOString().split('T')[0] // e.g., 2024-04-27
+    tabs.push({
+      day: day,
+      date: dateNumber,
+      dateString: dateString
+    })
+  }
+  dateTabs.value = tabs
+}
 
-	// Helper to get weekday key for i18n
-	const getWeekdayKey = (dayIndex) => {
-		const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-		return weekdays[dayIndex]
-	}
+// Helper to get weekday key for i18n
+const getWeekdayKey = (dayIndex) => {
+  const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+  return weekdays[dayIndex]
+}
 
-	// 初始化日期标签
-	onMounted(() => {
-		generateDateTabs()
-		updateSummaryNutrition()
-		updateChartData()
-	})
+// 初始化日期标签
+onMounted(() => {
+  generateDateTabs()
+  updateSummaryNutrition()
+  updateChartData()
+})
 
-	// 饮食记录总摄入卡路里
-	const breakfastCalories = ref(500)
-	const lunchCalories = ref(6255)
-	const dinnerCalories = ref(20671)
-	const otherCalories = ref(1000)
+// 获取 Pinia 存储
+const carbonNutritionStore = useCarbonAndNutritionStore()
 
-	// 五大营养摄入与计划
-	const summaryNutrition = ref([{
-			label: t('energy_unit'),
-			intake: 2000,
-			plan: 2500,
-			color: '#1890FF',
-			over: false
-		},
-		{
-			label: t('protein_unit'),
-			intake: 75,
-			plan: 80,
-			color: '#91CB74',
-			over: false
-		},
-		{
-			label: t('fat_unit'),
-			intake: 70,
-			plan: 80,
-			color: '#FAC858',
-			over: false
-		},
-		{
-			label: t('carbohydrates_unit'),
-			intake: 300,
-			plan: 350,
-			color: '#73C0DE',
-			over: false
-		},
-		{
-			label: t('sodium_unit'),
-			intake: 2400,
-			plan: 2300,
-			color: '#3CA272',
-			over: true
-		}
-	])
+// 五大营养摄入与计划
+const summaryNutrition = ref([])
 
-	// 当前展开的折叠项
-	const activeMeal = ref('breakfast')
+// 当前展开的折叠项
+const activeMeal = ref('breakfast')
 
+// 每餐的营养成分
+const breakfastNutrients = ref([])
+const lunchNutrients = ref([])
+const dinnerNutrients = ref([])
+const otherNutrients = ref([])
 
-	// 每餐的营养成分
-	const breakfastNutrients = ref([{
-			label: t('energy_unit'),
-			intake: 500
-		},
-		{
-			label: t('protein_unit'),
-			intake: 20
-		},
-		{
-			label: t('fat_unit'),
-			intake: 10
-		},
-		{
-			label: t('carbohydrates_unit'),
-			intake: 60
-		},
-		{
-			label: t('sodium_unit'),
-			intake: 500
-		},
-	])
+// 更新五大营养的过量标志
+const updateSummaryNutrition = () => {
+  const selectedDate = dateTabs.value[currentDateIndex.value].dateString
+  const dateData = carbonNutritionStore.getDataByDate(selectedDate)
 
-	const lunchNutrients = ref([{
-			label: t('energy_unit'),
-			intake: 800
-		},
-		{
-			label: t('protein_unit'),
-			intake: 40
-		},
-		{
-			label: t('fat_unit'),
-			intake: 25
-		},
-		{
-			label: t('carbohydrates_unit'),
-			intake: 120
-		},
-		{
-			label: t('sodium_unit'),
-			intake: 800
-		},
-	])
+  if (dateData) {
+    const nutrients = ['energy', 'protein', 'fat', 'carbohydrates', 'sodium']
+    summaryNutrition.value = nutrients.map(nutrient => {
+      const intake = dateData.nutrients.actual[nutrient] || 0
+      const plan = dateData.nutrients.target[nutrient] || 0
+      const over = intake > plan
+      const color = getNutrientColor(nutrient)
+      return {
+        label: t(`${nutrient}_unit`),
+        intake: intake,
+        plan: plan,
+        color: color,
+        over: over
+      }
+    })
 
-	const dinnerNutrients = ref([{
-			label: t('energy_unit'),
-			intake: 600
-		},
-		{
-			label: t('protein_unit'),
-			intake: 30
-		},
-		{
-			label: t('fat_unit'),
-			intake: 15
-		},
-		{
-			label: t('carbohydrates_unit'),
-			intake: 90
-		},
-		{
-			label: t('sodium_unit'),
-			intake: 600
-		},
-	])
+    // 更新每餐的营养成分
+    const meals = ['breakfast', 'lunch', 'dinner', 'others']
+    const mealNutrientsRefs = [breakfastNutrients, lunchNutrients, dinnerNutrients, otherNutrients]
+    meals.forEach((mealType, index) => {
+      const mealData = dateData.meals[mealType]
+      if (mealData) {
+        mealNutrientsRefs[index].value = nutrients.map(nutrient => {
+          return {
+            label: t(`${nutrient}_unit`),
+            intake: mealData.nutrients[nutrient] || 0
+          }
+        })
+      } else {
+        mealNutrientsRefs[index].value = []
+      }
+    })
+  } else {
+    // 选定日期没有数据
+    summaryNutrition.value = []
+    breakfastNutrients.value = []
+    lunchNutrients.value = []
+    dinnerNutrients.value = []
+    otherNutrients.value = []
+  }
+}
 
-	const otherNutrients = ref([{
-			label: t('energy_unit'),
-			intake: 100
-		},
-		{
-			label: t('protein_unit'),
-			intake: 5
-		},
-		{
-			label: t('fat_unit'),
-			intake: 5
-		},
-		{
-			label: t('carbohydrates_unit'),
-			intake: 15
-		},
-		{
-			label: t('sodium_unit'),
-			intake: 100
-		},
-	])
+// 更新图表数据
+const updateChartData = () => {
+  // 根据 summaryNutrition 更新 chartData
+  chartData.value.series = getChartSeries()
+}
 
-	// 折叠项切换处理
-	const onMealChange = (name) => {
-		console.log('当前展开的餐：', name)
-	}
+// 图表数据和选项
+const chartData = ref({
+  series: []
+})
 
-	// 更新五大营养的过量标志
-	const updateSummaryNutrition = () => {
-		summaryNutrition.value = summaryNutrition.value.map(item => {
-			const over = item.intake > item.plan
-			return {
-				...item,
-				over: over
-			}
-		})
-	}
+const chartOpts = ref({
+  color: [], // 不再使用全局颜色
+  padding: undefined,
+  title: {
+    name: "",
+    fontSize: 35,
+    color: "#1890ff"
+  },
+  subtitle: {
+    name: "",
+    fontSize: 15,
+    color: "#666666"
+  },
+  extra: {
+    arcbar: {
+      type: "circle",
+      width: 10, // 增加宽度确保环足够宽
+      backgroundColor: "#E9E9E9",
+      startAngle: 1.5,
+      endAngle: 0.25,
+      gap: 2
+    }
+  }
+})
 
-	// 获取图表数据，处理超标情况
-	const getChartSeries = () => {
-		return summaryNutrition.value.map(item => {
-			const data = item.intake > item.plan ? 1 : item.intake / item.plan
-			const color = item.over ? getRedShade(item.label) : item.color
-			return {
-				name: item.label,
-				data: data,
-				color: color,
-				over: item.over
-			}
-		})
-	}
+// 获取图表数据，处理超标情况
+const getChartSeries = () => {
+  return summaryNutrition.value.map(item => {
+    const data = item.intake > item.plan ? 1 : item.intake / item.plan
+    const color = item.over ? getRedShade(item.label) : item.color
+    return {
+      name: item.label,
+      data: data,
+      color: color,
+      over: item.over
+    }
+  })
+}
 
-	// Helper to get红色不同深浅基于标签
-	const getRedShade = (label) => {
-		const shades = {
-			'energy_unit': '#FF4D4F',
-			'protein_unit': '#FF7875',
-			'fat_unit': '#FFB3BA',
-			'carbohydrates_unit': '#FFA39E',
-			'sodium_unit': '#FF4D4F'
-		}
-		return shades[label] || '#FF4D4F'
-	}
+// Helper to get红色不同深浅基于标签
+const getRedShade = (label) => {
+  const shades = {
+    [t('energy_unit')]: '#FF4D4F',
+    [t('protein_unit')]: '#FF7875',
+    [t('fat_unit')]: '#FFB3BA',
+    [t('carbohydrates_unit')]: '#FFA39E',
+    [t('sodium_unit')]: '#FF4D4F'
+  }
+  return shades[label] || '#FF4D4F'
+}
 
-	// 图表数据和选项
-	const chartData = ref({
-		series: getChartSeries()
-	})
+// Helper to get nutrient color
+const getNutrientColor = (nutrient) => {
+  const colors = {
+    'energy': '#1890FF',
+    'protein': '#91CB74',
+    'fat': '#FAC858',
+    'carbohydrates': '#73C0DE',
+    'sodium': '#3CA272'
+  }
+  return colors[nutrient] || '#000000'
+}
 
-	const chartOpts = ref({
-		color: [], // 不再使用全局颜色
-		padding: undefined,
-		title: {
-			name: "",
-			fontSize: 35,
-			color: "#1890ff"
-		},
-		subtitle: {
-			name: "",
-			fontSize: 15,
-			color: "#666666"
-		},
-		extra: {
-			arcbar: {
-				type: "circle",
-				width: 10, // 增加宽度确保环足够宽
-				backgroundColor: "#E9E9E9",
-				startAngle: 1.5,
-				endAngle: 0.25,
-				gap: 2
-			}
-		}
-	})
+// 监听 summaryNutrition 的变化以更新图表
+watch(summaryNutrition, () => {
+  updateChartData()
+})
 
-	// 更新图表数据
-	const updateChartData = () => {
-		chartData.value.series = getChartSeries()
-	}
+// 日期改变
+const onDateChange = (index) => {
+  currentDateIndex.value = index
+  updateSummaryNutrition()
+  updateChartData()
+}
 
-	// 监听 summaryNutrition 的变化以更新图表
-	watch(summaryNutrition, () => {
-		updateChartData()
-	})
+// 折叠项切换处理
+const onMealChange = (name) => {
+  console.log('当前展开的餐：', name)
+}
 
-	// 日期改变
-	const onDateChange = (index) => {
-		currentDateIndex.value = index
-		// 动态加载数据可以在此处更新 summaryNutrition 和饮食记录
-		// 例如，模拟数据更新
-		setTimeout(() => {
-			// 示例：随机生成数据
-			const newData = summaryNutrition.value.map(item => {
-				const randomFactor = Math.random() * 1.2 // 可能超过1
-				const newIntake = Math.round(item.plan * randomFactor)
-				return {
-					...item,
-					intake: newIntake,
-					over: newIntake > item.plan
-				}
-			})
-			summaryNutrition.value = newData
-		}, 500)
-	}
-
-	// 跳转到设置营养目标页面
-	const navigateToSetGoals = () => {
-		uni.navigateTo({
-			url: "/pagesMy/setGoals/setGoals",
-		})
-	}
+// 跳转到设置营养目标页面
+const navigateToSetGoals = () => {
+  uni.navigateTo({
+    url: "/pagesMy/setGoals/setGoals",
+  })
+}
 </script>
 
 <style scoped>
