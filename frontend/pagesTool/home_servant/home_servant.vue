@@ -9,7 +9,7 @@
     </view>
 
     <!-- 家庭ID -->
-    <text v-if="family.id" class="list-title">{{ $t('family_info') + family.id  }}</text>
+    <text v-if="family.id" class="list-title">{{ $t('family_info') + family.id }}</text>
 
     <!-- 用户未加入家庭时的视图 -->
     <view v-if="!family.id" class="no-family-view">
@@ -27,7 +27,7 @@
         <text class="section-title">{{ t('propose_dish') }}</text>
         <input v-model="newDish.name" :placeholder="t('dish_name_placeholder')" class="input"></input>
         <picker mode="selector" :range="dishPreferenceLevels" :value="newDish.preference" @change="onDishPreferenceChange" class="picker">
-          <view class="picker-content">{{ $t('dish_preference') }}: {{ dishPreferenceLevels[newDish.preference] }}</view>
+          <view>{{ $t('dish_preference') }}: {{ dishPreferenceLevels[newDish.preference] }}</view>
         </picker>
         <button class="submit-button" @click="submitDishProposal">{{ t('submit_proposal') }}</button>
       </view>
@@ -35,16 +35,22 @@
       <!-- 家庭成员的提议 -->
       <view class="dish-list">
         <text class="section-title">{{ $t('family_dish_proposals') }}</text>
-        <view v-for="dish in family.dishProposals" :key="dish.id" class="dish-item">
-          <text class="dish-name">{{ dish.name }}</text>
-          <text class="dish-preference">{{ $t('preference_level') }}: {{ dishPreferenceLevels[dish.preference] }}</text>
-          <text class="dish-proposer">{{ $t('proposed_by') }}: {{ dish.proposer }}</text>
-        </view>
+        <scroll-view class="dish-scroll" scroll-y>
+          <view v-for="dish in sortedDishProposals" :key="dish.id" class="dish-item">
+            <uni-list>
+              <uni-list-item :title="dish.name" :note="dishPreferenceLevels[dish.preference]" :rightText="dish.proposer" />
+            </uni-list>
+          </view>
+        </scroll-view>
       </view>
 
       <!-- 共享家庭成员的五大营养成分达标情况 -->
       <view class="shared-data">
-        <text class="section-title">{{ $t('shared_nutrition_compliance') }}</text>
+        <text class="section-title">{{ $t('shared_family_data') }}</text>
+        <!-- 添加家庭碳排放环形图 -->
+        <view class="charts">
+          <qiun-data-charts :canvas2d="true" canvas-id="familyCarbonChart" type="ring" :opts="carbonRingOpts" :chartData="carbonChartData" />
+        </view>
         <!-- 添加家庭五大营养成分达标情况的图表 -->
         <view class="charts">
           <qiun-data-charts :canvas2d="true" canvas-id="familyNutrientChart" type="column" :opts="nutrientChartOpts" :chartData="nutrientChartData" />
@@ -91,6 +97,7 @@
 import { ref, computed, onMounted, reactive } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFamilyStore } from '@/stores/family.js';
+import UniList from "@/uni_modules/uni-list/components/uni-list/uni-list.vue";
 
 // 国际化
 const { t } = useI18n();
@@ -164,26 +171,21 @@ const joinFamily = () => {
 // 家庭五大营养成分达标情况数据（示例）
 const nutrientChartData = ref({
   categories: [],
-  series: [
-    {
-      name: t('nutrient_compliance'),
-      data: [],
-    },
-  ],
+  series: []
 });
 
 // 图表配置（示例）
 const nutrientChartOpts = {
-  color: ["#1890FF"],
-  padding: [15, 15, 0, 5],
+  color: ["#1890FF", "#2FC25B"],
+  padding: [15, 0, 0, 0],
   xAxis: {
-    disableGrid: false,
+    disableGrid: true,
     axisLine: true,
   },
   yAxis: {},
   extra: {
     column: {
-      type: "group",
+      type: "stack",
       width: 30,
     },
   },
@@ -192,13 +194,92 @@ const nutrientChartOpts = {
 // 模拟获取家庭五大营养成分达标数据
 onMounted(() => {
   nutrientChartData.value.categories = [
-    t('protein'),
-    t('fat'),
-    t('carbohydrate'),
-    t('vitamin'),
-    t('mineral'),
+    t('energy_unit'),
+    t('protein_unit'),
+    t('fat_unit'),
+    t('carbohydrates_unit'),
+    t('sodium_unit'),
   ];
-  nutrientChartData.value.series[0].data = [80, 90, 75, 85, 70]; // 示例数据，表示达标百分比
+  nutrientChartData.value.series = [
+    {
+      name: t('user_name1'),
+      data: [80, 90, 85, 70, 75],
+    },
+    {
+      name: t('user_name2'),
+      data: [100, 100, 100, 100, 120],
+    }
+  ];
+});
+
+// 家庭碳排放环形图数据
+const carbonChartData = ref({
+  series: [
+    {
+      data: []
+    }
+  ]
+});
+
+// 环形图配置
+const carbonRingOpts = {
+  rotate: false,
+  rotateLock: false,
+  color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE"],
+  padding: [0, 0, 0, 0],
+  dataLabel: true,
+  enableScroll: false,
+  legend: {
+    show: true,
+    position: "right",
+    lineHeight: 25
+  },
+  title: {
+    name: t('carbon_total'),
+    fontSize: 15,
+    color: "#666666"
+  },
+  subtitle: {
+    name: "",
+    fontSize: 25,
+    color: "#4CAF50"
+  },
+  extra: {
+    ring: {
+      ringWidth: 15,
+      activeOpacity: 0.5,
+      activeRadius: 10,
+      offsetAngle: 0,
+      labelWidth: 15,
+      border: false,
+      borderWidth: 3,
+      borderColor: "#FFFFFF"
+    }
+  }
+};
+
+// 模拟获取家庭成员碳排放数据（硬编码示例）
+onMounted(() => {
+  // 假设家庭成员及其碳排放数据
+  const memberCarbonData = [
+    { name: 'Alice', value: 2.5 },
+    { name: 'Bob', value: 3.0 },
+    { name: 'Charlie', value: 1.5 }
+  ];
+
+  carbonChartData.value.series[0].data = memberCarbonData;
+
+  // 计算总碳排放
+  const totalCarbonEmission = memberCarbonData.reduce((sum, item) => sum + item.value, 0);
+
+  // 更新环形图副标题
+  carbonRingOpts.subtitle.name = `${totalCarbonEmission.toFixed(1)}Kg`;
+});
+
+// 计算属性：按喜欢程度从高到低排序的菜品提议
+const sortedDishProposals = computed(() => {
+  if (!family.value.dishProposals) return [];
+  return [...family.value.dishProposals].sort((a, b) => b.preference - a.preference);
 });
 
 // 处理 <picker> 变化
@@ -206,10 +287,10 @@ const onDishPreferenceChange = (e) => {
   newDish.preference = parseInt(e.detail.value, 10);
 };
 
-// 管理成员功能（占位）
+// 管理成员功能
 const manageMembers = () => {
-  // 实现管理成员的逻辑
-  uni.showToast({ title: t('feature_not_implemented'), icon: 'none' });
+  // 跳转到家庭管理页面
+  uni.navigateTo({ url: '/pagesMy/myFamily/myFamily' });
 };
 </script>
 
@@ -315,9 +396,8 @@ const manageMembers = () => {
 
 /* 提出想吃的菜品 */
 .dish-proposal {
-  display: block;
   background-color: var(--card-background);
-  padding: 90rpx;
+  padding: 20rpx;
   border-radius: 10rpx;
   box-shadow: 0 2rpx 5rpx var(--shadow-color);
   margin-bottom: 20rpx;
@@ -326,30 +406,28 @@ const manageMembers = () => {
 .section-title {
   font-size: var(--font-size-title);
   font-weight: bold;
-  width: 50%;
   color: var(--primary-color);
-  //margin-left: 0rpx;
   margin-bottom: 10rpx;
 }
 
+/* 输入框 */
 .input {
   width: 100%;
   padding: 10rpx;
   border: 1rpx solid #ccc;
   border-radius: 5rpx;
-  margin-bottom: 15rpx;
+  margin-bottom: 20rpx;
+  margin-top: 20rpx;
 }
 
 .picker {
   width: 100%;
-  margin-bottom: 15rpx;
-}
-
-.picker-content {
   padding: 10rpx;
   border: 1rpx solid #ccc;
   border-radius: 5rpx;
-  background-color: #fff;
+  margin-bottom: 20rpx;
+  margin-top: 20rpx;
+  color: #666666;
 }
 
 .submit-button {
@@ -371,22 +449,16 @@ const manageMembers = () => {
   margin-bottom: 20rpx;
 }
 
+/* Scroll-View 滚动区域 */
+.dish-scroll {
+  max-height: 300rpx; /* 固定最大高度 */
+  overflow-y: auto;
+}
+
+/* 菜品项 */
 .dish-item {
   padding: 10rpx;
   border-bottom: 1rpx solid #eee;
-}
-
-.dish-name {
-  font-size: 24rpx;
-  color: var(--text-color);
-  margin-bottom: 5rpx;
-}
-
-.dish-preference,
-.dish-proposer {
-  font-size: 20rpx;
-  color: #666;
-  margin-bottom: 5rpx;
 }
 
 /* 共享数据 */
@@ -400,7 +472,8 @@ const manageMembers = () => {
 
 .charts {
   width: 100%;
-  height: 300px;
+  height: 300rpx;
+  margin-bottom: 20rpx;
 }
 
 /* 家庭成员部分（移到最下方） */
@@ -529,4 +602,3 @@ const manageMembers = () => {
   }
 }
 </style>
-

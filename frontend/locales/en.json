@@ -236,6 +236,8 @@
 	"carbon_emission_unit": "Carbon Emission(Kg)",
 	"You": "You",
 	"family_name": "Family Name",
-	"family_info": "Family ID: "
-
+	"family_info": "Family ID: ",
+	"manage_members": "Manage Members",
+	"shared_family_data": "Today's Shared Family Data",
+	"carbon_total": "Total Carbon Emission"
 }

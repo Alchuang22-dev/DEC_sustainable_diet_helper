@@ -236,6 +236,8 @@
 	"carbon_emission_unit": "碳排放（Kg）",
 	"You": "您",
 	"family_name": "家庭名称",
-	"family_info": "家庭ID："
-
+	"family_info": "家庭ID：",
+	"manage_members": "管理成员",
+	"shared_family_data": "今日家庭数据一览",
+	"carbon_total": "碳排放总量"
 }
