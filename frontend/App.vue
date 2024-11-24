@@ -1,5 +1,6 @@
 <script>
 	export default {
+		// from cy:加一个globaldata，let baseurl = globaldata.url差不多类似的
 		onLaunch: function() {
 			console.warn('当前组件仅支持 uni_modules 目录结构 ，请升级 HBuilderX 到 3.1.0 版本以上！')
 			console.log('App Launch')
