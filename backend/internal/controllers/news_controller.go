@@ -4,6 +4,7 @@ package controllers
 import (
     "net/http"
     "strconv"
+    "time"
 
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
@@ -18,14 +19,26 @@ func NewNewsController(db *gorm.DB) *NewsController {
     return &NewsController{DB: db}
 }
 
-func (nc *NewsController) CreateNews(c *gin.Context) {
+func (nc *NewsController) UploadNews(c *gin.Context) {
+    // 获取用户 ID
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
     var news models.News
     if err := c.ShouldBindJSON(&news); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
         return
     }
 
-    // 初始化用户列表为空切片，避免返回 null
+    // 设置作者 ID 为当前用户 ID
+    news.AuthorID = userID.(uint)
+
+    // 初始化一些字段
+    news.UploadTime = time.Now()
+    news.ViewCount = 0
     news.LikedByUsers = []models.User{}
     news.FavoritedByUsers = []models.User{}
     news.DislikedByUsers = []models.User{}
@@ -34,13 +47,6 @@ func (nc *NewsController) CreateNews(c *gin.Context) {
     // 检查 NewsType 是否为空
     if news.NewsType == "" {
         c.JSON(http.StatusBadRequest, gin.H{"error": "NewsType is required"})
-        return
-    }
-
-    // 检查 AuthorID 是否有效
-    var author models.User
-    if err := nc.DB.First(&author, news.AuthorID).Error; err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid author ID"})
         return
     }
 
@@ -56,6 +62,9 @@ func (nc *NewsController) CreateNews(c *gin.Context) {
             c.JSON(http.StatusBadRequest, gin.H{"error": "Paragraphs and Resources are not allowed for video news"})
             return
         }
+
+        // 设置 Video 的 NewsID
+        news.Video.NewsID = news.ID
 
     case models.NewsTypeRegular:
         // 如果是常规新闻，需要 Paragraphs 或 Resources 字段，不应包含 Video
