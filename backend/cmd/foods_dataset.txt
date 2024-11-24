@@ -1,0 +1,112 @@
+Food ID	Food Name
+-----------------
+1	Rice
+2	Water
+3	Beef
+4	Other seasoning
+5	Butter
+6	Other leafy vegetables
+7	Sugar
+8	Edible oil
+9	Lettuce
+10	Other citrus fruits
+11	Onion
+12	Other root vegetables
+13	Other alcohol
+14	Salt
+15	Soy sauce
+16	Minced Meat
+17	Burdock
+18	Flavor seasoning
+19	Green onion
+20	Cabbage
+21	Other dried food/seaweed
+22	Carrot
+23	Potato
+24	Green bean
+25	Other pickled vegetables
+26	Dried soup
+27	Tofu
+28	Fried tofu
+29	Sauce
+30	White Radish
+31	Pork
+32	Noodles
+33	Egg
+34	Dried udon・Soba
+35	Dried seaweed
+36	Other grains
+37	Eggplant
+38	Pork belly
+39	Mayonnaise
+40	Bean sprout
+41	Green pepper
+42	Pumpkin
+43	Tomato
+44	Vinegar
+45	Soy milk
+46	Other soy products
+47	Udon
+48	Raw Udon・Soba
+49	Other processed meat
+50	Miso
+51	Konjac
+52	Mushroom
+53	Dried Mushroom
+54	Other vegetables
+55	れんこん
+56	Ketchup
+57	Cheese
+58	Cucumber
+59	Spinach
+60	Wheat flour
+61	Eryngii
+62	Other mushroom
+63	Rice cake
+64	Chinese cabbage
+65	Broccoli
+66	Pickled Chinese noodle
+67	Soba
+68	Chinese noodle
+69	Shrimp
+70	Bonito flakes/shavings
+71	Chicken
+72	Chicken thigh
+73	Bambooshoot
+74	Chicken wings
+75	Milk
+76	Enoki
+77	Squid
+78	Wine
+79	Kamaboko
+80	Pasta
+81	Spaghetti
+82	Other dairy products
+83	Yogurt
+84	Curry roux
+85	Dried plums 
+86	Margarine
+87	Sausage
+88	Ham
+89	Canned tuna
+90	Canned seafood
+91	Mackerel
+92	Salmon
+93	Salted Salmon
+94	Cod
+95	Other fresh fish
+96	Clams
+97	Other Salted Dried Seafood
+98	Octopus
+99	Bacon
+100	Other processed vegetables and seaweed products
+101	Dumpling
+102	Other noodles
+103	Hijiki
+104	Chikuwa
+105	Seaweed
+106	Yellowtail
+107	Kelp
+108	Fried Kamaboko
+109	Bread
+110	Natto

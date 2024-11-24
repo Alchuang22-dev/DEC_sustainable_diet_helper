@@ -37,18 +37,22 @@
 			<button class="secondary-button small-button" @click="saveData">
 				保存添加
 			</button>
-			<button class="calculate-button small-button" @click="calculateEmission">
-				计算碳排放
+			<button class="calculate-button small-button" @click="calculateData">
+				开始计算
 			</button>
 		</view>
 
-		<!-- 碳排放结果环形图 -->
+		<!-- 结果显示（环形图和条形图） -->
 		<view class="result" v-if="showResult">
 			<text class="result-title">您本次的碳足迹是：</text>
 			<qiun-data-charts :canvas2d="true" canvas-id="carbonEmissionChart" type="ring" :opts="ringOpts"
 				:chartData="chartEmissionData" />
+			<text class="result-title">您的营养摄入：</text>
+			<qiun-data-charts :canvas2d="true" canvas-id="nutritionChart" type="bar" :opts="barOpts"
+				:chartData="chartNutritionData" />
 			<button class="save-button" @click="saveEmissionData">保存</button>
 		</view>
+
 
 
 		<!-- 实用工具 -->
@@ -75,6 +79,7 @@
 	} from '@dcloudio/uni-app';
 
 	// 食物列表
+	// TODO: 考虑使用模板
 	const foodList = reactive([{
 			name: "西红柿",
 			weight: "1kg",
@@ -83,7 +88,12 @@
 			foodSource: "本地",
 			image: "",
 			isAnimating: false, // 用于跟踪动画状态
-			emission: 0
+			emission: 0,
+			calories: 100, // 千卡 (kcal)
+			protein: 200, // 克 (g)
+			fat: 400, // 克 (g)
+			carbohydrates: 300, // 克 (g)
+			sodium: 500 // 毫克 (mg)
 		},
 		{
 			name: "西红柿",
@@ -93,7 +103,12 @@
 			foodSource: "本地",
 			image: "",
 			isAnimating: false,
-			emission: 0
+			emission: 0,
+			calories: 100,
+			protein: 200,
+			fat: 400,
+			carbohydrates: 300,
+			sodium: 500
 		},
 		{
 			name: "西红柿",
@@ -103,7 +118,12 @@
 			foodSource: "本地",
 			image: "",
 			isAnimating: false,
-			emission: 0
+			emission: 0,
+			calories: 100,
+			protein: 200,
+			fat: 400,
+			carbohydrates: 300,
+			sodium: 500
 		},
 		{
 			name: "西红柿",
@@ -113,7 +133,12 @@
 			foodSource: "本地",
 			image: "",
 			isAnimating: false,
-			emission: 0
+			emission: 0,
+			calories: 100,
+			protein: 200,
+			fat: 400,
+			carbohydrates: 300,
+			sodium: 500
 		},
 		// 可以预先添加更多食物项
 	]);
@@ -125,13 +150,28 @@
 
 	const showResult = ref(false);
 
-	// 环形图数据和配置
+	// 碳排放环形图数据和配置
 	const chartEmissionData = ref({
 		series: [{
 			name: "CO₂排放",
 			data: []
 		}]
 	});
+
+	// 营养计算条形图数据和配置
+	const chartNutritionData = ref({
+		categories: ["能量", "蛋白质", "脂肪", "碳水化合物", "钠"],
+		series: [{
+				name: "实际值",
+				data: [0, 0, 0, 0, 0]
+			},
+			{
+				name: "目标值",
+				data: [0, 0, 0, 0, 0]
+			}
+		]
+	});
+
 
 	const ringOpts = ref({
 		rotate: false,
@@ -169,6 +209,38 @@
 		}
 	});
 
+	// 营养条形图配置
+	const barOpts = ref({
+		color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE", "#3CA272", "#FC8452", "#9A60B4", "#ea7ccc"],
+		padding: [15, 30, 0, 5],
+		enableScroll: false,
+		legend: {},
+		xAxis: {
+			boundaryGap: "justify",
+			disableGrid: false,
+			min: 0,
+			axisLine: false,
+			max: 4000 // Adjusted max value for better visualization
+		},
+		yAxis: {},
+		extra: {
+			bar: {
+				type: "group",
+				width: 30,
+				meterBorde: 1,
+				meterFillColor: "#FFFFFF",
+				activeBgColor: "#000000",
+				activeBgOpacity: 0.08,
+				linearType: "custom",
+				barBorderCircle: true,
+				seriesGap: 2,
+				categoryGap: 2
+			}
+		}
+	});
+
+
+
 	// 页面加载时处理动画
 	const handleLoad = () => {
 		foodList.forEach((food, index) => {
@@ -197,11 +269,11 @@
 		uni.setStorageSync('foodDetails', foodList);
 	};
 
-	// 计算碳排放
-	const calculateEmission = () => {
+	// 计算碳排放和营养数据
+	const calculateData = () => {
 		// 模拟向后端发送请求
 		uni.request({
-			url: 'https://mock-api.com/calculateEmission', // 模拟的后端接口URL
+			url: 'https://mock-api.com/calculateData', // 模拟的后端接口URL
 			method: 'POST',
 			data: {
 				foodList: foodList.map(food => ({
@@ -210,42 +282,67 @@
 					// 其他需要发送的字段
 				}))
 			},
-			success: (res) => {
+			fail: (res) => {
 				// 模拟后端返回的数据
 				const mockResponse = {
-					data: [{
+					totalData: [{
 							name: "西红柿",
-							emission: 2
+							emission: 2,
+							calories: 100,
+							protein: 200,
+							fat: 400,
+							carbohydrates: 300,
+							sodium: 500,
 						},
 						{
 							name: "苹果",
-							emission: 3
+							emission: 3,
+							calories: 100,
+							protein: 200,
+							fat: 400,
+							carbohydrates: 300,
+							sodium: 500,
 						},
 						{
 							name: "牛肉",
-							emission: 10
+							emission: 10,
+							calories: 100,
+							protein: 200,
+							fat: 400,
+							carbohydrates: 300,
+							sodium: 500,
 						},
 						{
 							name: "豆腐",
-							emission: 1.5
+							emission: 1.5,
+							calories: 100,
+							protein: 200,
+							fat: 400,
+							carbohydrates: 300,
+							sodium: 500,
 						},
-						// 根据foodList的实际内容添加更多食物项
-					]
+						// ...
+					],
 				};
 
-				// 假设后端返回的数据结构与mockResponse相同
-				const emissionData = mockResponse.data;
+				// 假设后端返回的数据结构与 mockResponse 相同
+				const totalData = mockResponse.totalData;
 
-				// 更新foodList中的每个食物项，添加emission字段
-				emissionData.forEach((item, index) => {
+				// 更新 foodList 中的每个食物项，添加多个字段
+				totalData.forEach((item, index) => {
 					if (foodList[index]) {
 						foodList[index].emission = item.emission;
+						foodList[index].calories = item.calories;
+						foodList[index].protein = item.protein;
+						foodList[index].fat = item.fat;
+						foodList[index].carbohydrates = item.carbohydrates;
+						foodList[index].sodium = item.sodium;
 					}
 				});
 
 				// 更新环形图的数据和总排放量
 				let totalCO2 = 0;
-				chartEmissionData.value.series[0].data = emissionData.map(item => {
+				chartEmissionData.value.series[0].data = totalData.map(item => {
 					totalCO2 += item.emission;
 					return {
 						name: item.name,
@@ -255,6 +352,40 @@
 
 				// 更新环形图中心显示的总排放量
 				ringOpts.value.subtitle.name = `${totalCO2} kg`;
+
+				// 更新条形图的营养数据
+				const totalNutrition = {
+					calories: 0,
+					protein: 0,
+					fat: 0,
+					carbohydrates: 0,
+					sodium: 0
+				};
+
+				totalData.forEach(item => {
+					totalNutrition.calories += item.calories;
+					totalNutrition.protein += item.protein;
+					totalNutrition.fat += item.fat;
+					totalNutrition.carbohydrates += item.carbohydrates;
+					totalNutrition.sodium += item.sodium;
+				});
+
+				chartNutritionData.value.series[0].data = [
+					totalNutrition.calories,
+					totalNutrition.protein,
+					totalNutrition.fat,
+					totalNutrition.carbohydrates,
+					totalNutrition.sodium
+				];
+
+				// TODO: 从后端获取用户目标值，现在省去
+				chartNutritionData.value.series[1].data = [
+					totalNutrition.calories + 100,
+					totalNutrition.protein + 100,
+					totalNutrition.fat + 100,
+					totalNutrition.carbohydrates + 100,
+					totalNutrition.sodium + 100
+				];
 
 				// 显示结果
 				showResult.value = true;
@@ -274,58 +405,9 @@
 					});
 					chart.draw();
 				}).exec();
-			},
-			fail: (err) => {
-				// 模拟后端返回的数据
-				const mockResponse = {
-					data: [{
-							name: "西红柿",
-							emission: 2
-						},
-						{
-							name: "苹果",
-							emission: 3
-						},
-						{
-							name: "牛肉",
-							emission: 10
-						},
-						{
-							name: "豆腐",
-							emission: 1.5
-						},
-						// 根据foodList的实际内容添加更多食物项
-					]
-				};
 
-				// 假设后端返回的数据结构与mockResponse相同
-				const emissionData = mockResponse.data;
-
-				// 更新foodList中的每个食物项，添加emission字段
-				emissionData.forEach((item, index) => {
-					if (foodList[index]) {
-						foodList[index].emission = item.emission;
-					}
-				});
-
-				// 更新环形图的数据和总排放量
-				let totalCO2 = 0;
-				chartEmissionData.value.series[0].data = emissionData.map(item => {
-					totalCO2 += item.emission;
-					return {
-						name: item.name,
-						value: item.emission
-					};
-				});
-
-				// 更新环形图中心显示的总排放量
-				ringOpts.value.subtitle.name = `${totalCO2} kg`;
-
-				// 显示结果
-				showResult.value = true;
-
-				// 初始化并绘制环形图
-				uni.createSelectorQuery().select('#carbonEmissionChart').fields({
+				// 初始化并绘制条形图
+				uni.createSelectorQuery().select('#nutritionChart').fields({
 					node: true,
 					size: true
 				}, (res) => {
@@ -333,9 +415,9 @@
 					const ctx = canvas.getContext('2d');
 					const chart = new qCharts({
 						canvas: ctx,
-						type: 'ring',
-						data: chartEmissionData.value,
-						options: ringOpts.value
+						type: 'bar',
+						data: chartNutritionData.value,
+						options: barOpts.value
 					});
 					chart.draw();
 				}).exec();

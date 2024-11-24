@@ -1,58 +1,111 @@
 <template>
-	<view class="container">
+  <view class="container">
+    <image src="/static/images/index/background_img.jpg" class="background-image"></image>
 
-		<image src="/static/images/index/background_img.jpg" class="background-image"></image>
+    <!-- 个人信息部分 -->
+    <view class="profile-section">
+      <view class="profile-top">
+        <image src="/static/images/index/background_img.jpg" class="avatar"></image>
+        <view class="profile-text">
+          <text class="greeting">{{ isLoggedIn ? uid : 'Hello!' }}</text>
+          <text class="login-prompt">{{ isLoggedIn ? '已登录' : '登录以享受更多服务' }}</text>
+        </view>
+      </view>
+      <button class="login-button" @click="handleLoginButtonClick">
+        {{ isLoggedIn ? '切换账号' : '注册/登录' }}
+      </button>
+	  <button v-if="isLoggedIn" class="login-button" @click="logout">
+	    {{ '退出登录' }}
+	  </button>
+    </view>
 
-		<!-- 个人信息部分 -->
-		<view class="profile-section">
-			<view class="profile-top">
-				<image src="/static/images/index/background_img.jpg" class="avatar"></image>
-				<view class="profile-text">
-					<text class="greeting">Hello!</text>
-					<text class="login-prompt">登录以享受更多服务</text>
-				</view>
-			</view>
-			<button class="login-button">注册/登录</button>
-		</view>
-
-		<!-- 菜单部分 -->
-		<view class="menu-section">
-			<view class="menu-item" @click="navigateTo('setGoals')">
-				<text class="icon">🎯</text>
-				<text class="menu-text">设置目标</text>
-			</view>
-			<view class="menu-item" @click="navigateTo('foodPreferences')">
-				<text class="icon">🍲</text>
-				<text class="menu-text">食物偏好</text>
-			</view>
-			<view class="menu-item" @click="navigateTo('myFamily')">
-				<text class="icon">👪</text>
-				<text class="menu-text">我的家庭</text>
-			</view>
-			<view class="menu-item" @click="navigateTo('favorites')">
-				<text class="icon">❤️</text>
-				<text class="menu-text">我的收藏</text>
-			</view>
-			<view class="menu-item" @click="navigateTo('historyData')">
-				<text class="icon">📊</text>
-				<text class="menu-text">历史数据</text>
-			</view>
-		</view>
-
-	</view>
+    <!-- 菜单部分 -->
+    <view class="menu-section">
+      <view class="menu-item" @click="navigateTo('setGoals')">
+        <text class="icon">🎯</text>
+        <text class="menu-text">设置目标</text>
+      </view>
+      <view class="menu-item" @click="navigateTo('foodPreferences')">
+        <text class="icon">🍲</text>
+        <text class="menu-text">食物偏好</text>
+      </view>
+      <view class="menu-item" @click="navigateTo('myFamily')">
+        <text class="icon">👪</text>
+        <text class="menu-text">我的家庭</text>
+      </view>
+      <view class="menu-item" @click="navigateTo('favorites')">
+        <text class="icon">❤️</text>
+        <text class="menu-text">我的收藏</text>
+      </view>
+      <view class="menu-item" @click="navigateTo('historyData')">
+        <text class="icon">📊</text>
+        <text class="menu-text">历史数据</text>
+      </view>
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('appSettings')">
+        <text class="icon">⚙️</text>
+        <text class="menu-text">软件设置</text>
+      </view>
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('userSettings')">
+        <text class="icon">👤</text>
+        <text class="menu-text">用户设置</text>
+      </view>
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('searchTools')">
+        <text class="icon">🔍</text>
+        <text class="menu-text">搜索工具</text>
+      </view>
+    </view>
+  </view>
 </template>
 
 <script setup>
-	import {
-		ref
-	} from 'vue';
+import { ref } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
 
-	const navigateTo = (page) => {
-		uni.navigateTo({
-			url: `/pages/${page}/${page}`,
-		});
-	};
+const uid = ref('');
+const isLoggedIn = ref(false);
+
+function navigateTo(page) {
+  uni.navigateTo({
+    url: `/pagesMy/${page}/${page}`,
+  });
+}
+
+function handleLoginButtonClick() {
+  if (isLoggedIn.value) {
+    // 切换账户的逻辑
+    uni.navigateTo({
+      url: '/pagesMy/login/login',
+    });
+  } else {
+    // 跳转到登录页面
+    navigateTo('login');
+  }
+}
+
+function checkLoginStatus() {
+  console.log("in check");
+  const query = uni.getStorageSync('uid');
+  console.log(query);
+  if (query && query !== '') {
+    uid.value = query;
+    isLoggedIn.value = true;
+  } else {
+    isLoggedIn.value = false;
+  }
+}
+
+function logout() {
+  isLoggedIn.value = false;
+  uni.removeStorageSync('uid');
+}
+
+onShow(() => {
+  console.log("in onShow");
+  // 在页面显示时调用检查登录状态
+  checkLoginStatus();
+});
 </script>
+
 
 <style scoped>
 	/* 全局样式变量 */

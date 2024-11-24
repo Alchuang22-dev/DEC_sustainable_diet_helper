@@ -16,22 +16,55 @@
 			"style": {
 				"navigationBarTitleText": "资讯"
 			}
+		},
+		{
+			"path": "pages/tools_index/tools_index",
+			"style": {
+				"navigationBarTitleText": "工具"
+			}
 		}
 	],
 	"subPackages": [{
 			"root": "pagesMy",
 			"pages": [{
 				"path": "my_home/my_home"
+			}, {
+				"path": "login/login"
+			}, {
+				"path": "appSettings/appSettings"
+			}, {
+				"path": "favorites/favorites"
+			}, {
+				"path": "foodPreferences/foodPreferences"
+			}, {
+				"path": "historyData/historyData"
+			}, {
+				"path": "myFamily/myFamily"
+			}, {
+				"path": "searchTools/searchTools",
+				"style": {
+					"navigationBarTitleText": "搜索工具"
+				}
+			}, {
+				"path": "setGoals/setGoals"
+			}, {
+				"path": "userSettings/userSettings"
 			}]
 		},
 		{
 			"root": "pagesNews",
 			"pages": [{
 				"path": "news_detail/news_detail"
-			},{
+			}, {
 				"path": "video_detail/video_detail"
-			},{
+			}, {
 				"path": "web_detail/web_detail"
+			}]
+		},
+		{
+			"root": "pagesSetting",
+			"pages": [{
+				"path": "language/language"
 			}]
 		},
 		{
@@ -44,30 +77,26 @@
 				},
 				{
 					"path": "nutrition_calculator/nutrition_calculator",
-					"style" :
-					{
-						"navigationBarTitleText" : "营养目标"
+					"style": {
+						"navigationBarTitleText": "营养目标"
 					}
 				},
 				{
-					"path" : "add_food/add_food",
-					"style" : 
-					{
-						"navigationBarTitleText" : "添加食品"
+					"path": "add_food/add_food",
+					"style": {
+						"navigationBarTitleText": "添加食品"
 					}
 				},
 				{
-					"path" : "food_recommend/food_recommend",
-					"style" : 
-					{
-						"navigationBarTitleText" : "今日推荐"
+					"path": "food_recommend/food_recommend",
+					"style": {
+						"navigationBarTitleText": "今日推荐"
 					}
 				},
 				{
-					"path" : "home_servant/home_servant",
-					"style" : 
-					{
-						"navigationBarTitleText" : "家庭管理"
+					"path": "home_servant/home_servant",
+					"style": {
+						"navigationBarTitleText": "家庭管理"
 					}
 				}
 			]
@@ -94,16 +123,22 @@
 				"selectedIconPath": "static/c1.png"
 			},
 			{
-				"pagePath": "pages/news_index/news_index",
-				"text": "资讯",
+				"pagePath": "pages/tools_index/tools_index",
+				"text": "工具",
 				"iconPath": "static/c2.png",
 				"selectedIconPath": "static/c2.png"
 			},
 			{
-				"pagePath": "pages/my_index/my_index",
-				"text": "我的",
+				"pagePath": "pages/news_index/news_index",
+				"text": "资讯",
 				"iconPath": "static/c3.png",
 				"selectedIconPath": "static/c3.png"
+			},
+			{
+				"pagePath": "pages/my_index/my_index",
+				"text": "我的",
+				"iconPath": "static/c4.png",
+				"selectedIconPath": "static/c4.png"
 			}
 		]
 	}
