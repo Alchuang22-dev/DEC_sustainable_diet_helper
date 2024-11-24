@@ -24,7 +24,7 @@
         <text class="arrow">></text>
       </view>
       <view class="divider"></view>
-      <view class="list-item" @click="navigateTo('Permissions')">
+      <view class="list-item" @click="navigateTo('InfoShared')">
         <text>通信权限</text>
         <text class="arrow">></text>
       </view>
@@ -32,7 +32,7 @@
         <text>个人信息与权限</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item" @click="navigateTo('InfoShared')">
+      <view class="list-item" @click="navigateTo('Permissions')">
         <text>个人信息收集清单</text>
         <text class="arrow">></text>
       </view>
