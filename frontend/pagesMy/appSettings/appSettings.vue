@@ -13,7 +13,7 @@
       <view class="divider">
         <text class="divider-text">显示</text>
       </view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('Fonts')">
         <text>字体大小</text>
         <text class="arrow">></text>
       </view>
@@ -24,33 +24,33 @@
       <view class="divider">
         <text class="divider-text">存储与数据</text>
       </view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('DeleteData')">
         <text>清除数据</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('Storage')">
         <text>存储空间</text>
         <text class="arrow">></text>
       </view>
       <view class="divider">
         <text class="divider-text">辅助功能</text>
       </view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('DevelopingFunc')">
         <text>开发功能</text>
         <text class="arrow">></text>
       </view>
       <view class="divider">
         <text class="divider-text">关于软件</text>
       </view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('FeedBack')">
         <text>帮助与反馈</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('SoftwareInfo')">
         <text>软件信息</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('ConnectUs')">
         <text>联系我们</text>
         <text class="arrow">></text>
       </view>

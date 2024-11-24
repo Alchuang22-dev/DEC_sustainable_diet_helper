@@ -72,98 +72,82 @@
 			"root": "pagesSetting",
 			"pages": [{
 				"path": "language/language"
-			}],
-			"pages": [{
-				"path": "pAuthorizations/Authorizations",
+			},{
+				"path": "Authorizations/Authorizations",
 				"style": {
 					"navigationBarTitleText": "个人信息与权限"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "Bend/Bend",
 				"style": {
 					"navigationBarTitleText": "账户绑定"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "ConnectUs/ConnectUs",
 				"style": {
 					"navigationBarTitleText": "联系我们"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "DeleteData/DeleteData",
 				"style": {
 					"navigationBarTitleText": "删除数据"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "DeleteId/DeleteId",
 				"style": {
 					"navigationBarTitleText": "账户注销"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "DevelopingFunc/DevelopingFunc",
 				"style": {
 					"navigationBarTitleText": "开发中功能"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "FeedBack/FeedBack",
 				"style": {
 					"navigationBarTitleText": "帮助与反馈"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "Fonts/Fonts",
 				"style": {
 					"navigationBarTitleText": "调整字体"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "Idinfo/Idinfo",
 				"style": {
 					"navigationBarTitleText": "账号与安全"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "InfoShared/InfoShared",
 				"style": {
 					"navigationBarTitleText": "通信权限"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "newsSetting/newsSetting",
 				"style": {
 					"navigationBarTitleText": "消息通知"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "Permissions/Permissions",
 				"style": {
 					"navigationBarTitleText": "个人信息收集清单"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "PIConnected/PIConnected",
 				"style": {
 					"navigationBarTitleText": "第三方信息共享清单"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "recoSetting/recoSetting",
 				"style": {
 					"navigationBarTitleText": "个性化推荐设置"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "SoftwareInfo/SoftwareInfo",
 				"style": {
 					"navigationBarTitleText": "关于软件"
 				}
-			}],
-			"pages": [{
+			},{
 				"path": "Storage/Storage",
 				"style": {
 					"navigationBarTitleText": "存储空间"
