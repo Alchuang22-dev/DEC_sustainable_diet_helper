@@ -1,31 +1,77 @@
 package models
 
-// 食物结构体
+import (
+    "gorm.io/gorm"
+    "fmt"
+)
+
 type Food struct {
-    ID             int64     `json:"id"`             // 食物ID
-    Name           string    `json:"name"`           // 食物名称（用户输入类型，下拉选取）
-    Weight         float64   `json:"weight"`         // 用户购买的重量
-    Price          float64   `json:"price"`          // 用户购买的价格
-    TransportMode  string    `json:"transport_mode"` // 用户购买的方式（陆运，海运，空运）
-    Location       string    `json:"location"`       // 用户购买的地理位置（本地，外地）
-    Emissions      float64   `json:"emissions"`      // 食物的碳排放
-    Nutrition      Nutrition `json:"nutrition"`      // 食物的营养成分
+    gorm.Model
+    ZhFoodName    string  `json:"zh_food_name" gorm:"column:zh_food_name;not null"`
+    EnFoodName    string  `json:"en_food_name" gorm:"column:en_food_name;not null"`
+    GHG           float64 `json:"ghg" gorm:"column:ghg"`
+    Calories      float64 `json:"calories" gorm:"column:calories"`
+    Protein       float64 `json:"protein" gorm:"column:protein"`
+    Fat           float64 `json:"fat" gorm:"column:fat"`
+    Carbohydrates float64 `json:"carbohydrates" gorm:"column:carbohydrates"`
+    Sodium        float64 `json:"sodium" gorm:"column:sodium"`
+    Price         float64 `json:"price" gorm:"column:price"`
+    Recipes       []Recipe `json:"recipes" gorm:"many2many:food_recipes;"`
 }
 
-// 营养结构体（根据实际数据库字段重新定义）
-type Nutrition struct {
-    Calories      float64 `json:"calories"`       // 卡路里
-    Protein       float64 `json:"protein"`        // 蛋白质
-    Fat           float64 `json:"fat"`            // 脂肪
-    Carbohydrates float64 `json:"carbohydrates"`  // 碳水化合物
-    // 可根据需要添加更多营养成分字段
+// TableName 指定表名
+func (Food) TableName() string {
+    return "foods"
 }
 
-// 用户食物集合结构体
-type UserFoodCollection struct {
-    Foods          []Food    `json:"foods"`           // 关联的食物类型
-    TotalEmissions float64   `json:"total_emissions"` // 总碳排放
-    TotalNutrition Nutrition `json:"total_nutrition"` // 总营养成分
-    Recipes        []Recipe  `json:"recipes"`         // 关联的菜谱
+// CreateFood 创建食物记录
+func (f *Food) CreateFood(db *gorm.DB) error {
+    return db.Create(f).Error
 }
 
+// GetFoodByID 通过ID获取食物
+func GetFoodByID(db *gorm.DB, id uint) (*Food, error) {
+    var food Food
+    err := db.First(&food, id).Error
+    return &food, err
+}
+
+// GetAllFoods 获取所有食物
+func GetAllFoods(db *gorm.DB) ([]Food, error) {
+    var foods []Food
+    err := db.Find(&foods).Error
+    return foods, err
+}
+
+// UpdateFood 更新食物信息
+func (f *Food) UpdateFood(db *gorm.DB) error {
+    return db.Save(f).Error
+}
+
+// DeleteFood 删除食物
+func (f *Food) DeleteFood(db *gorm.DB) error {
+    return db.Delete(f).Error
+}
+
+// FoodNameResponse 定义返回的食物名称结构
+type FoodNameResponse struct {
+    ID   uint   `json:"id"`
+    Name string `json:"name"`
+}
+
+// GetAllFoodNames 获取所有食物名称
+func GetAllFoodNames(db *gorm.DB, language string) ([]FoodNameResponse, error) {
+    var results []FoodNameResponse
+    query := db.Model(&Food{})
+    
+    switch language {
+    case "zh":
+        err := query.Select("id, zh_food_name as name").Find(&results).Error
+        return results, err
+    case "en":
+        err := query.Select("id, en_food_name as name").Find(&results).Error
+        return results, err
+    default:
+        return nil, fmt.Errorf("unsupported language: %s", language)
+    }
+}

@@ -1,43 +1,43 @@
-// routes/news_routes.go
+// internal/routes/food_routes.go
 package routes
 
-// import (
-//     "gorm.io/gorm"
-//     "github.com/gin-gonic/gin"
-//     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/controllers"
-// )
+import (
+    "gorm.io/gorm"
+    "github.com/gin-gonic/gin"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/controllers"
+    // "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/middleware"
+)
 
-// func RegisterFoodRoutes(router *gin.Engine, db *gorm.DB) {
-//     newsController := controllers.NewNewsController(db)
-//     newsGroup := router.Group("/news")
-//     {
-//         // 创建新闻
-//         newsGroup.POST("/", newsController.CreateNews)
-//         // 获取新闻详情
-//         newsGroup.GET("/:id", newsController.GetNewsDetail)
-//         // 添加评论
-//         newsGroup.POST("/:id/comment", newsController.AddComment)
+func RegisterFoodRoutes(router *gin.Engine, db *gorm.DB) {
+    foodController := controllers.NewFoodController(db)
+    foodGroup := router.Group("/foods")
+    {
+        // // 需要认证的路由
+        // authGroup := foodGroup.Group("")
+        // authGroup.Use(middleware.AuthMiddleware())
+        // {
+        //     // 创建食物（管理员操作）
+        //     authGroup.POST("/create", foodController.CreateFood)
+        //     // 更新食物信息（管理员操作）
+        //     authGroup.PUT("/:id", foodController.UpdateFood)
+        //     // 删除食物（管理员操作）
+        //     authGroup.DELETE("/:id", foodController.DeleteFood)
+        //     // 获取用户相关的食物分析
+        //     authGroup.POST("/analyze", foodController.AnalyzeFood)
+        //     // 用户的食物收藏
+        //     authGroup.POST("/:id/favourite", foodController.FavoriteFood)
+        //     // 取消收藏
+        //     authGroup.POST("/:id/cancel_favourite", foodController.CancelFavoriteFood)
+        // }
 
-// 		// TODO
-// 		// 删除评论
-// 		// 删除新闻
-// 		// 更新新闻
-
-//         // 点赞新闻
-//         newsGroup.POST("/:id/like", newsController.LikeNews)
-//         // 取消点赞新闻
-//         newsGroup.POST("/:id/cancel_like", newsController.CancelLikeNews)
-
-//         // 收藏新闻
-//         newsGroup.POST("/:id/favourite", newsController.FavoriteNews)
-//         // 取消收藏新闻
-//         newsGroup.POST("/:id/cancel_favourite", newsController.CancelFavoriteNews)
-
-//         // 点踩新闻
-//         newsGroup.POST("/:id/dislike", newsController.DislikeNews)
-//         // 取消点踩新闻
-//         newsGroup.POST("/:id/cancel_dislike", newsController.CancelDislikeNews)
-
-//         newsGroup.POST("/:id/view", newsController.ViewNews)
-//     }
-// }
+        // 不需要认证的路由
+        // 获取食物名称列表
+        foodGroup.GET("/names", foodController.GetFoodNames)
+        // // 获取单个食物详情
+        // foodGroup.GET("/:id", foodController.GetFoodDetail)
+        // // 获取所有食物列表
+        // foodGroup.GET("", foodController.GetAllFoods)
+        // // 搜索食物
+        // foodGroup.GET("/search", foodController.SearchFoods)
+    }
+}
