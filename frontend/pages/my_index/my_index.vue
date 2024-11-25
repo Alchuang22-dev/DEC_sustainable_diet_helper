@@ -64,6 +64,8 @@ import { onShow } from '@dcloudio/uni-app';
 const uid = ref('');
 const avatarSrc = ref('/static/images/index/background_img.jpg');
 const isLoggedIn = ref(false);
+//TODO：根据后端传递的id进行页面内容加载
+  
 
 function navigateTo(page) {
   uni.navigateTo({
