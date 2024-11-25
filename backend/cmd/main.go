@@ -35,6 +35,8 @@ func main() {
         &models.Paragraph{},
         &models.Video{},
         &models.Comment{},
+        &models.Food{},
+        &models.Recipe{},
     )
     if err != nil {
         log.Fatal("自动迁移失败:", err)
@@ -48,6 +50,9 @@ func main() {
 
     // 注册新闻路由
     routes.RegisterNewsRoutes(router, db)
+
+    // 注册食物路由
+    routes.RegisterFoodRoutes(router, db)
 
     // 启动服务器
     err = router.Run(":8080")

@@ -2,6 +2,7 @@ package models
 
 import (
     "gorm.io/gorm"
+    "fmt"
 )
 
 type Food struct {
@@ -50,4 +51,27 @@ func (f *Food) UpdateFood(db *gorm.DB) error {
 // DeleteFood 删除食物
 func (f *Food) DeleteFood(db *gorm.DB) error {
     return db.Delete(f).Error
+}
+
+// FoodNameResponse 定义返回的食物名称结构
+type FoodNameResponse struct {
+    ID   uint   `json:"id"`
+    Name string `json:"name"`
+}
+
+// GetAllFoodNames 获取所有食物名称
+func GetAllFoodNames(db *gorm.DB, language string) ([]FoodNameResponse, error) {
+    var results []FoodNameResponse
+    query := db.Model(&Food{})
+    
+    switch language {
+    case "zh":
+        err := query.Select("id, zh_food_name as name").Find(&results).Error
+        return results, err
+    case "en":
+        err := query.Select("id, en_food_name as name").Find(&results).Error
+        return results, err
+    default:
+        return nil, fmt.Errorf("unsupported language: %s", language)
+    }
 }
