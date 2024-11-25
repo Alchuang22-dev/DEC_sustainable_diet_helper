@@ -71,7 +71,7 @@ export const useNewsStore = defineStore('news', {
           data: [
             {
               id: 1,
-              form: 'news',
+              form: 'video',
               newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
               imgsSrc: '',
               tabs: ['环境保护', '环保要闻'],
@@ -98,13 +98,41 @@ export const useNewsStore = defineStore('news', {
       }
     },
     convertVideoToItems(video) {
-      this.allNewsItems.push({
-        id: video.id,
-        link: video.newsSrc || 'news_detail',
-        image: video.imgsSrc || '',
-        title: video.newsName,
-        description: video.tabs.join(' | ') + ' | ' + video.time,
-      });
+		if (video.type === 'main') {
+    		if(video.form === 'web') {
+    			this.allNewsItems.push({
+    			id: video.id,
+    			link: video.newsSrc,
+    			image: '',
+    			title: video.newsName,
+    			description: video.tabs.join(' | ') + ' | '+ video.time,
+    			info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount,
+    			form: video.form,
+    			});
+    		}
+    		else if(video.form === 'news') {
+    			this.allNewsItems.push({
+    			id: video.id,
+    			link: 'news_detail',
+    			image: '',
+    			title: video.newsName,
+    			description: video.tabs.join(' | ') + ' | '+ video.time,
+    			info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount,
+    			form: video.form,
+				});
+    		}
+    		else if(video.form === 'video') {
+    			this.allNewsItems.push({
+    			id: video.id,
+    			link: 'video_detail',
+    			image: '',
+    			title: video.newsName,
+    			description: video.tabs.join(' | ') + ' | '+ video.time,
+    			info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount,
+    			form: video.form,
+    			});
+    		}
+    	}
     },
   },
 });
