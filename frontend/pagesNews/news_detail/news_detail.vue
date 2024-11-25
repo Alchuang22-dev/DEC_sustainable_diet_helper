@@ -21,9 +21,10 @@
 
           <!-- Interaction Buttons - Merged into News Content -->
           <view class="inline-interaction-buttons">
-            <button @click="toggleInteraction('like')">👍 {{ newsData[0].likeCount }}</button>
-            <button @click="toggleInteraction('favorite')">⭐ {{ newsData[0].favoriteCount }}</button>
-            <button @click="toggleInteraction('share')">🔄 {{ newsData[0].shareCount}}</button>
+            <button @click="toggleInteraction('like')">👍 {{ formatCount(newsData[0].likeCount) }}</button>
+            <button @click="toggleInteraction('favorite')">⭐ {{ formatCount(newsData[0].favoriteCount) }}</button>
+            <button @click="toggleInteraction('share')">🔄 {{ formatCount(newsData[0].shareCount)}}</button>
+			<button @click="toggleInteraction('dislike')" :style="{ color: ifDislike ? 'green' : 'black' }">👎 dis</button>
           </view>
         </view>
 
@@ -80,209 +81,425 @@
 </template>
 
 
-<script>
-export default {
-  data() {
-    return {
-	  webTitle: '',
-	  newsData: [],
-      comments: [
-        { text: "这篇文章非常有用！", liked: false, replies: [] },
+<script setup>
+import { ref, reactive, onMounted } from "vue";
+import { onLoad } from "@dcloudio/uni-app";
+
+const webTitle = ref("");
+const newsData = ref([]);
+const comments = reactive([
+  { text: "这篇文章非常有用！", liked: false, replies: [] },
+]);
+const newComment = ref("");
+const replyingTo = ref(null); // 当前正在回复的评论的索引
+const newReply = ref(""); // 回复内容
+const recommendations = ref([]);
+
+const ifLike = ref(false);
+const ifFavourite = ref(false);
+const ifDislike = ref(false);
+const ifShare = ref(false);
+
+const fetchData = async () => {
+  try {
+    uni.request({
+      url: "https://122.51.231.155/news/{id}", // 模拟的后端接口URL
+      method: "GET",
+      data: {
+        id: 1,
+      },
+      success: (res) => {
+        const mockResponse = {
+          data: [
+            {
+              id: 1,
+              form: "news",
+              newsSrc: "http://vjs.zencdn.net/v/oceans.mp4",
+              imgsSrc: "",
+              tabs: ["环境保护", "环保要闻"],
+              time: "2024-4-17",
+              newsName: "垃圾分类",
+              authorName: "user_test",
+              authorAvatar: "",
+              newsinfo: "测试测试测试测试测试",
+              newsbody:
+                "9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。",
+              likeCount: 10010,
+              shareCount: 37,
+              favoriteCount: 897,
+              followCount: 189,
+              dislikeCount: 100,
+              type: "main",
+            },
+            {
+              id: 2,
+              form: "news",
+              newsSrc: "http://vjs.zencdn.net/v/oceans.mp4",
+              imgsSrc: "",
+              tabs: ["环境保护", "环保要闻"],
+              time: "2024-4-17",
+              newsName: "把自然讲给你听",
+              authorName: "中野梓",
+              authorAvatar: "",
+              newsinfo: "测试测试测试测试测试",
+              newsbody: "",
+              likeCount: 1001,
+              shareCount: 37,
+              favoriteCount: 897,
+              followCount: 189,
+              dislikeCount: 100,
+              type: "reco",
+            },
+          ],
+        };
+        newsData.value = mockResponse.data;
+        recommendations.value = [];
+        newsData.value.forEach((video) => convertnewsToRecommendation(video));
+      },
+      fail: (err) => {
+        const mockResponse = {
+          data: [
+            {
+              id: 1,
+              form: "news",
+              newsSrc: "http://vjs.zencdn.net/v/oceans.mp4",
+              imgsSrc: "",
+              tabs: ["环境保护", "环保要闻"],
+              time: "2024-4-17",
+              newsName: "垃圾分类",
+              authorName: "user_test",
+              authorAvatar: "",
+              newsinfo: "测试测试测试测试测试",
+              newsbody:
+                "9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。",
+              likeCount: 10010,
+              shareCount: 37,
+              favoriteCount: 897,
+              followCount: 189,
+              dislikeCount: 100,
+              type: "main",
+            },
+            {
+              id: 2,
+              form: "news",
+              newsSrc: "http://vjs.zencdn.net/v/oceans.mp4",
+              imgsSrc: "",
+              tabs: ["环境保护", "环保要闻"],
+              time: "2024-4-17",
+              newsName: "把自然讲给你听",
+              authorName: "中野梓",
+              authorAvatar: "",
+              newsinfo: "测试测试测试测试测试",
+              newsbody: "",
+              likeCount: 1001,
+              shareCount: 37,
+              favoriteCount: 897,
+              followCount: 189,
+              dislikeCount: 100,
+              type: "reco",
+            },
+          ],
+        };
+        newsData.value = mockResponse.data;
+        recommendations.value = [];
+        newsData.value.forEach((video) => convertnewsToRecommendation(video));
+      },
+    });
+  } catch (error) {
+    const mockResponse = {
+      data: [
+        {
+          id: 1,
+          form: "news",
+          newsSrc: "http://vjs.zencdn.net/v/oceans.mp4",
+          imgsSrc: "",
+          tabs: ["环境保护", "环保要闻"],
+          time: "2024-4-17",
+          newsName: "垃圾分类",
+          authorName: "user_test",
+          authorAvatar: "",
+          newsinfo: "测试测试测试测试测试",
+          newsbody:
+            "9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。",
+          likeCount: 10010,
+          shareCount: 37,
+          favoriteCount: 897,
+          followCount: 189,
+          dislikeCount: 100,
+          type: "main",
+        },
+        {
+          id: 2,
+          form: "news",
+          newsSrc: "http://vjs.zencdn.net/v/oceans.mp4",
+          imgsSrc: "",
+          tabs: ["环境保护", "环保要闻"],
+          time: "2024-4-17",
+          newsName: "把自然讲给你听",
+          authorName: "中野梓",
+          authorAvatar: "",
+          newsinfo: "测试测试测试测试测试",
+          newsbody: "",
+          likeCount: 1001,
+          shareCount: 37,
+          favoriteCount: 897,
+          followCount: 189,
+          dislikeCount: 100,
+          type: "reco",
+        },
       ],
-      newComment: '',
-      replyingTo: null,  // 当前正在回复的评论的索引
-      newReply: '',      // 回复内容
-      likeText: '点赞',
-      favoriteText: '收藏',
-      shareText: '分享',
-      recommendations: []
     };
-  },
-  async created() {
-    // 在组件创建时调用后端获取数据
-    await this.fetchData();
-  },
-  onLoad(options) {
-    if (options.title) {
-      this.webTitle = decodeURIComponent(options.title);
-    }
-  },
-  methods: {
-	async fetchData() {
-		try {
-		    uni.request({ // 模拟从后端获取数据
-		        url: 'https://122.51.231.155/news/{id}', // 模拟的后端接口URL
-		        method: 'GET',
-		        data: {
-		            id: 1,
-		        },
-		        success: (res) => {
-		            const mockResponse = {
-		                data: [{
-		                        id: 1,
-		                        form: 'news',
-		                        newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-		                        imgsSrc: '',
-		                        tabs: ['环境保护', '环保要闻'],
-		                        time: '2024-4-17',
-		                        newsName: '垃圾分类',
-		                        authorName: 'user_test',
-		                        authorAvatar: '',
-		                        newsinfo: '测试测试测试测试测试',
-		                        newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。',
-		                        likeCount: 1001,
-		                        shareCount: 37,
-		                        favoriteCount: 897,
-		                        followCount: 189,
-		                        dislikeCount: 100,
-		                        type: 'main'
-		                    },
-		                    {
-		                        id: 2,
-		                        form: 'news',
-		                        newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-		                        imgsSrc: '',
-		                        tabs: ['环境保护', '环保要闻'],
-		                        time: '2024-4-17',
-		                        newsName: '把自然讲给你听',
-		                        authorName: '中野梓',
-		                        authorAvatar: '',
-		                        newsinfo: '测试测试测试测试测试',
-		                        newsbody: '',
-		                        likeCount: 1001,
-		                        shareCount: 37,
-		                        favoriteCount: 897,
-		                        followCount: 189,
-		                        dislikeCount: 100,
-		                        type: 'reco'
-		                    },
-		                ]
-		            };
-		            this.newsData = mockResponse.data;
-		            this.recommendations = [];
-		            this.newsData.forEach(video => this.convertnewsToRecommendation(video));
-		        },
-		        fail: (err) => {
-		            const mockResponse = {
-		                data: [{
-		                        id: 1,
-		                        form: 'news',
-		                        newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-		                        imgsSrc: '',
-		                        tabs: ['环境保护', '环保要闻'],
-		                        time: '2024-4-17',
-		                        newsName: '垃圾分类',
-		                        authorName: 'user_test',
-		                        authorAvatar: '',
-		                        newsinfo: '测试测试测试测试测试',
-		                        newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中扮演了重要角色。',
-		                        likeCount: 1001,
-		                        shareCount: 37,
-		                        favoriteCount: 897,
-		                        followCount: 189,
-		                        dislikeCount: 100,
-		                        type: 'main'
-		                    },
-		                    {
-		                        id: 2,
-		                        form: 'news',
-		                        newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-		                        imgsSrc: '',
-		                        tabs: ['环境保护', '环保要闻'],
-		                        time: '2024-4-17',
-		                        newsName: '把自然讲给你听',
-		                        authorName: '中野梓',
-		                        authorAvatar: '',
-		                        newsinfo: '测试测试测试测试测试',
-		                        newsbody: '',
-		                        likeCount: 1001,
-		                        shareCount: 37,
-		                        favoriteCount: 897,
-		                        followCount: 189,
-		                        dislikeCount: 100,
-		                        type: 'reco'
-		                    }
-		                ]
-		            };
-		            this.newsData = mockResponse.data;
-		            this.recommendations = [];
-		            this.newsData.forEach(video => this.convertnewsToRecommendation(video));
-		        },
-		    });
-		} catch (error) {
-		    console.error('Error fetching data:', error);
-		}
-	  },
-	  convertnewsToRecommendation(news) {
-	    if (news.type === 'reco') {
-	      this.recommendations.push({
-			id: news.id,
-			src: news.newsSrc,
-	        image: '',
-	        title: news.authorName + ' | ' + news.newsName,
-	        info: '阅读量: ' + news.followCount + ' | 点赞量: ' + news.likeCount,
-			form: news.form,
-	      });
-	    }
-	  },
-    goBack() {
-      uni.navigateBack();
-    },
-    toggleInteraction(type) {
-      if (type === 'like') {
-        this.newsData[0].likeCount++;
-      } else if (type === 'favorite') {
-        this.newsData[0].favoriteCount++;
-      } else if (type === 'follow') {
-        this.newsData[0].followCount++;
-      } else if (type === 'share') {
-        this.newsData[0].shareCount++;
-      }
-    },
-    toggleCommentLike(index) {
-      this.$set(this.comments[index], 'liked', !this.comments[index].liked);
-    },
-    replyToComment(index) {
-      this.replyingTo = index;
-      this.newReply = ''; // 清空之前的回复内容
-    },
-    addReply(index) {
-      if (this.newReply.trim()) {
-        this.comments[index].replies.push({ text: this.newReply });
-        this.newReply = '';
-        this.replyingTo = null; // 回复完成后取消回复状态
-      }
-    },
-    addComment() {
-      if (this.newComment.trim()) {
-        this.comments.push({ text: this.newComment, liked: false, replies: [] });
-        this.newComment = '';
-      }
-    },
-	// 页面跳转方法
-	goRecommend(title, form, id) {
-	  setTimeout(() => {
-	    if (form === 'news') {
-	      // 图文页面跳转
-	      uni.navigateTo({
-	        url: `/pagesNews/news_detail/news_detail?title=${title}}`,
-	      });
-	    } else if(form === 'video'){
-	      // 视频页面跳转
-	      uni.navigateTo({
-	        url: `/pagesNews/video_detail/video_detail?title=${name}`,
-	      });
-	    }
-		else{
-			uni.navigateTo({
-			  url: `/pagesNews/web_detail/web_detail?url=${encodeURIComponent(id)}`,
-			});
-		}
-	  }, 100); // 延迟 100 毫秒
-	},
+    newsData.value = mockResponse.data;
+    recommendations.value = [];
+    newsData.value.forEach((video) => convertnewsToRecommendation(video));
   }
 };
+
+const formatCount = (count) => {
+  return count < 10000 ? count : (count / 1000).toFixed(1) + 'k';
+};
+
+const convertnewsToRecommendation = (news) => {
+  if (news.type === "reco") {
+    recommendations.value.push({
+      id: news.id,
+      src: news.newsSrc,
+      image: "",
+      title: news.authorName + " | " + news.newsName,
+      info: "阅读量: " + news.followCount + " | 点赞量: " + news.likeCount,
+      form: news.form,
+    });
+  }
+};
+
+const goBack = () => {
+  uni.navigateBack();
+};
+
+const toggleInteraction = (type) => {
+  const userId = uni.getStorageSync('UserId');
+  if (type === "like") {
+		if(ifLike.value === false) {
+			uni.request({
+			url: `http://122.51.231.155:8080/news/${newsData.value[0].id}/like`,
+			method: "POST",
+			header: {
+				"Content-type": "application/json",
+			},
+			data: {
+				user_id: userId,
+			},
+			success: () => {
+				newsData.value[0].likeCount++;
+				ifLike.value = true;
+			},
+			fail: (err) => {
+				console.error("Error liking news:", err);
+			},
+		});
+	  }
+	  else{
+		    uni.request({
+		    	url: `http://122.51.231.155:8080/news/${newsData.value[0].id}/cancel_like`,
+		    	method: "POST",
+		    	header: {
+		    		"Content-type": "application/json",
+		    	},
+		    	data: {
+		    		user_id: userId,
+		    	},
+		    	success: () => {
+		    		newsData.value[0].likeCount--;
+		    		ifLike.value = false;
+		    	},
+		    	fail: (err) => {
+		    		console.error("Error Cancel liking news:", err);
+		    	},
+		    });
+	  }
+  } else if (type === "favorite") {
+	  if(ifFavourite.value === false){
+		  uni.request({
+		    url: `http://122.51.231.155:8080/news/${newsData.value[0].id}/favourite`,
+		    method: "POST",
+		    header: {
+		      "Content-type": "application/json",
+		    },
+		    data: {
+		      user_id: userId,
+		    },
+		    success: () => {
+		      newsData.value[0].favoriteCount++;
+			  ifFavourite.value = true;
+		    },
+		    fail: (err) => {
+		      console.error("Error favoriting news:", err);
+		    },
+		  });
+	  }
+	  else{
+		  uni.request({
+		    url: `http://122.51.231.155:8080/news/${newsData.value[0].id}/favourite`,
+		    method: "POST",
+		    header: {
+		      "Content-type": "application/json",
+		    },
+		    data: {
+		      user_id: userId,
+		    },
+		    success: () => {
+		      newsData.value[0].favoriteCount--;
+		  	  ifFavourite.value = false;
+		    },
+		    fail: (err) => {
+		      console.error("Error favoriting news:", err);
+		    },
+		  });
+	  }
+  } else if (type === "follow") {
+    newsData.value[0].followCount++;
+  } else if (type === "share") {
+    newsData.value[0].shareCount++;
+  } else if (type === "dislike"){
+	  if(ifDislike.value === false){
+		  uni.request({
+		  	url: `http://122.51.231.155:8080/news/${newsData.value[0].id}/dislike`,
+		  	method: "POST",
+		  	header: {
+		  		"Content-type": "application/json",
+		  	},
+		  	data: {
+		  		user_id: userId,
+		  	},
+		  	success: () => {
+		  		newsData.value[0].dislikeCount++;
+		  		ifDislike.value = true;
+		  	},
+		  	fail: (err) => {
+		  		console.error("Error liking news:", err);
+		  	},
+		  });
+	  }
+	  else{
+		  uni.request({
+		  	url: `http://122.51.231.155:8080/news/${newsData.value[0].id}/cancel_dislike`,
+		  	method: "POST",
+		  	header: {
+		  		"Content-type": "application/json",
+		  	},
+		  	data: {
+		  		user_id: userId,
+		  	},
+		  	success: () => {
+		  		newsData.value[0].dislikeCount--;
+		  		ifDislike.value = false;
+		  	},
+		  	fail: (err) => {
+		  		console.error("Error liking news:", err);
+		  	},
+		  });
+	  }
+  }
+};
+
+const toggleCommentLike = (index) => {
+  comments[index].liked = !comments[index].liked;
+};
+
+const replyToComment = (index) => {
+  replyingTo.value = index;
+  newReply.value = ""; // 清空之前的回复内容
+};
+
+const addReply = (index) => {
+  if (newReply.value.trim()) {
+    const userId = uni.getStorageSync('UserId');
+    uni.request({
+      url: `http://122.51.231.155:8080/news/${newsData.value[0].id}/comment`,
+      method: "POST",
+      header: {
+        "Content-type": "application/json",
+      },
+      data: {
+        content: newReply.value,
+        publish_time: "2024-11-05T12:35:00Z",
+        user_id: userId,
+        parent_id: 1,
+        news_id: newsData.value[0].id,
+        is_reply: true,
+      },
+      success: () => {
+        comments[index].replies.push({ text: newReply.value });
+        newReply.value = "";
+        replyingTo.value = null; // 回复完成后取消回复状态
+      },
+      fail: (err) => {
+        console.error("Error adding reply:", err);
+      },
+    });
+  }
+};
+
+const addComment = () => {
+  if (newComment.value.trim()) {
+    const userId = uni.getStorageSync('UserId');
+    uni.request({
+      url: `http://122.51.231.155:8080/news/${newsData.value[0].id}/comment`,
+      method: "POST",
+      header: {
+        "Content-type": "application/json",
+      },
+      data: {
+        content: newComment.value,
+        publish_time: "2024-11-05T12:30:00Z",
+        user_id: userId,
+        news_id: newsData.value[0].id,
+        is_reply: false,
+        is_liked: false,
+      },
+      success: () => {
+        comments.push({ text: newComment.value, liked: false, replies: [] });
+        newComment.value = "";
+      },
+      fail: (err) => {
+        console.error("Error adding comment:", err);
+      },
+    });
+  }
+};
+
+// 页面跳转方法
+const goRecommend = (title, form, id) => {
+  setTimeout(() => {
+    if (form === "news") {
+      // 图文页面跳转
+      uni.navigateTo({
+        url: `/pagesNews/news_detail/news_detail?title=${title}}`,
+      });
+    } else if (form === "video") {
+      // 视频页面跳转
+      uni.navigateTo({
+        url: `/pagesNews/video_detail/video_detail?title=${title}`,
+      });
+    } else {
+      uni.navigateTo({
+        url: `/pagesNews/web_detail/web_detail?url=${encodeURIComponent(id)}`,
+      });
+    }
+  }, 100); // 延迟 100 毫秒
+};
+
+onMounted(async () => {
+  await fetchData();
+});
+
+onLoad((options) => {
+  if (options.title) {
+    webTitle.value = decodeURIComponent(options.title);
+  }
+});
 </script>
+
 
 <style scoped>
 /* Body */
