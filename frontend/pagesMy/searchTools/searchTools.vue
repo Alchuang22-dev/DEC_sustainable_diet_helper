@@ -1,13 +1,28 @@
 <template>
   <view class="search-container">
-	<image src="/static/images/index/background_img.jpg" class="background-image"></image>
     <view class="header">
-      <input class="search-box" v-model="searchText" @input="onSearchInput" :placeholder="placeholdertext" />
+      <input class="search-box" v-model="searchText" @input="onSearchInput" :placeholder="placeholderText" />
       <button class="search-button" @click="onSearch"> {{$t('text_search')}} </button>
     </view>
     <view v-if="suggestions.length > 0" class="suggestions">
       <view v-for="(item, index) in suggestions" :key="index" class="suggestion-item" @click="onSelectSuggestion(item)">
         <span v-html="highlightMatch(item)"></span>
+      </view>
+    </view>
+    <view v-if="historySearches.length > 0" class="history-tags">
+      <text class="section-title">历史搜索</text>
+      <view class="tags">
+        <view v-for="(item, index) in historySearches" :key="index" class="tag" @click="onSelectHistory(item)">
+          {{ item }}
+        </view>
+      </view>
+    </view>
+    <view v-if="popularSearches.length > 0" class="popular-tags">
+      <text class="section-title">热门搜索</text>
+      <view class="tags">
+        <view v-for="(item, index) in popularSearches" :key="index" class="tag" @click="onSelectPopular(item)">
+          {{ item }}
+        </view>
       </view>
     </view>
   </view>
@@ -21,7 +36,12 @@ const { t } = useI18n();
 
 const searchText = ref('');
 const suggestions = ref([]);
-const placeholderText = ref(t('text_search_label')); // 将翻译后的文本赋给变量
+const placeholderText = ref(t('text_search_label'));
+
+// 历史搜索数据
+const historySearches = ref(['历史搜索1', '历史搜索2', '历史搜索3']);
+// 热门搜索数据
+const popularSearches = ref(['热门搜索1', '热门搜索2', '热门搜索3']);
 
 // 模拟与后端通信的函数
 const fetchSuggestions = async (query) => {
@@ -50,10 +70,31 @@ const onSearchInput = async () => {
 const onSearch = () => {
   // 实现搜索逻辑
   console.log('搜索：', searchText.value);
+  // 将搜索记录添加到历史搜索中
+  if (searchText.value.trim() !== '' && !historySearches.value.includes(searchText.value)) {
+    historySearches.value.unshift(searchText.value);
+    // 限制历史记录最多保存10个
+    if (historySearches.value.length > 10) {
+      historySearches.value.pop();
+    }
+  }
 };
 
 const onSelectSuggestion = (item) => {
   console.log('用户选择了推荐结果:', item);
+  searchText.value = item;
+};
+
+const onSelectHistory = (item) => {
+  console.log('用户选择了历史搜索:', item);
+  searchText.value = item;
+  onSearch();
+};
+
+const onSelectPopular = (item) => {
+  console.log('用户选择了热门搜索:', item);
+  searchText.value = item;
+  onSearch();
 };
 
 const highlightMatch = (item) => {
@@ -66,26 +107,6 @@ const highlightMatch = (item) => {
 </script>
 
 <style scoped>
-body {
-  font-family: 'Arial', sans-serif;
-  background: url('/static/images/index/background_img.jpg') no-repeat center center fixed;
-  background-size: cover;
-  background-color: #f0f4f7;
-  margin: 0;
-  padding: 0;
-}
-
-.background-image {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 0;
-  opacity: 0.1;
-}
-	
 .search-container {
   padding: 16px;
 }
@@ -126,5 +147,27 @@ body {
 }
 .suggestion-item:hover {
   background-color: #f0f0f0;
+}
+.history-tags, .popular-tags {
+  margin-top: 16px;
+}
+.section-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+  display: block;
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tag {
+  padding: 6px 12px;
+  background-color: #e0e0e0;
+  border-radius: 16px;
+  cursor: pointer;
+}
+.tag:hover {
+  background-color: #d0d0d0;
 }
 </style>
