@@ -75,3 +75,69 @@ func GetAllFoodNames(db *gorm.DB, language string) ([]FoodNameResponse, error) {
         return nil, fmt.Errorf("unsupported language: %s", language)
     }
 }
+
+// FoodCalculateRequest 定义单个食物的计算请求
+type FoodCalculateItem struct {
+    ID     uint    `json:"id" binding:"required"`
+    Price  float64 `json:"price" binding:"required"`
+    Weight float64 `json:"weight" binding:"required"` // 单位：kg
+}
+
+// FoodCalculateResponse 定义单个食物的计算响应
+type FoodCalculateResult struct {
+    ID          uint    `json:"id"`
+    CO2Emission float64 `json:"co2_emission"`
+    Calories    float64 `json:"calories"`
+    Protein     float64 `json:"protein"`
+    Fat         float64 `json:"fat"`
+    Carbs       float64 `json:"carbs"`
+    Sodium      float64 `json:"sodium"`
+}
+
+// CalculateFoodNutrition 计算食物的营养成分和碳排放
+func CalculateFoodNutritionAndEmission(db *gorm.DB, items []FoodCalculateItem) ([]FoodCalculateResult, error) {
+    var results []FoodCalculateResult
+
+    // 获取所有相关的食物ID
+    var foodIDs []uint
+    for _, item := range items {
+        foodIDs = append(foodIDs, item.ID)
+    }
+
+    // 从数据库获取食物信息
+    var foods []Food
+    if err := db.Where("id IN ?", foodIDs).Find(&foods).Error; err != nil {
+        return nil, err
+    }
+
+    // 创建食物ID到食物信息的映射
+    foodMap := make(map[uint]Food)
+    for _, food := range foods {
+        foodMap[food.ID] = food
+    }
+
+    // 计算每个食物的结果
+    for _, item := range items {
+        food, exists := foodMap[item.ID]
+        if !exists {
+            return nil, fmt.Errorf("food with id %d not found", item.ID)
+        }
+
+        // 计算结果
+        result := FoodCalculateResult{
+            ID: item.ID,
+            // CO2Emission = (GHG * weight * item.price) / food.price
+            CO2Emission: (food.GHG * item.Weight * item.Price) / food.Price,
+            // 其他营养成分直接按照重量比例计算
+            Calories:    food.Calories * item.Weight,
+            Protein:     food.Protein * item.Weight,
+            Fat:         food.Fat * item.Weight,
+            Carbs:      food.Carbohydrates * item.Weight,
+            Sodium:      food.Sodium * item.Weight,
+        }
+
+        results = append(results, result)
+    }
+
+    return results, nil
+}

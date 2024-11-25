@@ -77,11 +77,11 @@ func importFoodsData(db *gorm.DB, filename string) error {
             ZhFoodName:    record[0],
             GHG:           ghg,
             EnFoodName:    record[2],
-            Calories:      calories,
-            Protein:       protein,
-            Fat:           fat,
-            Carbohydrates: carbs,
-            Sodium:        sodium,
+            Calories:      calories * 10, // 对于营养的部分，我们数据中的单位是每100g，但是我们的模型中的单位是每1kg
+            Protein:       protein * 10,
+            Fat:           fat * 10,
+            Carbohydrates: carbs * 10,
+            Sodium:        sodium * 10,
             Price:         price,
         }
 

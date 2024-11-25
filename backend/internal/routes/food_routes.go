@@ -33,6 +33,8 @@ func RegisterFoodRoutes(router *gin.Engine, db *gorm.DB) {
         // 不需要认证的路由
         // 获取食物名称列表
         foodGroup.GET("/names", foodController.GetFoodNames)
+		// 计算食物的营养成分和碳排放
+		foodGroup.POST("/calculate", foodController.CalculateNutritionAndEmission)
         // // 获取单个食物详情
         // foodGroup.GET("/:id", foodController.GetFoodDetail)
         // // 获取所有食物列表
