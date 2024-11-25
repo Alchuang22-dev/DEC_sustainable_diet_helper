@@ -10,41 +10,41 @@
     </view>
 
     <view class="list">
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('Idinfo')">
         <text>账号与安全</text>
         <text class="arrow">></text>
       </view>
       <view class="divider"></view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('newsSetting')">
         <text>消息设置</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('recoSetting')">
         <text>个性化推荐设置</text>
         <text class="arrow">></text>
       </view>
       <view class="divider"></view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('InfoShared')">
         <text>通信权限</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('Authorizations')">
         <text>个人信息与权限</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('Permissions')">
         <text>个人信息收集清单</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item">
+      <view class="list-item" @click="navigateTo('PIConnected')">
         <text>第三方信息收集清单</text>
         <text class="arrow">></text>
       </view>
       <view class="divider"></view>
-      <view class="list-item centered">
+      <view class="list-item centered" @click="navigateTo('Bend')">
         <text>账户绑定</text>
       </view>
-      <view class="list-item centered red-text">
+      <view class="list-item centered red-text" @click="navigateTo('DeleteId')">
         <text>账户注销</text>
       </view>
     </view>

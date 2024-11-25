@@ -1,7 +1,7 @@
 <template>
 	<view class="container">
 		<!-- 全屏背景图片 -->
-		<image src="/static/images/index/background_img.jpg" class="background-image"></image>
+		<image src="/static/images/index/background_index_new.png" class="background-image"></image>
 
 		<!-- 头部 -->
 		<view class="dec_header">

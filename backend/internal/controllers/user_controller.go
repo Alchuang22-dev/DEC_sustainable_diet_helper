@@ -2,14 +2,17 @@
 package controllers
 
 import (
-    "net/http"
-    "strconv"
-    "log"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"time"
 
-    "github.com/gin-gonic/gin"
-    "gorm.io/gorm"
-    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
-    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
+	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
+	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type UserController struct {
@@ -20,124 +23,148 @@ func NewUserController(db *gorm.DB) *UserController {
     return &UserController{DB: db}
 }
 
-// 注册
-func (uc *UserController) Register(c *gin.Context) {
-    log.Println("Register 被调用")
+// 微信注册/登录
+func (uc *UserController) WeChatAuth(c *gin.Context) {
+    log.Println("WeChatAuth 被调用")
 
     // 定义请求体结构
-    var registerRequest struct {
-        Nickname    string `json:"nickname"`                              // 昵称可选
-        PhoneNumber string `json:"phone_number" binding:"required"`       // 手机号必填
-        Password    string `json:"password" binding:"required,min=6"`     // 密码必填，长度至少 6 位
+    var authRequest struct {
+        Code     string `json:"code" binding:"required"` // 微信登录凭证
+        Nickname string `json:"nickname"`               // 可选用户昵称
     }
 
     // 绑定请求体
-    if err := c.ShouldBindJSON(&registerRequest); err != nil {
+    if err := c.ShouldBindJSON(&authRequest); err != nil {
         log.Println("绑定JSON失败:", err)
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
         return
     }
 
-    // 验证手机号格式（简单示例）
-    if !utils.IsValidPhoneNumber(registerRequest.PhoneNumber) {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phone number"})
-        return
+    // 调用微信 API 获取 open_id 和 session_key
+    // 获取微信 API URL，优先使用环境变量
+    wechatAPIURL := os.Getenv("WECHAT_API_URL")
+    if wechatAPIURL == "" {
+        wechatAPIURL = "https://api.weixin.qq.com/sns/jscode2session"
     }
 
-    // 检查手机号是否已注册
-    var existingUser models.User
-    if err := uc.DB.Where("phone_number = ?", registerRequest.PhoneNumber).First(&existingUser).Error; err == nil {
-        c.JSON(http.StatusConflict, gin.H{"error": "Phone number already registered"})
-        return
-    }
+    // 构建请求 URL
+    wxAPI := fmt.Sprintf(
+        "%s?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
+        wechatAPIURL, os.Getenv("APP_ID"), os.Getenv("APP_SECRET"), authRequest.Code,
+    )
 
-    // 加密密码
-    hashedPassword, err := utils.HashPassword(registerRequest.Password)
+    resp, err := http.Get(wxAPI)
     if err != nil {
-        log.Println("密码加密失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
+        log.Println("调用微信 API 失败:", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to call WeChat API"})
+        return
+    }
+    defer resp.Body.Close()
+
+    var wxResponse struct {
+        OpenID     string `json:"open_id"`
+        SessionKey string `json:"session_key"`
+        ErrCode    int    `json:"errcode"`
+        ErrMsg     string `json:"errmsg"`
+    }
+    if err := json.NewDecoder(resp.Body).Decode(&wxResponse); err != nil {
+        log.Println("解析微信 API 响应失败:", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse WeChat API response"})
         return
     }
 
-    // 如果未提供昵称，生成随机昵称
-    nickname := registerRequest.Nickname
-    if nickname == "" {
-        nickname = utils.GenerateRandomNickname()
-    }
-
-    // 创建新用户
-    user := models.User{
-        Nickname:    nickname,
-        PhoneNumber: registerRequest.PhoneNumber,
-        Password:    hashedPassword, // 存储加密后的密码
-        LikedNews:     []models.News{},
-        FavoritedNews: []models.News{},
-        DislikedNews:  []models.News{},
-        ViewedNews:    []models.News{},
-    }
-
-    if err := uc.DB.Create(&user).Error; err != nil {
-        log.Println("创建用户失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+    // 微信 API 错误
+    if wxResponse.ErrCode != 0 {
+        log.Println("微信 API 返回错误:", wxResponse.ErrMsg)
+        c.JSON(http.StatusUnauthorized, gin.H{"error": wxResponse.ErrMsg})
         return
     }
 
-    log.Println("用户创建成功:", user)
-    c.JSON(http.StatusCreated, gin.H{"message": "User registered successfully"})
-}
-
-// 登录
-func (uc *UserController) Login(c *gin.Context) {
-    var loginRequest struct {
-        PhoneNumber string `json:"phone_number" binding:"required"` // 必须提供手机号
-        Password    string `json:"password" binding:"required"`    // 必须提供密码
-    }
-
-    // 绑定请求体
-    if err := c.ShouldBindJSON(&loginRequest); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
-        return
-    }
-
-    // 验证手机号格式（可选）
-    if !utils.IsValidPhoneNumber(loginRequest.PhoneNumber) {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phone number format"})
-        return
-    }
-
-    // 验证用户是否存在
+    // 检查用户是否已存在
     var user models.User
-    if err := uc.DB.Where("phone_number = ?", loginRequest.PhoneNumber).First(&user).Error; err != nil {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"}) // 用户不存在
-        return
-    }
 
-    // 验证密码
-    if err := utils.CheckPassword(user.Password, loginRequest.Password); err != nil {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"}) // 密码不匹配
+    if err := uc.DB.Where("open_id = ?", wxResponse.OpenID).First(&user).Error; err == nil {
+        // 用户已存在，更新 SessionKey
+        user.SessionKey = wxResponse.SessionKey
+        if err := uc.DB.Save(&user).Error; err != nil {
+            log.Println("更新用户 SessionKey 失败:", err)
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user session"})
+            return
+        }
+    } else if err == gorm.ErrRecordNotFound { // 表为空或没有对应条目
+        // 用户不存在，创建新用户
+        user = models.User{
+            OpenID:     wxResponse.OpenID,
+            SessionKey: wxResponse.SessionKey,
+            Nickname:   authRequest.Nickname,
+        }
+
+        // 如果未提供昵称，生成随机昵称
+        if user.Nickname == "" {
+            user.Nickname = utils.GenerateRandomNickname()
+        }
+
+        // 初始化头像路径为默认值
+        BaseUploadPath := os.Getenv("BASE_UPLOAD_PATH")
+        if BaseUploadPath == "" {
+            BaseUploadPath = "./uploads" // 默认路径
+        }
+        timestamp := time.Now().Unix()
+        relativePath := fmt.Sprintf("avatars/%d_%d.jpg", user.ID, timestamp)
+        user.AvatarURL = relativePath
+
+        // 创建用户
+        if err := uc.DB.Create(&user).Error; err != nil {
+            log.Println("创建用户失败:", err)
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+            return
+        }
+
+        // 拷贝默认头像到新用户头像路径
+        defaultAvatarPath := fmt.Sprintf("%s/avatars/default.jpg", BaseUploadPath) // 默认头像路径
+        newAvatarPath := fmt.Sprintf("%s/%s", BaseUploadPath, relativePath)
+        if err := utils.CopyFile(defaultAvatarPath, newAvatarPath); err != nil {
+            log.Printf("复制默认头像失败: %v\n", err)
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default avatar"})
+            return
+        }
+    } else {
+        log.Println("查询数据库时发生错误:", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
         return
     }
 
     // 生成 JWT
     token, err := utils.GenerateJWT(user.ID)
     if err != nil {
+        log.Println("生成 JWT 失败:", err)
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
         return
     }
 
     // 返回成功响应
-    c.JSON(http.StatusOK, gin.H{"token": token})
+    c.JSON(http.StatusOK, gin.H{
+        "token": token,
+        "user": gin.H{
+            "id":         user.ID,
+            "nickname":   user.Nickname,
+            "avatar_url": user.AvatarURL,
+        },
+    })
 }
 
 // 设置用户名
 func (uc *UserController) SetNickname(c *gin.Context) {
     log.Println("SetNickname 被调用")
-    id, err := strconv.Atoi(c.Param("id"))
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+
+    // 从上下文中获取用户 ID
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
         return
     }
 
+    // 解析请求体
     var request struct {
         Nickname string `json:"nickname" binding:"required"`
     }
@@ -146,14 +173,14 @@ func (uc *UserController) SetNickname(c *gin.Context) {
         return
     }
 
+    // 查询用户并更新昵称
     var user models.User
-    if err := uc.DB.First(&user, id).Error; err != nil {
+    if err := uc.DB.First(&user, userID).Error; err != nil {
         c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
         return
     }
 
     user.Nickname = request.Nickname
-
     if err := uc.DB.Save(&user).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update nickname"})
         return
@@ -162,208 +189,71 @@ func (uc *UserController) SetNickname(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{"message": "Nickname updated successfully", "nickname": user.Nickname})
 }
 
-// 设置手机号
-func (uc *UserController) SetPhoneNumber(c *gin.Context) {
-    log.Println("SetPhoneNumber 被调用")
-    id, err := strconv.Atoi(c.Param("id"))
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+// 设置头像
+func (uc *UserController) SetAvatar(c *gin.Context) {
+    log.Println("SetAvatar 被调用")
+
+    // 获取用户 ID
+    id, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
         return
     }
 
-    var request struct {
-        PhoneNumber string `json:"phone_number" binding:"required"`
-    }
-    if err := c.ShouldBindJSON(&request); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-        return
-    }
-
-    // 验证手机号格式
-    if !utils.IsValidPhoneNumber(request.PhoneNumber) {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phone number format"})
-        return
-    }
-
+    // 检查用户是否存在
     var user models.User
     if err := uc.DB.First(&user, id).Error; err != nil {
         c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
         return
     }
 
-    // 检查手机号唯一性
-    var existingUser models.User
-    if err := uc.DB.Where("phone_number = ?", request.PhoneNumber).First(&existingUser).Error; err == nil && existingUser.ID != uint(id) {
-        c.JSON(http.StatusConflict, gin.H{"error": "Phone number already in use"})
+    // 获取上传的文件
+    file, err := c.FormFile("avatar")
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to retrieve file"})
         return
     }
 
-    user.PhoneNumber = request.PhoneNumber
+    // 获取基本路径
+    BaseUploadPath := os.Getenv("BASE_UPLOAD_PATH")
+    if BaseUploadPath == "" {
+        BaseUploadPath = "./uploads" // 默认路径
+    }
 
+    // 保存文件到服务器
+    timestamp := time.Now().Unix()
+    savePath := fmt.Sprintf("%s/avatars/%d_%d.jpg", BaseUploadPath, user.ID, timestamp) // 文件路径
+    if err := c.SaveUploadedFile(file, savePath); err != nil {
+        log.Println("文件保存失败:", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
+        return
+    }
+
+    // 删除旧头像文件
+    if user.AvatarURL != "" {
+        oldPath := fmt.Sprintf("%s/%s", BaseUploadPath, user.AvatarURL)
+        if err := os.Remove(oldPath); err != nil {
+            log.Printf("无法删除旧头像文件: %s, 错误: %v\n", oldPath, err)
+        }
+    }
+
+    fmt.Printf("\n\ntimestamp")
+    fmt.Println(timestamp)
+
+    // 更新用户头像路径
+    relativePath := fmt.Sprintf("avatars/%d_%d", user.ID, timestamp)
+    user.AvatarURL = relativePath
     if err := uc.DB.Save(&user).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update phone number"})
+        log.Println("更新用户头像失败:", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update avatar"})
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{"message": "Phone number updated successfully", "phone_number": user.PhoneNumber})
-}
+    var x models.User
+    uc.DB.Where("id=1").First((&x))
+    fmt.Println((x))
+    fmt.Println(relativePath)
 
-// 设置密码
-func (uc *UserController) SetPassword(c *gin.Context) {
-    log.Println("SetPassword 被调用")
-    id, err := strconv.Atoi(c.Param("id"))
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-        return
-    }
-
-    var request struct {
-        Password string `json:"password" binding:"required,min=6"`
-    }
-    if err := c.ShouldBindJSON(&request); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-        return
-    }
-
-    var user models.User
-    if err := uc.DB.First(&user, id).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-        return
-    }
-
-    // 加密密码
-    hashedPassword, err := utils.HashPassword(request.Password)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
-        return
-    }
-
-    user.Password = hashedPassword
-
-    if err := uc.DB.Save(&user).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{"message": "Password updated successfully"})
-}
-
-
-
-// 获取所有用户
-func (uc *UserController) GetAllUsers(c *gin.Context) {
-    log.Println("GetAllUsers 被调用")
-    var users []models.User
-    if err := uc.DB.Preload("LikedNews").
-        Preload("FavoritedNews").
-        Preload("DislikedNews").
-        Preload("ViewedNews").
-        Find(&users).Error; err != nil {
-        log.Println("获取所有用户失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
-
-    // 初始化空列表，避免返回 null
-    for i := range users {
-        if users[i].LikedNews == nil {
-            users[i].LikedNews = []models.News{}
-        }
-        if users[i].FavoritedNews == nil {
-            users[i].FavoritedNews = []models.News{}
-        }
-        if users[i].DislikedNews == nil {
-            users[i].DislikedNews = []models.News{}
-        }
-        if users[i].ViewedNews == nil {
-            users[i].ViewedNews = []models.News{}
-        }
-    }
-
-    c.JSON(http.StatusOK, users)
-}
-
-// 根据ID获取用户
-func (uc *UserController) GetUserByID(c *gin.Context) {
-    log.Println("GetUserByID 被调用")
-    id, err := strconv.Atoi(c.Param("id"))
-    if err != nil {
-        log.Println("无效的用户ID:", c.Param("id"))
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-        return
-    }
-
-    var user models.User
-    if err := uc.DB.Preload("LikedNews").
-        Preload("FavoritedNews").
-        Preload("DislikedNews").
-        Preload("ViewedNews").
-        First(&user, id).Error; err != nil {
-        log.Println("用户未找到:", id)
-        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-        return
-    }
-
-    // 确保空列表初始化
-    if user.LikedNews == nil {
-        user.LikedNews = []models.News{}
-    }
-    if user.FavoritedNews == nil {
-        user.FavoritedNews = []models.News{}
-    }
-    if user.ViewedNews == nil {
-        user.ViewedNews = []models.News{}
-    }
-
-    c.JSON(http.StatusOK, user)
-}
-
-// 删除用户
-func (uc *UserController) DeleteUser(c *gin.Context) {
-    log.Println("DeleteUser 被调用")
-    id, err := strconv.Atoi(c.Param("id"))
-    if err != nil {
-        log.Println("无效的用户ID:", c.Param("id"))
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-        return
-    }
-
-    var user models.User
-    if err := uc.DB.First(&user, id).Error; err != nil {
-        log.Println("用户未找到:", id)
-        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-        return
-    }
-
-    // 删除用户的关联记录
-    if err := uc.DB.Model(&user).Association("LikedNews").Clear(); err != nil {
-        log.Println("清除点赞记录失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear liked news"})
-        return
-    }
-    if err := uc.DB.Model(&user).Association("FavoritedNews").Clear(); err != nil {
-        log.Println("清除收藏记录失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear favorited news"})
-        return
-    }
-    if err := uc.DB.Model(&user).Association("DislikedNews").Clear(); err != nil {
-        log.Println("清除点踩记录失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear disliked news"})
-        return
-    }
-    if err := uc.DB.Model(&user).Association("ViewedNews").Clear(); err != nil {
-        log.Println("清除浏览记录失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear viewed news"})
-        return
-    }
-
-    // 删除用户记录
-    if err := uc.DB.Delete(&user).Error; err != nil {
-        log.Println("删除用户失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
-
-    log.Println("用户删除成功:", id)
-    c.JSON(http.StatusOK, gin.H{"message": "User deleted"})
+    log.Println("用户头像设置成功:", relativePath)
+    c.JSON(http.StatusOK, gin.H{"message": "Avatar updated successfully", "avatar_url": relativePath})
 }

@@ -5,18 +5,18 @@
     <!-- 个人信息部分 -->
     <view class="profile-section">
       <view class="profile-top">
-        <image src="/static/images/index/background_img.jpg" class="avatar"></image>
-        <view class="profile-text">
-          <text class="greeting">{{ isLoggedIn ? uid : 'Hello!' }}</text>
+        <image :src="avatarSrc" class="avatar" @click="handleAvatarClick"></image>
+        <view class="profile-text" @click="handleUsernameClick">
+          <text class="greeting" >{{ isLoggedIn ? uid : 'Hello!' }}</text>
           <text class="login-prompt">{{ isLoggedIn ? '已登录' : '登录以享受更多服务' }}</text>
         </view>
       </view>
       <button class="login-button" @click="handleLoginButtonClick">
         {{ isLoggedIn ? '切换账号' : '注册/登录' }}
       </button>
-	  <button v-if="isLoggedIn" class="login-button" @click="logout">
-	    {{ '退出登录' }}
-	  </button>
+      <button v-if="isLoggedIn" class="login-button" @click="logout">
+        {{ '退出登录' }}
+      </button>
     </view>
 
     <!-- 菜单部分 -->
@@ -62,7 +62,10 @@ import { ref } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 
 const uid = ref('');
+const avatarSrc = ref('/static/images/index/background_img.jpg');
 const isLoggedIn = ref(false);
+//TODO：根据后端传递的id进行页面内容加载
+  
 
 function navigateTo(page) {
   uni.navigateTo({
@@ -99,6 +102,42 @@ function logout() {
   uni.removeStorageSync('uid');
 }
 
+function handleAvatarClick() {
+	console.log("in changing avatar");
+  if (isLoggedIn.value) {
+    // 选择图片作为头像
+    uni.chooseImage({
+      count: 1,
+      sourceType: ['album'],
+      success: (res) => {
+        avatarSrc.value = res.tempFilePaths[0];
+      },
+      fail: (err) => {
+        console.error('选择头像失败', err);
+      },
+    });
+  }
+}
+
+function handleUsernameClick() {
+  if (isLoggedIn.value) {
+    // 更换用户名
+    uni.prompt({
+      title: '更换用户名',
+      placeholder: '请输入新的用户名',
+      success: (res) => {
+        if (res.confirm && res.content) {
+          uid.value = res.content;
+          uni.setStorageSync('uid', res.content);
+        }
+      },
+      fail: (err) => {
+        console.error('更换用户名失败', err);
+      },
+    });
+  }
+}
+
 onShow(() => {
   console.log("in onShow");
   // 在页面显示时调用检查登录状态
@@ -106,230 +145,169 @@ onShow(() => {
 });
 </script>
 
-
 <style scoped>
-	/* 全局样式变量 */
-	:root {
-		--primary-color: #4CAF50;
-		--background-color: #f0f4f7;
-		--text-color: #333;
-		--secondary-text-color: #777;
-		--border-color: #e0e0e0;
-		--font-family: 'Arial', sans-serif;
-	}
+  /* 全局样式变量 */
+  :root {
+    --primary-color: #4CAF50;
+    --background-color: #f0f4f7;
+    --text-color: #333;
+    --secondary-text-color: #777;
+    --border-color: #e0e0e0;
+    --font-family: 'Arial', sans-serif;
+  }
 
-	/* 容器 */
-	.container {
-		display: flex;
-		flex-direction: column;
-		min-height: 100vh;
-		background-color: var(--background-color);
-		font-family: var(--font-family);
-	}
+  /* 容器 */
+  .container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: var(--background-color);
+    font-family: var(--font-family);
+  }
 
-	/* 全屏背景图片 */
-	.background-image {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		z-index: 0;
-		/* 将背景图片置于最底层 */
-		opacity: 0.1;
-		/* 调整透明度以不干扰内容 */
-	}
+  /* 全屏背景图片 */
+  .background-image {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    /* 将背景图片置于最底层 */
+    opacity: 0.1;
+    /* 调整透明度以不干扰内容 */
+  }
 
-	/* 头部 */
-	.header {
-		display: flex;
-		align-items: center;
-		padding: 20rpx;
-		background-color: #ffffff;
-		border-bottom: 1rpx solid var(--border-color);
-	}
+  /* 个人信息部分 */
+  .profile-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40rpx;
+    background-color: rgba(33, 255, 6, 0.1);
+    margin: 40rpx 20rpx;
+    border-radius: 20rpx;
+    box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.1);
+  }
 
-	.header-button {
-		border: none;
-		background-color: transparent;
-		font-size: 36rpx;
-		cursor: pointer;
-		font-weight: bold;
-		margin-right: 20rpx;
-	}
+  .profile-top {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    width: 100%;
+    margin-bottom: 30rpx;
+  }
 
-	/* 个人信息部分 */
-	.profile-section {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 40rpx;
-		background-color: rgba(33, 255, 6, 0.1);
-		margin: 40rpx 20rpx;
-		border-radius: 20rpx;
-		box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.1);
-	}
+  .avatar {
+    width: 140rpx;
+    height: 140rpx;
+    border-radius: 70rpx;
+    margin-right: 20rpx;
+    cursor: pointer;
+  }
 
-	.profile-top {
-		display: flex;
-		flex-direction: row;
-		align-items: flex-start;
-		width: 100%;
-		margin-bottom: 30rpx;
-	}
+  .profile-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
 
-	.avatar {
-		width: 140rpx;
-		height: 140rpx;
-		border-radius: 70rpx;
-		margin-right: 20rpx;
-	}
+  .greeting {
+    font-size: 38rpx;
+    margin: 10rpx 0;
+    color: var(--text-color);
+    cursor: pointer;
+  }
 
-	.profile-text {
-		display: flex;
-		flex-direction: column;
-		justify-content: center;
-	}
+  .login-prompt {
+    color: var(--secondary-text-color);
+  }
 
-	.greeting {
-		font-size: 38rpx;
-		margin: 10rpx 0;
-		color: var(--text-color);
-	}
+  .login-button {
+    padding: 20rpx 40rpx;
+    border: none;
+    background-color: var(--primary-color);
+    color: #ffffff;
+    font-size: 32rpx;
+    cursor: pointer;
+    border-radius: 10rpx;
+    transition: background-color 0.3s;
+    width: 80%;
+  }
 
-	.login-prompt {
-		color: var(--secondary-text-color);
-	}
+  .login-button:hover {
+    background-color: #45a049;
+  }
 
-	.login-button {
-		padding: 20rpx 40rpx;
-		border: none;
-		background-color: var(--primary-color);
-		color: #ffffff;
-		font-size: 32rpx;
-		cursor: pointer;
-		border-radius: 10rpx;
-		transition: background-color 0.3s;
-		width: 80%;
-	}
+  /* 菜单部分 */
+  .menu-section {
+    background-color: rgba(33, 255, 6, 0.06);
+    margin: 40rpx 20rpx;
+    border-radius: 20rpx;
+    box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10rpx);
+  }
 
-	.login-button:hover {
-		background-color: #45a049;
-	}
+  .menu-item {
+    display: flex;
+    align-items: center;
+    padding: 30rpx;
+    border-bottom: 1rpx solid var(--border-color);
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
 
-	/* 菜单部分 */
-	.menu-section {
-		background-color: rgba(33, 255, 6, 0.06);
-		margin: 40rpx 20rpx;
-		border-radius: 20rpx;
-		box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.1);
-		backdrop-filter: blur(10rpx);
-	}
+  .menu-item:last-child {
+    border-bottom: none;
+  }
 
-	.menu-item {
-		display: flex;
-		align-items: center;
-		padding: 30rpx;
-		border-bottom: 1rpx solid var(--border-color);
-		cursor: pointer;
-		transition: background-color 0.3s;
-	}
+  .menu-item:hover {
+    background-color: #f9f9f9;
+  }
 
-	.menu-item:last-child {
-		border-bottom: none;
-	}
+  .icon {
+    font-size: 48rpx;
+    color: var(--primary-color);
+    margin-right: 30rpx;
+  }
 
-	.menu-item:hover {
-		background-color: #f9f9f9;
-	}
+  .menu-text {
+    font-size: 36rpx;
+    color: var(--text-color);
+  }
 
-	.icon {
-		font-size: 48rpx;
-		color: var(--primary-color);
-		margin-right: 30rpx;
-	}
+  /* 响应式调整 */
+  @media screen and (max-width: 600px) {
+    .profile-top {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
 
-	.menu-text {
-		font-size: 36rpx;
-		color: var(--text-color);
-	}
+    .avatar {
+      margin-right: 0;
+      margin-bottom: 20rpx;
+    }
 
-	/* 底部导航 */
-	.footer {
-		background-color: #ffffff;
-		padding: 20rpx 0;
-		box-shadow: 0 -4rpx 10rpx rgba(0, 0, 0, 0.1);
-	}
+    .profile-text {
+      align-items: center;
+    }
 
-	.footer-nav {
-		display: flex;
-		justify-content: space-around;
-	}
+    .login-button {
+      width: 100%;
+    }
 
-	.nav-item {
-		text-decoration: none;
-		color: var(--text-color);
-		font-weight: bold;
-		transition: color 0.3s;
-		font-size: 36rpx;
-	}
+    .menu-item {
+      padding: 20rpx;
+    }
 
-	.nav-item:hover {
-		color: var(--primary-color);
-	}
+    .icon {
+      margin-right: 20rpx;
+    }
 
-	/* 响应式调整 */
-	@media screen and (max-width: 600px) {
-		.header {
-			flex-direction: column;
-			align-items: center;
-		}
-
-		.header-button {
-			margin-right: 0;
-			margin-bottom: 10rpx;
-		}
-
-		.profile-top {
-			flex-direction: column;
-			align-items: center;
-			text-align: center;
-		}
-
-		.avatar {
-			margin-right: 0;
-			margin-bottom: 20rpx;
-		}
-
-		.profile-text {
-			align-items: center;
-		}
-
-		.login-button {
-			width: 100%;
-		}
-
-		.menu-item {
-			padding: 20rpx;
-		}
-
-		.icon {
-			margin-right: 20rpx;
-		}
-
-		.menu-text {
-			font-size: 28rpx;
-		}
-
-		.footer-nav {
-			flex-direction: column;
-			align-items: center;
-		}
-
-		.nav-item {
-			font-size: 28rpx;
-			margin-bottom: 10rpx;
-		}
-	}
+    .menu-text {
+      font-size: 28rpx;
+    }
+  }
 </style>
