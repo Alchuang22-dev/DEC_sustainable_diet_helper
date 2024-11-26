@@ -7,6 +7,7 @@ export const useFoodListStore = defineStore('foodList', () => {
     const foodList = reactive([
         {
             name: "西红柿",
+            id: "1",
             weight: "1kg",
             price: "5元",
             transportMethod: "陆运",
@@ -25,6 +26,54 @@ export const useFoodListStore = defineStore('foodList', () => {
 
     // 定义一个加载状态
     const loaded = ref(false);
+
+    // 存储所有后端的食物名和对应的ID，改为 reactive 数组
+    const availableFoods = reactive([]);
+
+    // 从后端获取食物ID和姓名的函数
+    const fetchAvailableFoods = () => {
+        const lang = 'zh'; // 根据应用的语言设置动态获取
+        uni.request({
+            url: `http://122.51.231.155:8080/foods/names`,
+            method: 'GET',
+            data: {
+                lang: lang
+            },
+            success: (res) => {
+                if (res.statusCode === 200) {
+                    // 使用 splice 方法更新 reactive 数组
+                    availableFoods.splice(0, availableFoods.length, ...res.data);
+                } else {
+                    console.error('获取食物列表失败:', res.data.error);
+                    uni.showToast({
+                        title: '获取食物列表失败',
+                        icon: 'none',
+                        duration: 2000,
+                    });
+                }
+            },
+            fail: (err) => {
+                console.error('网络错误:', err);
+                // 使用 splice 方法更新 reactive 数组
+                availableFoods.splice(0, availableFoods.length,
+                    {
+                        "id": 1,
+                        "name": "苹果"  // 或 "Apple"，取决于 lang 参数
+                    },
+                    {
+                        "id": 2,
+                        "name": "香蕉"  // 或 "Banana"
+                    }
+                );
+                console.log('availableFoods:', availableFoods);
+                uni.showToast({
+                    title: '网络错误，无法获取食物列表',
+                    icon: 'none',
+                    duration: 2000,
+                });
+            }
+        });
+    };
 
     // 加载食物列表从本地存储
     const loadFoodList = () => {
@@ -75,6 +124,8 @@ export const useFoodListStore = defineStore('foodList', () => {
         updateFood,
         saveFoodList,
         loadFoodList,
-        loaded
+        loaded,
+        availableFoods, // 现在是 reactive 数组
+        fetchAvailableFoods
     };
 });

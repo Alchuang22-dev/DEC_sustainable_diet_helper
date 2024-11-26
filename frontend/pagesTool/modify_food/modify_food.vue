@@ -5,7 +5,26 @@
     <view class="form-container">
       <view class="form-group">
         <text class="label">{{ $t('name') }}</text>
-        <input class="input" type="text" v-model="food.name" :placeholder="$t('please_enter_food_name')" />
+        <input
+          class="input"
+          type="text"
+          v-model="foodNameInput"
+          @focus="showFoodList = true"
+          @blur="onInputBlur"
+          :placeholder="$t('please_enter_food_name')"
+        />
+        <!-- 食物名的模糊匹配下拉列表 -->
+        <view v-if="showFoodList && filteredFoods.length > 0" class="food-list">
+          <view
+            v-for="item in filteredFoods"
+            :key="item.id"
+            class="food-item"
+            @mousedown.prevent
+            @click="selectFood(item)"
+          >
+            {{ item.name }}
+          </view>
+        </view>
       </view>
       <view class="form-group">
         <text class="label">{{ $t('total_weight') }}</text>
@@ -47,16 +66,16 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n'; // Import useI18n
 import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
 import { onLoad } from '@dcloudio/uni-app'; // 引入 onLoad 钩子
 
-// 使用国际化
 const { t } = useI18n();
-
-// 使用 Pinia Store
 const foodStore = useFoodListStore();
+
+// 获取 availableFoods
+const { availableFoods, fetchAvailableFoods, updateFood } = foodStore;
 
 // 初始化数据
 const options = ref({});
@@ -66,24 +85,62 @@ const existingFood = ref(null);
 // 食品数据，初始化为空
 const food = reactive({
   name: '',
+  id: null, // 添加 id 字段
   weight: '',
   price: '',
   transportMethod: 'transport_land',
   foodSource: 'source_local',
-  imagePath: '', // 图片路径
+  imagePath: '',
 });
 
-// 下拉选项数据
+// 食物名称输入
+const foodNameInput = ref('');
+const showFoodList = ref(false);
+
+// 模糊匹配过滤食物列表
+const filteredFoods = computed(() => {
+  if (foodNameInput.value === '') {
+    return availableFoods.value;
+  } else {
+    return availableFoods.value.filter((f) => f.name.includes(foodNameInput.value));
+  }
+});
+
+// 当用户选择食物时
+const selectFood = (foodItem) => {
+  food.name = foodItem.name;
+  food.id = foodItem.id;
+  foodNameInput.value = foodItem.name;
+  showFoodList.value = false;
+};
+
+// 处理输入框失焦事件
+const onInputBlur = () => {
+  setTimeout(() => {
+    showFoodList.value = false;
+  }, 100);
+};
+
+// 监听输入变化，控制下拉列表显示
+watch(foodNameInput, (newValue) => {
+  if (newValue !== '') {
+    showFoodList.value = true;
+  } else {
+    showFoodList.value = false;
+  }
+});
+
+// 输入验证错误状态
+const weightError = ref(false);
+const priceError = ref(false);
+
+// 运输方式和食品来源下拉选项数据
 const transportMethods = [t('transport_land'), t('transport_sea'), t('transport_air')];
 const foodSources = [t('source_local'), t('source_imported')];
 
 // 当前选择的索引
 const transportIndex = ref(0);
 const sourceIndex = ref(0);
-
-// 输入验证错误状态
-const weightError = ref(false);
-const priceError = ref(false);
 
 // 运输方式选择改变
 const onTransportChange = (e) => {
@@ -137,7 +194,7 @@ const submitFoodDetails = () => {
     price,
     transportMethod,
     foodSource,
-    imagePath,
+    imagePath
   } = food;
 
   // 输入验证
@@ -169,16 +226,17 @@ const submitFoodDetails = () => {
 
   const updatedFood = {
     name,
+    id: food.id, // 添加 id
     weight: parseInt(weight),
     price: parseInt(price),
     transportMethod,
     foodSource,
-    image: imagePath, // 保存图片路径
+    image: imagePath,
     // 保留其他字段不变
   };
 
   // 使用 Store 更新指定的食物项
-  foodStore.updateFood(foodIndex.value, updatedFood);
+  updateFood(foodIndex.value, updatedFood);
 
   uni.showToast({
     title: t('modify_success'),
@@ -218,15 +276,27 @@ onLoad((loadedOptions) => {
 
   // 初始化食品数据
   food.name = existingFood.value.name || '';
+  food.id = existingFood.value.id || null;
   food.weight = existingFood.value.weight || '';
   food.price = existingFood.value.price || '';
   food.transportMethod = existingFood.value.transportMethod || 'transport_land';
   food.foodSource = existingFood.value.foodSource || 'source_local';
   food.imagePath = existingFood.value.image || '';
 
+  // 初始化输入框
+  foodNameInput.value = food.name;
+
   // 初始化下拉选项索引
-  transportIndex.value = transportMethods.indexOf(t(existingFood.value.transportMethod));
-  sourceIndex.value = foodSources.indexOf(t(existingFood.value.foodSource));
+  transportIndex.value = transportMethods.indexOf(existingFood.value.transportMethod);
+  sourceIndex.value = foodSources.indexOf(existingFood.value.foodSource);
+});
+
+// 页面加载时执行
+onMounted(() => {
+  // 如果 availableFoods 为空，调用获取函数
+  if (availableFoods.value.length === 0) {
+    fetchAvailableFoods();
+  }
 });
 </script>
 
@@ -358,5 +428,25 @@ onLoad((loadedOptions) => {
   color: #f44336;
   font-size: 24rpx;
   margin-top: 5rpx;
+}
+
+/* 添加下拉列表样式 */
+.food-list {
+  max-height: 300rpx;
+  overflow-y: auto;
+  border: 1rpx solid var(--border-color);
+  border-top: none;
+  background-color: #ffffff;
+}
+
+.food-item {
+  padding: 20rpx;
+  font-size: 28rpx;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.food-item:hover {
+  background-color: #f0f0f0;
 }
 </style>
