@@ -7,15 +7,15 @@
       <view class="profile-top">
         <image :src="avatarSrc" class="avatar" @click="handleAvatarClick"></image>
         <view class="profile-text" @click="handleUsernameClick">
-          <text class="greeting" >{{ isLoggedIn ? uid : 'Hello!' }}</text>
-          <text class="login-prompt">{{ isLoggedIn ? '已登录' : '登录以享受更多服务' }}</text>
+          <text class="greeting" >{{ isLoggedIn ? uid : $t('profile_greeting') }}</text>
+          <text class="login-prompt">{{ isLoggedIn ? $t('profile_logged_in') : $t('profile_switch_account') }}</text>
         </view>
       </view>
       <button class="login-button" @click="handleLoginButtonClick">
-        {{ isLoggedIn ? '切换账号' : '注册/登录' }}
+        {{ isLoggedIn ? $t('profile_switch_account') : $t('profile_register_login') }}
       </button>
       <button v-if="isLoggedIn" class="login-button" @click="logout">
-        {{ '退出登录' }}
+        {{ $t('profile_logout') }}
       </button>
     </view>
 
@@ -23,35 +23,35 @@
     <view class="menu-section">
       <view class="menu-item" @click="navigateTo('setGoals')">
         <text class="icon">🎯</text>
-        <text class="menu-text">设置目标</text>
+        <text class="menu-text">{{$t('menu_set_goals')}}</text>
       </view>
       <view class="menu-item" @click="navigateTo('foodPreferences')">
         <text class="icon">🍲</text>
-        <text class="menu-text">食物偏好</text>
+        <text class="menu-text">{{$t('menu_food_preferences')}}</text>
       </view>
       <view class="menu-item" @click="navigateTo('myFamily')">
         <text class="icon">👪</text>
-        <text class="menu-text">我的家庭</text>
+        <text class="menu-text">{{$t('menu_my_family')}}</text>
       </view>
       <view class="menu-item" @click="navigateTo('favorites')">
         <text class="icon">❤️</text>
-        <text class="menu-text">我的收藏</text>
+        <text class="menu-text">{{$t('menu_favorites')}}</text>
       </view>
       <view class="menu-item" @click="navigateTo('historyData')">
         <text class="icon">📊</text>
-        <text class="menu-text">历史数据</text>
+        <text class="menu-text">{{$t('menu_history_data')}}</text>
       </view>
       <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('appSettings')">
         <text class="icon">⚙️</text>
-        <text class="menu-text">软件设置</text>
+        <text class="menu-text">{{$t('menu_app_settings')}}</text>
       </view>
       <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('userSettings')">
         <text class="icon">👤</text>
-        <text class="menu-text">用户设置</text>
+        <text class="menu-text">{{$t('menu_user_settings')}}</text>
       </view>
       <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('searchTools')">
         <text class="icon">🔍</text>
-        <text class="menu-text">搜索工具</text>
+        <text class="menu-text">{{$t('menu_search_tools')}}</text>
       </view>
     </view>
   </view>

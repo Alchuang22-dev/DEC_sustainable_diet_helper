@@ -239,5 +239,21 @@
 	"family_info": "Family ID: ",
 	"manage_members": "Manage Members",
 	"shared_family_data": "Today's Shared Family Data",
-	"carbon_total": "Total Carbon Emission"
+	"carbon_total": "Total Carbon Emission",
+	//用户页
+    "profile_avatar_click": "Click Avatar",
+    "profile_username_click": "Click Username",
+    "menu_set_goals_icon": "🎯",
+    "menu_food_preferences_icon": "🍲",
+    "menu_my_family_icon": "👪",
+    "menu_favorites_icon": "❤️",
+    "menu_history_data_icon": "📊",
+    "menu_app_settings_icon": "⚙️",
+    "menu_user_settings_icon": "👤",
+    "menu_search_tools_icon": "🔍",
+	//bend
+    "unbind_account_notice": "After unbinding, the original phone number cannot be used to log in to this account.",
+    "change_binding_phone": "You are changing the phone number bound to your account.",
+    "confirm_binding": "Confirm Binding",
+    "input_verification_code": "Enter verification code"
 }

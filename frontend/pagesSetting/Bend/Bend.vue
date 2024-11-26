@@ -7,13 +7,13 @@
 	  <img src="/static/images/settings/mail_open.png" class="delete-icon"></img>
 	</view>
     <view class="text_holder" :style="{ fontSize: fontSizeBig + 'px' }">
-      <text style="font-weight: bold;">账号绑定</text>
+      <text style="font-weight: bold;">{{ $t('settings_account_binding') }}</text>
     </view>
     <view class="text_holder" :style="{ fontSize: fontSize + 'px' }">
-      <text>您正在更换账号绑定的电话号码。</text>
+      <text>{{ $t('change_binding_phone') }}</text>
     </view>
     <view class="text_holder" :style="{ fontSize: fontSize + 'px' }">
-      <text>解绑账号后，原绑定电话将不可用于登录此账号。</text>
+      <text>{{ $t('unbind_account_notice') }}</text>
     </view>
     <view class="form">
       <input v-model="phoneNumber" type="text" :placeholder="$t('enterPhoneNumber')" class="input" />
@@ -24,8 +24,8 @@
       </button> 
     </view>
     <view v-if="showVerification" class="form">
-      <input v-model="verificationCode" type="text" placeholder="请输入验证码" class="input" />
-      <button class="confirm-button" @click="verifyCode">确认绑定</button>
+      <input v-model="verificationCode" type="text" :placeholder="$t('input_verification_code')" class="input" />
+      <button class="confirm-button" @click="verifyCode">{{ $t('confirm_binding') }}</button>
     </view>
   </view>
 </template>
