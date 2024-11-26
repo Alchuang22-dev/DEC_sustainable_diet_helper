@@ -5,6 +5,7 @@ import (
     "net/http"
     "strconv"
     "time"
+    "fmt"
 
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
@@ -28,6 +29,14 @@ func (nc *NewsController) UploadNews(c *gin.Context) {
     }
 
     var news models.News
+    // 初始化一些字段
+    news.UploadTime = time.Now()
+    news.ViewCount = 0
+    news.LikedByUsers = []models.User{}
+    news.FavoritedByUsers = []models.User{}
+    news.DislikedByUsers = []models.User{}
+    news.Tags = []models.Tag{}
+
     if err := c.ShouldBindJSON(&news); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
         return
@@ -157,6 +166,7 @@ func (nc *NewsController) GetNewsDetail(c *gin.Context) {
         Preload("LikedByUsers").
         Preload("FavoritedByUsers").
         Preload("DislikedByUsers").
+        Preload("Tags").
         First(&news, id).Error; err != nil {
         c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
         return
@@ -174,6 +184,15 @@ func (nc *NewsController) GetNewsDetail(c *gin.Context) {
             c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load regular news details"})
             return
         }
+    case models.NewsTypeExternal:
+        // 外部新闻无需额外预加载
+        if news.ExternalLink == "" {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load external news details"})
+            return
+        }
+    default:
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid news type"})
+        return
     }
 
     // 确保关联字段不为 null
@@ -189,6 +208,9 @@ func (nc *NewsController) GetNewsDetail(c *gin.Context) {
     if news.Comments == nil {
         news.Comments = []models.Comment{}
     }
+    if news.Tags == nil {
+        news.Tags = []models.Tag{}
+    }
     if news.NewsType == models.NewsTypeRegular {
         if news.Paragraphs == nil {
             news.Paragraphs = []models.Paragraph{}
@@ -201,7 +223,137 @@ func (nc *NewsController) GetNewsDetail(c *gin.Context) {
     }
 
     // 返回新闻详情
-    c.JSON(http.StatusOK, news)
+    c.JSON(http.StatusOK, gin.H{
+        "id":            news.ID,
+        "title":         news.Title,
+        "description":   news.Description,
+        "upload_time":   news.UploadTime,
+        "view_count":    news.ViewCount,
+        "news_type":     news.NewsType,
+        "author":        news.Author, // 包括作者信息
+        "tags":          news.Tags,
+        "liked_by":      news.LikedByUsers,
+        "favorited_by":  news.FavoritedByUsers,
+        "disliked_by":   news.DislikedByUsers,
+        "comments":      news.Comments,
+        "paragraphs":    news.Paragraphs,
+        "resources":     news.Resources,
+        "video":         news.Video,
+        "external_link": news.ExternalLink,
+    })
+}
+
+// TODO
+// 以单个 id 为索引，查看一个新闻所有和页面有关的信息，包括内容等，用户是否点赞、收藏，并返回所有一级评论，和评论是否是这个用户发表的
+
+// 以某些条件为约束，查看多个新闻预览
+func (nc *NewsController) GetNewsPreviews(c *gin.Context) {
+    // 解析查询参数
+    category := c.Query("category")
+    page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+    if err != nil || page < 1 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
+        return
+    }
+    size, err := strconv.Atoi(c.DefaultQuery("size", "10"))
+    if err != nil || size < 1 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page size"})
+        return
+    }
+    sortBy := c.DefaultQuery("sort_by", "upload_time") // 默认按上传时间排序
+    order := c.DefaultQuery("order", "desc")          // 默认降序
+
+    // 校验排序字段和顺序
+    allowedSortFields := map[string]bool{
+        "upload_time": true,
+        "view_count":  true,
+    }
+    if !allowedSortFields[sortBy] {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sort_by parameter"})
+        return
+    }
+    if order != "asc" && order != "desc" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order parameter"})
+        return
+    }
+
+    // 计算分页偏移量
+    offset := (page - 1) * size
+
+    // 定义预览响应结构
+    type NewsPreview struct {
+        ID             uint       `json:"id"`
+        Title          string     `json:"title"`
+        Description    string     `json:"description"`
+        UploadTime     time.Time  `json:"upload_time"`
+        ViewCount      int        `json:"view_count"`
+        ShareCount     int        `json:"share_count"`
+        LikeCount      int        `json:"like_count"`
+        FavoriteCount  int        `json:"favorite_count"`
+        DislikeCount   int        `json:"dislike_count"`
+        NewsType       string     `json:"news_type"`
+        AuthorName     string     `json:"author_name"`
+        AuthorAvatar   string     `json:"author_avatar"`
+        Tags           []string   `json:"tags"`
+    }
+
+    // 查询新闻列表
+    var news []models.News
+    query := nc.DB.Preload("Tags").Preload("Author").
+        Order(fmt.Sprintf("%s %s", sortBy, order)).
+        Offset(offset).
+        Limit(size)
+    if category != "" {
+        query = query.Where("type = ?", category)
+    }
+
+    if err := query.Find(&news).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch news previews"})
+        return
+    }
+
+    // 转换为响应格式
+    previews := make([]NewsPreview, len(news))
+    for i, n := range news {
+        tags := []string{}
+        for _, tag := range n.Tags {
+            tags = append(tags, tag.Name)
+        }
+
+        previews[i] = NewsPreview{
+            ID:            n.ID,
+            Title:         n.Title,
+            Description:   n.Description,
+            UploadTime:    n.UploadTime,
+            ViewCount:     n.ViewCount,
+            ShareCount:    0, // 假设为0或以后扩展
+            LikeCount:     len(n.LikedByUsers),
+            FavoriteCount: len(n.FavoritedByUsers),
+            DislikeCount:  len(n.DislikedByUsers),
+            NewsType:      string(n.NewsType),
+            AuthorName:    n.AuthorName,
+            AuthorAvatar:  n.AuthorAvatar,
+            Tags:          tags,
+        }
+
+        // 根据 NewsType 添加额外字段（示例待定）
+        switch n.NewsType {
+        case models.NewsTypeVideo:
+            // 可以扩展为额外字段，如视频 URL 或时长
+        case models.NewsTypeRegular:
+            // 可以扩展为额外字段，如段落摘要
+        case models.NewsTypeExternal:
+            // 可返回外部链接
+        }
+    }
+
+    // 返回响应
+    c.JSON(http.StatusOK, gin.H{
+        "total": len(previews),
+        "page":  page,
+        "size":  size,
+        "data":  previews,
+    })
 }
 
 // 添加评论
@@ -255,21 +407,11 @@ func (nc *NewsController) AddComment(c *gin.Context) {
     c.JSON(http.StatusCreated, comment)
 }
 
-// TODO
-// 删除评论
-func (nc *NewsController) DeleteComment(c *gin.Context) {
 
-}
 
-// 删除新闻
-func (nc *NewsController) DeleteNews(c *gin.Context) {
 
-}
 
-// 更新新闻
-func (nc *NewsController) UpdateNews(c *gin.Context) {
 
-}
 
 // 用户点赞新闻
 func (nc *NewsController) LikeNews(c *gin.Context) {
@@ -612,4 +754,11 @@ func (nc *NewsController) ViewNews(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{
         "message": "News view recorded successfully",
     })
+}
+
+
+// TODO
+// 删除评论
+func (nc *NewsController) DeleteComment(c *gin.Context) {
+
 }
