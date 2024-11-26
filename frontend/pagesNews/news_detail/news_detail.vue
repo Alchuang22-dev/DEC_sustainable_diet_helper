@@ -24,7 +24,7 @@
             <button @click="toggleInteraction('like')">👍 {{ formatCount(newsData[0].likeCount) }}</button>
             <button @click="toggleInteraction('favorite')">⭐ {{ formatCount(newsData[0].favoriteCount) }}</button>
             <button @click="toggleInteraction('share')">🔄 {{ formatCount(newsData[0].shareCount)}}</button>
-			<button @click="toggleInteraction('dislike')" :style="{ color: ifDislike ? 'green' : 'black' }">👎 dis</button>
+			      <button @click="toggleInteraction('dislike')" :style="{ color: ifDislike ? 'green' : 'black' }">👎 dis</button>
           </view>
         </view>
 
