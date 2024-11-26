@@ -33,7 +33,7 @@
         <text class="arrow">></text>
       </view>
       <view class="list-item" @click="navigateTo('Permissions')">
-        <text>{{ $t('settings_third_party_info_collection') }}</text>
+        <text>{{ $t('settings_personal_info_collection') }}</text>
         <text class="arrow">></text>
       </view>
       <view class="list-item" @click="navigateTo('PIConnected')">
@@ -41,7 +41,7 @@
         <text class="arrow">></text>
       </view>
       <view class="divider"></view>
-      <view class="list-item centered" @click="navigateTo('Bend')">
+      <view class="list-item centered" @click="navigateTo('Bend')">  
         <text>{{ $t('settings_account_binding') }}</text>
       </view>
       <view class="list-item centered red-text" @click="navigateTo('DeleteId')">

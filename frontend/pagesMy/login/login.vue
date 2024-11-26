@@ -24,162 +24,374 @@
       <span class="forgot-password">{{ $t('forgotPassword') }}</span>
     </view>
     <view class="wechat-login">
-      <button class="wechat-button" @click="test_login">
+      <button class="wechat-button" @click="testLogin">
         <img src="/static/logo.png" alt="WeChat" class="wechat-icon" />
         <span>{{ $t('loginWithWeChat') }}</span>
       </button>
     </view>
+	<view class="wechat-login">
+	  <button class="wechat-button" @click="autoLogin">
+	    <img src="/static/logo.png" alt="WeChat" class="wechat-icon" />
+	    <span>测试登录</span>
+	  </button>
+	</view>
   </view>
 </template>
 
-<script>
-export default {
-  data() {
-	console.log('Current locale:', this.$i18n.locale);
-	console.log('Available messages:', this.$i18n.messages);
-    return {
-      phoneNumber: '',
-	  testUser: 'test_user',
-      password: '',
-      repeatPassword: '',
-      showRepeatPassword: false
-    };
-  },
-  methods: {
-	switchLanguage(lang) {
-	    this.$i18n.locale = lang;
-	},
-	login() {
-		uni.switchTab({
-		  url: `/pages/my_index/my_index`,
-		});
-	},
-	test_login(){
-		uni.setStorageSync('uid', 'test');
-		uni.switchTab({
-		  url: `/pages/my_index/my_index`,
-		});
-	},
-    check() {
-      uni.request({
-        url: `https://122.51.231.155:8080/users/${this.phoneNumber}`,
-        method: 'GET',
-        success: (response) => {
-          if (response.statusCode === 200) {
-            const realPassword = response.data.realpassword;
-            if (this.password === realPassword) {
-              uni.showToast({
-                title: '登录成功',
-                icon: 'none',
-                duration: 2000
+<script setup>
+import { ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+//import uni from '@dcloudio/uni-app';
+import { useStore } from 'vuex'; // 引入 Vuex 的 useStore
+
+const { t, locale, messages } = useI18n();
+const store = useStore(); // 获取 store 实例
+
+console.log('Current locale:', locale.value);
+console.log('Available messages:', messages);
+
+const phoneNumber = ref('');
+const password = ref('');
+const repeatPassword = ref('');
+const showRepeatPassword = ref(false);
+
+const switchLanguage = (lang) => {
+  locale.value = lang;
+};
+
+const login = () => {
+  uni.switchTab({
+    url: '/pages/my_index/my_index',
+  });
+};
+
+const autoLogin = () => {
+  uni.setStorageSync('uid', 'test');
+  uni.switchTab({
+    url: '/pages/my_index/my_index',
+  });
+};
+
+const testLogin = () => {
+  uni.showLoading({
+    title: t('loggingIn') || '正在登录...',
+    mask: true
+  });
+
+  // 获取可用的OAuth服务提供商
+  uni.getProvider({
+    service: 'oauth',
+    success: function(res) {
+      // 检查是否支持微信登录
+      if (res.provider && res.provider.includes('weixin')) {
+        // 调用微信登录接口
+        uni.login({
+          provider: 'weixin',
+          success: function(loginRes) {
+            if (loginRes.code) {
+              const code = loginRes.code;
+              console.log('微信登录码:', code);
+
+              // 获取用户信息
+              uni.getUserProfile({
+                desc: t('authorizeLogin') || '用于完善会员资料', // 必须填写描述
+                success: function(infoRes) {
+                  const userInfo = infoRes.userInfo;
+                  console.log('用户信息:', userInfo);
+
+                  // 准备发送到后端的数据
+                  const data = {
+                    code: code,
+                    userInfo: {
+                      nickName: userInfo.nickName,
+                      avatarUrl: userInfo.avatarUrl,
+                      gender: userInfo.gender,
+                      province: userInfo.province,
+                      city: userInfo.city,
+                      country: userInfo.country
+                    }
+                  };
+
+                  // 调用 Vuex 的 Login action
+                  store.dispatch('Login', {
+                    type: 'weixin',
+                    url: 'https://122.51.231.155:8080/wechat-login', // 后端登录接口
+                    data
+                  }).then(res => {
+                    uni.hideLoading();
+                    if (res === 'ok') {
+                      uni.showToast({
+                        title: t('loginSuccess') || '登录成功',
+                        icon: 'success',
+                        duration: 2000
+                      });
+                      login();
+                    } else {
+                      uni.showToast({
+                        icon: 'none',
+                        title: res || (t('loginFailed') || '登录失败')
+                      });
+                      console.error('后端登录失败:', res);
+                    }
+                  }).catch(err => {
+                    uni.hideLoading();
+                    uni.showToast({
+                      icon: 'none',
+                      title: err || (t('loginFailed') || '登录失败')
+                    });
+                    console.error('登录过程中发生错误:', err);
+                  });
+                },
+                fail: function(err) {
+                  uni.hideLoading();
+                  uni.showToast({
+                    icon: 'none',
+                    title: t('getUserProfileFailed') || '获取用户信息失败'
+                  });
+                  console.error('获取用户信息失败:', err);
+                }
               });
-			  login();
             } else {
+              uni.hideLoading();
               uni.showToast({
-                title: '账号或密码错误',
+                title: t('loginFailed') || '登录失败',
                 icon: 'none',
                 duration: 2000
               });
+              console.error('微信登录失败:', loginRes.errMsg);
             }
-          } else if (response.statusCode === 501) {
-            this.registerUser();
-          } else {
+          },
+          fail: function(err) {
+            uni.hideLoading();
             uni.showToast({
-              title: '发生错误，请稍后再试',
               icon: 'none',
+              title: t('loginFailed') || '登录失败',
               duration: 2000
             });
+            console.error('微信登录接口调用失败:', err);
           }
-        },
-        fail: (error) => {
-          console.error('请求错误', error);
-          uni.showToast({
-            title: '发生错误，请稍后再试',
-            icon: 'none',
-            duration: 2000
-          });
-        }
-      });
-    },
-    registerUser() {
-      uni.request({
-        url: 'https://122.51.231.155:8080/users/',
-        method: 'POST',
-        header: {
-          'Content-Type': 'application/json'
-        },
-        data: {
-          phoneNumber: this.phoneNumber,
-          password: this.password
-        },
-        success: (response) => {
-          if (response.statusCode === 200 || response.statusCode === 201) {
-            this.showRepeatPassword = true;
-          } else {
-            uni.showToast({
-              title: '注册请求失败，请稍后再试',
-              icon: 'none',
-              duration: 2000
-            });
-          }
-        },
-        fail: (error) => {
-          console.error('请求错误', error);
-          uni.showToast({
-            title: '发生错误，请稍后再试',
-            icon: 'none',
-            duration: 2000
-          });
-        }
-      });
-    },
-    confirmRegistration() {
-      if (!this.showRepeatPassword || this.repeatPassword === '') {
-        return;
+        });
+      } else {
+        uni.hideLoading();
+        uni.showToast({
+          icon: 'none',
+          title: t('weixinNotSupported') || '当前设备不支持微信登录',
+          duration: 2000
+        });
+        console.warn('当前设备不支持微信登录:', res.provider);
       }
-      uni.request({
-        url: `https://122.51.231.155:8080/users/${this.phoneNumber}`,
-        method: 'GET',
-        success: (response) => {
-          if (response.statusCode === 200) {
-            const repeatCheck = response.data.repeatcheck;
-            if (this.repeatPassword === repeatCheck) {
+    },
+    fail: function(err) {
+      uni.hideLoading();
+      uni.showToast({
+        icon: 'none',
+        title: t('getProviderFailed') || '获取服务提供商失败',
+        duration: 2000
+      });
+      console.error('获取OAuth服务提供商失败:', err);
+    }
+  });
+};
+
+const performWeixinLogin = () => {
+  uni.login({
+    provider: 'weixin',
+    success: function(loginRes) {
+      if (loginRes.authResult && loginRes.authResult.code) {
+        const authResult = loginRes.authResult;
+        
+        // 获取用户信息
+        uni.getUserInfo({
+          provider: 'weixin',
+          success: function(infoRes) {
+            const userInfo = infoRes.userInfo;
+            const data = {
+              ...authResult,
+              userInfo
+            };
+
+            // 调用 Vuex 的 Login action
+            store.dispatch('Login', {
+              type: 'weixin',
+              url: 'https://122.51.231.155:8080/wechat-login', // 后端登录接口
+              data
+            }).then(res => {
+              if (res === 'ok') {
+                uni.hideLoading();
+                uni.showToast({
+                  title: t('loginSuccess'),
+                  icon: 'success',
+                  duration: 2000
+                });
+                login();
+              } else {
+                uni.hideLoading();
+                uni.showToast({
+                  icon: 'none',
+                  title: res || t('loginFailed')
+                });
+                console.error('后端登录失败:', res);
+              }
+            }).catch(err => {
+              uni.hideLoading();
               uni.showToast({
-                title: '注册成功',
                 icon: 'none',
-                duration: 2000
+                title: err || t('loginFailed')
               });
-			  login();
-            } else {
-              uni.showToast({
-                title: '注册账号失败',
-                icon: 'none',
-                duration: 2000
-              });
-            }
-          } else {
+              console.error('登录过程中发生错误:', err);
+            });
+          },
+          fail: function(err) {
+            uni.hideLoading();
             uni.showToast({
-              title: '发生错误，请稍后再试',
               icon: 'none',
+              title: t('getUserInfoFailed') || '获取用户信息失败',
               duration: 2000
             });
+            console.error('获取用户信息失败:', err);
           }
-        },
-        fail: (error) => {
-          console.error('请求错误', error);
+        });
+      } else {
+        uni.hideLoading();
+        uni.showToast({
+          title: t('loginFailed'),
+          icon: 'none',
+          duration: 2000
+        });
+        console.error('微信登录失败:', loginRes.errMsg);
+      }
+    },
+    fail: function(err) {
+      uni.hideLoading();
+      uni.showToast({
+        icon: 'none',
+        title: t('loginFailed'),
+        duration: 2000
+      });
+      console.error('微信登录接口调用失败:', err);
+    }
+  });
+};
+
+const check = () => {
+  uni.request({
+    url: `https://122.51.231.155:8080/users/${phoneNumber.value}`,
+    method: 'GET',
+    success: (response) => {
+      if (response.statusCode === 200) {
+        const realPassword = response.data.realpassword;
+        if (password.value === realPassword) {
           uni.showToast({
-            title: '发生错误，请稍后再试',
+            title: t('loginSuccess'),
+            icon: 'none',
+            duration: 2000
+          });
+          login();
+        } else {
+          uni.showToast({
+            title: t('incorrectCredentials'),
             icon: 'none',
             duration: 2000
           });
         }
+      } else if (response.statusCode === 501) {
+        registerUser();
+      } else {
+        uni.showToast({
+          title: t('errorTryAgain'),
+          icon: 'none',
+          duration: 2000
+        });
+      }
+    },
+    fail: (error) => {
+      console.error('Request error', error);
+      uni.showToast({
+        title: t('errorTryAgain'),
+        icon: 'none',
+        duration: 2000
       });
     }
-  },
-  watch: {
-    repeatPassword: 'confirmRegistration'
-  }
+  });
 };
+
+const registerUser = () => {
+  uni.request({
+    url: 'https://122.51.231.155:8080/users/',
+    method: 'POST',
+    header: {
+      'Content-Type': 'application/json'
+    },
+    data: {
+      phoneNumber: phoneNumber.value,
+      password: password.value
+    },
+    success: (response) => {
+      if (response.statusCode === 200 || response.statusCode === 201) {
+        showRepeatPassword.value = true;
+      } else {
+        uni.showToast({
+          title: t('registerFailed'),
+          icon: 'none',
+          duration: 2000
+        });
+      }
+    },
+    fail: (error) => {
+      console.error('Request error', error);
+      uni.showToast({
+        title: t('errorTryAgain'),
+        icon: 'none',
+        duration: 2000
+      });
+    }
+  });
+};
+
+const confirmRegistration = () => {
+  if (!showRepeatPassword.value || repeatPassword.value === '') {
+    return;
+  }
+  uni.request({
+    url: `https://122.51.231.155:8080/users/${phoneNumber.value}`,
+    method: 'GET',
+    success: (response) => {
+      if (response.statusCode === 200) {
+        const repeatCheck = response.data.repeatcheck;
+        if (repeatPassword.value === repeatCheck) {
+          uni.showToast({
+            title: t('registerSuccess'),
+            icon: 'none',
+            duration: 2000
+          });
+          login();
+        } else {
+          uni.showToast({
+            title: t('registerFailed'),
+            icon: 'none',
+            duration: 2000
+          });
+        }
+      } else {
+        uni.showToast({
+          title: t('errorTryAgain'),
+          icon: 'none',
+          duration: 2000
+        });
+      }
+    },
+    fail: (error) => {
+      console.error('Request error', error);
+      uni.showToast({
+        title: t('errorTryAgain'),
+        icon: 'none',
+        duration: 2000
+      });
+    }
+  });
+};
+
+watch(repeatPassword, confirmRegistration);
 </script>
 
 <style scoped>

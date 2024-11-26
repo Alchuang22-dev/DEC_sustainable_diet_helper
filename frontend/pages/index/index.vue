@@ -200,6 +200,9 @@ const ringOpts = {
   rotate: false,
   rotateLock: false,
   color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE", "#3CA272", "#FC8452", "#9A60B4", "#ea7ccc"],
+  animation: {
+		duration: 0, // 设置为0可以避免动画延迟
+	},
   padding: [5, 5, 5, 5],
   dataLabel: true,
   enableScroll: false,
@@ -401,9 +404,12 @@ const navigateTo = (page) => {
 		flex-direction: column;
 		width: 100%;
 		align-items: center;
+		will-change: contents;
 	}
 
 	.chart {
+		transform: translateZ(0);
+		will-change: transform;
 		width: 100%;
 		margin-bottom: 40rpx;
 	}
@@ -421,6 +427,7 @@ const navigateTo = (page) => {
 		align-items: center;
 		width: 100%;
 		height: 300px;
+		position: relative; 
 	}
 
 	/* 实用工具 */
