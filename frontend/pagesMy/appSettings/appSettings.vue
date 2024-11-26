@@ -1,8 +1,7 @@
 <template>
   <view class="settings">
     <view class="header">
-      <view @click="goBack" class="back-icon">返回</view>
-      <text class="title">软件设置</text>
+      <text class="title">{{ $t('settings_app_settings') }}</text>
       <view class="header-actions">
         <button class="menu-icon"></button>
         <button class="camera-icon"></button>
@@ -11,47 +10,47 @@
 
     <view class="list">
       <view class="divider">
-        <text class="divider-text">显示</text>
+        <text class="divider-text">{{ $t('settings_display') }}</text>
       </view>
       <view class="list-item" @click="navigateTo('Fonts')">
-        <text>字体大小</text>
+        <text>{{ $t('settings_font_size') }}</text>
         <text class="arrow">></text>
       </view>
       <view class="list-item" @click="navigateTo('language')">
-        <text>多语言</text>
+        <text>{{ $t('settings_language') }}</text>
         <text class="arrow">></text>
       </view>
       <view class="divider">
-        <text class="divider-text">存储与数据</text>
+        <text class="divider-text">{{ $t('settings_storage_data') }}</text>
       </view>
       <view class="list-item" @click="navigateTo('DeleteData')">
-        <text>清除数据</text>
+        <text>{{ $t('settings_clear_data') }}</text>
         <text class="arrow">></text>
       </view>
       <view class="list-item" @click="navigateTo('Storage')">
-        <text>存储空间</text>
+        <text>{{ $t('settings_storage_space') }}</text>
         <text class="arrow">></text>
       </view>
       <view class="divider">
-        <text class="divider-text">辅助功能</text>
+        <text class="divider-text">{{ $t('settings_accessibility') }}</text>
       </view>
       <view class="list-item" @click="navigateTo('DevelopingFunc')">
-        <text>开发功能</text>
+        <text>{{ $t('settings_development_features') }}</text>
         <text class="arrow">></text>
       </view>
       <view class="divider">
-        <text class="divider-text">关于软件</text>
+        <text class="divider-text">{{ $t('settings_about_software') }}</text>
       </view>
       <view class="list-item" @click="navigateTo('FeedBack')">
-        <text>帮助与反馈</text>
+        <text>{{ $t('settings_help_feedback') }}</text>
         <text class="arrow">></text>
       </view>
       <view class="list-item" @click="navigateTo('SoftwareInfo')">
-        <text>软件信息</text>
+        <text>{{ $t('settings_software_info') }}</text>
         <text class="arrow">></text>
       </view>
       <view class="list-item" @click="navigateTo('ConnectUs')">
-        <text>联系我们</text>
+        <text>{{ $t('settings_contact_us') }}</text>
         <text class="arrow">></text>
       </view>
     </view>

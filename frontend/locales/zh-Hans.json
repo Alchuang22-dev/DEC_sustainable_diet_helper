@@ -239,5 +239,22 @@
 	"family_info": "家庭ID：",
 	"manage_members": "管理成员",
 	"shared_family_data": "今日家庭数据一览",
-	"carbon_total": "碳排放总量"
+	"carbon_total": "碳排放总量",
+	//用户页
+	"profile_avatar_click": "点击头像",
+    "profile_username_click": "点击用户名",
+    "menu_set_goals_icon": "🎯",
+    "menu_food_preferences_icon": "🍲",
+    "menu_my_family_icon": "👪",
+    "menu_favorites_icon": "❤️",
+    "menu_history_data_icon": "📊",
+    "menu_app_settings_icon": "⚙️",
+    "menu_user_settings_icon": "👤",
+    "menu_search_tools_icon": "🔍",
+	//bend
+	"unbind_account_notice": "解绑账号后，原绑定电话将不可用于登录此账号。",
+	"change_binding_phone": "您正在更换账号绑定的电话号码。",
+	"confirm_binding": "确认绑定",
+	"input_verification_code": "请输入验证码",
+	"settings_back": "返回",
 }
