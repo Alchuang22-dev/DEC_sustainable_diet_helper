@@ -6,9 +6,22 @@
     <view class="profile-section">
       <view class="profile-top">
         <image :src="avatarSrc" class="avatar" @click="handleAvatarClick"></image>
-        <view class="profile-text" @click="handleUsernameClick">
-          <text class="greeting" >{{ isLoggedIn ? uid : $t('profile_greeting') }}</text>
-          <text class="login-prompt">{{ isLoggedIn ? $t('profile_logged_in') : $t('profile_switch_account') }}</text>
+        <view class="profile-text">
+          <template v-if="isEditingUsername">
+            <input
+              v-model="newUsername"
+              class="username-input"
+              @keyup.enter="submitUsername"
+              @blur="submitUsername"
+              ref="usernameInput"
+            />
+          </template>
+          <view v-else @click="handleUsernameClick">
+            <text class="greeting">{{ isLoggedIn ? uid : $t('profile_greeting') }}</text>
+          </view>
+		  <view>
+			  <text class="login-prompt">{{ isLoggedIn ? $t('profile_logged_in') : $t('profile_login_prompt') }}</text>
+		  </view>
         </view>
       </view>
       <button class="login-button" @click="handleLoginButtonClick">
@@ -58,15 +71,19 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 
 const uid = ref('');
 const avatarSrc = ref('/static/images/index/background_img.jpg');
 const isLoggedIn = ref(false);
-//TODO：根据后端传递的id进行页面内容加载
-  
 
+// 新增的响应式变量
+const isEditingUsername = ref(false);
+const newUsername = ref('');
+const usernameInput = ref(null);
+
+// 根据后端传递的id进行页面内容加载
 function navigateTo(page) {
   uni.navigateTo({
     url: `/pagesMy/${page}/${page}`,
@@ -103,12 +120,13 @@ function logout() {
 }
 
 function handleAvatarClick() {
-	console.log("in changing avatar");
+  console.log("in changing avatar");
   if (isLoggedIn.value) {
     // 选择图片作为头像
     uni.chooseImage({
       count: 1,
       sourceType: ['album'],
+	  // 省略了向后端的发信
       success: (res) => {
         avatarSrc.value = res.tempFilePaths[0];
       },
@@ -121,21 +139,34 @@ function handleAvatarClick() {
 
 function handleUsernameClick() {
   if (isLoggedIn.value) {
-    // 更换用户名
-    uni.prompt({
-      title: '更换用户名',
-      placeholder: '请输入新的用户名',
-      success: (res) => {
-        if (res.confirm && res.content) {
-          uid.value = res.content;
-          uni.setStorageSync('uid', res.content);
-        }
-      },
-      fail: (err) => {
-        console.error('更换用户名失败', err);
-      },
+    console.log("handleUsernameClick triggered");
+    isEditingUsername.value = true;
+    newUsername.value = uid.value;
+    nextTick(() => {
+      if (usernameInput.value) {
+        usernameInput.value.focus();
+      }
     });
   }
+}
+
+function submitUsername() {
+  const trimmedUsername = newUsername.value.trim();
+  if (trimmedUsername) {
+    uid.value = trimmedUsername;
+    uni.setStorageSync('uid', trimmedUsername);
+	//省略了向后端的发信
+    uni.showToast({
+      title: '用户名已更新',
+      icon: 'success',
+    });
+  } else {
+    uni.showToast({
+      title: '用户名不能为空',
+      icon: 'none',
+    });
+  }
+  isEditingUsername.value = false;
 }
 
 onShow(() => {
@@ -144,6 +175,7 @@ onShow(() => {
   checkLoginStatus();
 });
 </script>
+
 
 <style scoped>
   /* 全局样式变量 */
@@ -173,7 +205,7 @@ onShow(() => {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    z-index: 0;
+    z-index: -1;
     /* 将背景图片置于最底层 */
     opacity: 0.1;
     /* 调整透明度以不干扰内容 */
@@ -211,6 +243,7 @@ onShow(() => {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    flex: 1; /* 使其占据剩余空间 */
   }
 
   .greeting {
@@ -234,6 +267,7 @@ onShow(() => {
     border-radius: 10rpx;
     transition: background-color 0.3s;
     width: 80%;
+    margin-top: 10rpx;
   }
 
   .login-button:hover {
@@ -274,6 +308,16 @@ onShow(() => {
 
   .menu-text {
     font-size: 36rpx;
+    color: var(--text-color);
+  }
+
+  /* 新增的输入框样式 */
+  .username-input {
+    font-size: 38rpx;
+    padding: 5rpx 10rpx;
+    border: 1rpx solid var(--border-color);
+    border-radius: 5rpx;
+    outline: none;
     color: var(--text-color);
   }
 
