@@ -14,15 +14,15 @@
 
     <!-- 可滑动的食物列表 -->
     <scroll-view scroll-y="true" class="food-list scroll-view">
-      <view v-for="(food, index) in foodList" :key="food.id" class="card-container">
+      <view v-for="(food, index) in displayFoodList" :key="food.id" class="card-container">
         <uni-card
-          :title="food.name || $t('default_food_name')"
+          :title="food.displayName || $t('default_food_name')"
           :thumbnail="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
           :sub-title="`${$t('weight')}: ${food.weight || '1.2kg'} ${$t('price')}: ${food.price || '5元'}`"
           shadow=1
           @click="animateCard(index)"
           :class="{ clicked: food.isAnimating }"
-          :extra="`${food.transportMethod} ${food.foodSource}`"
+          :extra="`${t(`transport_${food.transportMethod}`)} ${t(`source_${food.foodSource}`)}`"
           :style="{ animationDelay: `${index * 0.1}s` }"
         >
           <view class="card-actions">
@@ -71,18 +71,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n'; // Import useI18n
 import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
 
 // 使用国际化
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 // 使用 Pinia Store
 const foodStore = useFoodListStore();
 
 // 解构需要使用的状态和方法
-const { foodList, deleteFood, updateFood, saveFoodList, loadFoodList, fetchAvailableFoods } = foodStore;
+const { foodList, deleteFood, updateFood, saveFoodList, loadFoodList, fetchAvailableFoods, availableFoods } = foodStore;
 
 // 碳排放数据，仅包含CO2
 const emission = ref({
@@ -179,6 +179,21 @@ const barOpts = ref({
   }
 });
 
+// 计算 displayFoodList，根据当前语言显示食物名称
+const displayFoodList = computed(() => {
+  return foodList.map(food => {
+    const availableFood = availableFoods.find(f => f.id === food.id);
+    const displayName = availableFood
+      ? (locale.value === 'zh-Hans' ? availableFood.name_zh : availableFood.name_en)
+      : food.name || t('default_food_name');
+
+    return {
+      ...food,
+      displayName
+    };
+  });
+});
+
 // 页面加载时处理动画
 const handleLoad = () => {
   foodList.forEach((food, index) => {
@@ -234,7 +249,7 @@ const calculateData = () => {
     data: {
       foodList: foodList.map(food => ({
         id: food.id,
-        name: food.name,
+        name: food.name, // 始终为英文名称
         weight: food.weight,
         // 其他需要发送的字段
       }))
@@ -262,7 +277,7 @@ const calculateData = () => {
         chartEmissionData.value.series[0].data = totalData.map(item => {
           totalCO2 += item.emission;
           return {
-            name: item.name,
+            name: item.name, // 英文名称
             value: item.emission
           };
         });
@@ -366,7 +381,7 @@ const saveEmissionData = () => {
     data: {
       foodList: foodList.map(food => ({
         id: food.id,
-        name: food.name,
+        name: food.name, // 始终为英文名称
         weight: food.weight,
         price: food.price,
         transportMethod: food.transportMethod,
@@ -399,24 +414,6 @@ const saveEmissionData = () => {
         duration: 2000,
       });
     }
-  });
-};
-
-// 页面跳转方法
-const navigateTo = (page) => {
-  if (page === 'add_food') {
-    navigateToAddFood();
-  } else if (page === 'recommendMenu') {
-    uni.navigateTo({
-      url: '/pages/recommendMenu/recommendMenu',
-    });
-  }
-};
-
-// 页面跳转到修改页面
-const navigateToModify = (index) => {
-  uni.navigateTo({
-    url: `/pagesTool/modify_food/modify_food?index=${index}`,
   });
 };
 
