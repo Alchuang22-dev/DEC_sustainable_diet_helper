@@ -201,6 +201,7 @@
 	"add_success": "添加成功",
 	"invalid_food_item": "无效的食物项",
 	"modify_success": "修改成功",
+	"method_default": "默认",
 	"transport_land": "陆运",
 	"transport_sea": "海运",
 	"transport_air": "空运",

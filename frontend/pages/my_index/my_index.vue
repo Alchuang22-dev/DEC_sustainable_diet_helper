@@ -76,6 +76,7 @@ import { onShow } from '@dcloudio/uni-app';
 
 const uid = ref('');
 const avatarSrc = ref('/static/images/index/background_img.jpg');
+const avatarSrc_ori = ref('/static/images/index/background_img.jpg');
 const isLoggedIn = ref(false);
 
 // 新增的响应式变量
@@ -116,6 +117,7 @@ function checkLoginStatus() {
 
 function logout() {
   isLoggedIn.value = false;
+  avatarSrc.value = avatarSrc_ori.value;
   uni.removeStorageSync('uid');
 }
 
