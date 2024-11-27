@@ -22,7 +22,7 @@
             @mousedown.prevent
             @click="selectFood(item)"
           >
-            {{ item.name }}
+            {{ displayName(item) }}
           </view>
         </view>
       </view>
@@ -70,7 +70,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n'; // Import useI18n
 import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const foodStore = useFoodListStore();
 
 // 获取 availableFoods
@@ -82,8 +82,8 @@ const food = reactive({
   id: null, // 添加 id 字段
   weight: '',
   price: '',
-  transportMethod: t('transport_land'),
-  foodSource: t('source_local'),
+  transportMethod: 'land', // 使用英文标识
+  foodSource: 'local', // 使用英文标识
   imagePath: '',
 });
 
@@ -94,20 +94,34 @@ const showFoodList = ref(false);
 // 模糊匹配过滤食物列表
 const filteredFoods = computed(() => {
   if (foodNameInput.value === '') {
-    console.log('availableFoods', availableFoods);
-    return availableFoods;
+    const currentLang = locale.value;
+    if (currentLang === 'zh-Hans') {
+      return availableFoods.filter((f) => f.name_zh !== '');
+    } else {
+      return availableFoods.filter((f) => f.name_en !== '');
+    }
   } else {
-    console.log('foodNameInput.value:', foodNameInput.value);
-    console.log('availableFoods:', availableFoods);
-    return availableFoods.filter((f) => f.name.includes(foodNameInput.value));
+    const currentLang = locale.value;
+    return availableFoods.filter((f) => {
+      if (currentLang === 'zh-Hans') {
+        return f.name_zh.includes(foodNameInput.value);
+      } else {
+        return f.name_en.toLowerCase().includes(foodNameInput.value.toLowerCase());
+      }
+    });
   }
 });
 
+// 根据当前语言显示名称
+const displayName = (item) => {
+  return locale.value === 'zh-Hans' ? item.name_zh : item.name_en;
+};
+
 // 当用户选择食物时
 const selectFood = (foodItem) => {
-  food.name = foodItem.name;
+  food.name = foodItem.name_en; // 始终使用英文名称存储
   food.id = foodItem.id;
-  foodNameInput.value = foodItem.name;
+  foodNameInput.value = displayName(foodItem); // 显示当前语言的名称
   showFoodList.value = false;
 };
 
@@ -131,9 +145,8 @@ watch(foodNameInput, (newValue) => {
 const weightError = ref(false);
 const priceError = ref(false);
 
-// 运输方式和食品来源下拉选项数据
+// 运输方式和食品来源下拉选项数据（使用翻译）
 const transportMethods = [t('transport_land'), t('transport_sea'), t('transport_air')];
-console.log('transportMethods:', transportMethods);
 const foodSources = [t('source_local'), t('source_imported')];
 
 // 当前选择的索引
@@ -143,15 +156,17 @@ const sourceIndex = ref(0);
 // 运输方式选择改变
 const onTransportChange = (e) => {
   transportIndex.value = e.detail.value;
-  console.log('transportIndex:', transportIndex.value);
-  food.transportMethod = transportMethods[transportIndex.value];
-  console.log('food.transportMethod:', food.transportMethod);
+  const selected = e.detail.value;
+  // 使用英文标识存储
+  food.transportMethod = selected === 0 ? 'land' : selected === 1 ? 'sea' : 'air';
 };
 
 // 食品来源选择改变
 const onSourceChange = (e) => {
   sourceIndex.value = e.detail.value;
-  food.foodSource = foodSources[sourceIndex.value];
+  const selected = e.detail.value;
+  // 使用英文标识存储
+  food.foodSource = selected === 0 ? 'local' : 'imported';
 };
 
 // 上传图片
@@ -197,8 +212,6 @@ const submitFoodDetails = () => {
     imagePath
   } = food;
 
-  console.log('food:', food);
-
   // 输入验证
   let valid = true;
 
@@ -227,7 +240,7 @@ const submitFoodDetails = () => {
   }
 
   const newFood = {
-    name,
+    name, // 始终为英文名称
     id: food.id, // 添加 id
     weight: parseInt(weight),
     price: parseInt(price),
@@ -264,6 +277,11 @@ onMounted(() => {
   if (availableFoods.length === 0) {
     fetchAvailableFoods();
   }
+});
+
+// 监听语言变化，重新获取食物列表（如果需要）
+watch(locale, () => {
+  // 可选：根据需要重新获取或处理食物列表
 });
 </script>
 
