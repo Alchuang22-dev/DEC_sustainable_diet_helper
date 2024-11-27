@@ -201,6 +201,7 @@
 	"add_success": "Add Successful",
 	"invalid_food_item": "Invalid Food Item",
 	"modify_success": "Modification Successful",
+	"method_default": "average",
 	"transport_land": "Land Transport",
 	"transport_sea": "Sea Transport",
 	"transport_air": "Air Transport",
