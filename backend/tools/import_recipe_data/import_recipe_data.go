@@ -1,5 +1,5 @@
 // cmd/import_recipe_data.go
-package main
+package import_recipe_data
 
 import (
     "encoding/csv"
