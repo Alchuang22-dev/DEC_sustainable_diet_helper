@@ -28,6 +28,13 @@ func RegisterFamilyRoutes(router *gin.Engine, db *gorm.DB) {
             authGroup.POST("/:id/join", familyController.JoinFamily)
             // 批准加入家庭
             authGroup.POST("/admit", familyController.AdmitJoinFamily)
+            // 拒绝加入家庭
+            authGroup.POST("/reject", familyController.AdmitJoinFamily)
+            // 取消加入家庭
+            authGroup.POST("/cancel_join", familyController.CancelJoinFamily)
+            // 查看当前试图加入的家庭信息
+            authGroup.POST("/pending_family_details", familyController.PendingFamilyDetails)
+            
         }
     }
 }

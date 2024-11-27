@@ -121,6 +121,7 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
     admins := make([]gin.H, len(user.Family.Admins))
     for i, admin := range user.Family.Admins {
         admins[i] = gin.H{
+            "id":         admin.ID,
             "nickname":   admin.Nickname,
             "avatar_url": admin.AvatarURL, // TODO 应该传递图片，暂时用avatar_url替代
         }
@@ -129,6 +130,7 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
     members := make([]gin.H, len(user.Family.Members))
     for i, member := range user.Family.Members {
         members[i] = gin.H{
+            "id":         member.ID,
             "nickname":   member.Nickname,
             "avatar_url": member.AvatarURL,
         }
@@ -315,13 +317,23 @@ func (fc *FamilyController) AdmitJoinFamily(c *gin.Context) {
         return
     }
 
-    // 从等待列表中移除用户并添加到成员列表
-    if err := fc.DB.Model(&family).Association("WaitingList").Delete(&user); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove user from waiting list"})
-        return
-    }
-    if err := fc.DB.Model(&family).Association("Members").Append(&user); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add user to members"})
+    // 从等待列表中移除用户并添加到成员列表（使用事务保证原子性）
+    err := fc.DB.Transaction(func(tx *gorm.DB) error {
+        // 从等待列表中移除用户
+        if err := tx.Model(&family).Association("WaitingList").Delete(&user); err != nil {
+            return err
+        }
+
+        // 将用户添加到成员列表
+        if err := tx.Model(&family).Association("Members").Append(&user); err != nil {
+            return err
+        }
+
+        return nil
+    })
+
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update family membership"})
         return
     }
 
@@ -340,14 +352,372 @@ func (fc *FamilyController) AdmitJoinFamily(c *gin.Context) {
 }
 
 // 拒绝加入家庭
+func (fc *FamilyController) RejectJoinFamily(c *gin.Context) {
+    // 从 JWT 中解析当前用户 ID
+    adminUserID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
+    // 获取被拒绝用户的 ID
+    var request struct {
+        UserID uint `json:"user_id" binding:"required"`
+    }
+    if err := c.ShouldBindJSON(&request); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+        return
+    }
+
+    // 获取当前用户的 FamilyID
+    var adminUser models.User
+    if err := fc.DB.Preload("Family.Admins").First(&adminUser, adminUserID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve admin user"})
+        return
+    }
+
+    if adminUser.FamilyID == 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
+        return
+    }
+
+    // 检查是否为家庭管理员
+    isAdmin := false
+    for _, admin := range adminUser.Family.Admins {
+        if admin.ID == adminUserID {
+            isAdmin = true
+            break
+        }
+    }
+    if !isAdmin {
+        c.JSON(http.StatusForbidden, gin.H{"error": "You are not an admin of this family"})
+        return
+    }
+
+    // 获取目标家庭
+    var family models.Family
+    if err := fc.DB.Preload("WaitingList").First(&family, adminUser.FamilyID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve family"})
+        return
+    }
+
+    // 检查被拒绝用户是否在家庭的等待列表中
+    var user models.User
+    if err := fc.DB.First(&user, request.UserID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+
+    if user.PendingFamilyID == nil || *user.PendingFamilyID != family.ID {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "User is not in the waiting list of your family"})
+        return
+    }
+
+    // 从等待列表中移除用户
+    if err := fc.DB.Model(&family).Association("WaitingList").Delete(&user); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove user from waiting list"})
+        return
+    }
+
+    // 清除用户的 PendingFamilyID 字段
+    user.PendingFamilyID = nil
+    if err := fc.DB.Save(&user).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user's pending family information"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "message": "User's join request rejected successfully",
+        "family_id": family.ID,
+        "user_id":   user.ID,
+    })
+}
 
 // 取消申请
+func (fc *FamilyController) CancelJoinFamily(c *gin.Context) {
+    // 从 JWT 中解析当前用户 ID
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
+    // 获取当前用户
+    var user models.User
+    if err := fc.DB.Preload("PendingFamily").First(&user, userID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+
+    // 检查用户是否有待处理的家庭申请
+    if user.PendingFamilyID == nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You have not requested to join any family"})
+        return
+    }
+
+    // 获取用户申请的家庭
+    var family models.Family
+    if err := fc.DB.Preload("WaitingList").First(&family, *user.PendingFamilyID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve family"})
+        return
+    }
+
+    // 从等待列表中移除用户
+    if err := fc.DB.Model(&family).Association("WaitingList").Delete(&user); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove user from waiting list"})
+        return
+    }
+
+    // 清除用户的 PendingFamilyID 字段
+    user.PendingFamilyID = nil
+    if err := fc.DB.Save(&user).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user's pending family information"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Join request canceled successfully",
+        "family_id": family.ID,
+        "user_id":   user.ID,
+    })
+}
+
+// 查看当前试图加入的家庭信息
+func (fc *FamilyController) PendingFamilyDetails(c *gin.Context) {
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    var user models.User
+    if err := fc.DB.First(&user, userID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+
+    if user.PendingFamilyID == nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You have not requested to join any family"})
+        return
+    }
+
+    var family models.Family
+    if err := fc.DB.First(&family, user.PendingFamilyID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve family"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "id":       family.ID,
+        "name":     family.Name,
+        "token":    family.Token,
+    })
+}
 
 // TODO
-// 更改某个家庭成员权限
+// 更改某个家庭成员为 member
+func (fc *FamilyController) SetMember(c *gin.Context) {
+    adminUserID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
+    var request struct {
+        UserID  uint `json:"user_id" binding:"required"`
+    }
+    if err := c.ShouldBindJSON(&request); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+        return
+    }
+
+    var adminUser models.User
+    if err := fc.DB.First(&adminUser, adminUserID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+
+    if adminUser.FamilyID == 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
+        return
+    }
+
+    var family models.Family
+    if err := fc.DB.Preload("Admins").Preload("Members").First(&family, adminUser.FamilyID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve family"})
+        return
+    }
+
+    // 检查用户是否是管理员
+    isAdmin := false
+    for _, admin := range family.Admins {
+        if admin.ID == adminUserID {
+            isAdmin = true
+            break
+        }
+    }
+    if !isAdmin {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You are not an admin of this family"})
+        return
+    }
+
+    var user models.User
+    if err := fc.DB.First(&user, request.UserID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+
+    // 检查目标用户是否是管理员
+    isTargetAdmin := false
+    for _, admin := range family.Admins {
+        if admin.ID == user.ID {
+            isTargetAdmin = true
+            break
+        }
+    }
+    if !isTargetAdmin {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "The target user is not an admin of the family"})
+        return
+    }
+
+    // 检查用户是否是家庭成员
+    if user.FamilyID != family.ID {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "The user is not in your family"})
+        return
+    }
+
+    // 防止管理员对自身权限进行修改
+    if user.ID == adminUserID {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You cannot change your own role"})
+        return
+    }
+
+    // 使用事务操作，确保原子性
+    err := fc.DB.Transaction(func(tx *gorm.DB) error {
+        // 从管理员移除
+        if err := tx.Model(&family).Association("Admins").Delete(&user); err != nil {
+            return err
+        }
+        // 添加到成员
+        if err := tx.Model(&family).Association("Members").Append(&user); err != nil {
+            return err
+        }
+        return nil
+    })
+
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user role"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Successfully set user to member",
+        "family_id": family.ID,
+        "user_id":   user.ID,
+    })
+}
+
+// 更改某个家庭成员为 admin
+func (fc *FamilyController) SetAdmin(c *gin.Context) {
+    adminUserID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    var request struct {
+        UserID  uint `json:"user_id" binding:"required"`
+    }
+    if err := c.ShouldBindJSON(&request); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+        return
+    }
+
+    var adminUser models.User
+    if err := fc.DB.First(&adminUser, adminUserID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+
+    if adminUser.FamilyID == 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
+        return
+    }
+
+    var family models.Family
+    if err := fc.DB.Preload("Admins").Preload("Members").First(&family, adminUser.FamilyID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve family"})
+        return
+    }
+
+    // 检查用户是否是管理员
+    isAdmin := false
+    for _, admin := range family.Admins {
+        if admin.ID == adminUserID {
+            isAdmin = true
+            break
+        }
+    }
+    if !isAdmin {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You are not an admin of this family"})
+        return
+    }
+
+    var user models.User
+    if err := fc.DB.First(&user, request.UserID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+
+    // 检查目标用户是否是管理员
+    isTargetAdmin := false
+    for _, admin := range family.Admins {
+        if admin.ID == user.ID {
+            isTargetAdmin = true
+            break
+        }
+    }
+    if !isTargetAdmin {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "The target user is not an admin of the family"})
+        return
+    }
+
+    // 检查用户是否是家庭成员
+    if user.FamilyID != family.ID {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "The user is not in your family"})
+        return
+    }
+
+    // 防止管理员对自身权限进行修改
+    if user.ID == adminUserID {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You cannot change your own role"})
+        return
+    }
+
+    // 使用事务操作，确保原子性
+    err := fc.DB.Transaction(func(tx *gorm.DB) error {
+        // 从管理员移除
+        if err := tx.Model(&family).Association("Admins").Delete(&user); err != nil {
+            return err
+        }
+        // 添加到成员
+        if err := tx.Model(&family).Association("Members").Append(&user); err != nil {
+            return err
+        }
+        return nil
+    })
+
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user role"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Successfully set user to member",
+        "family_id": family.ID,
+        "user_id":   user.ID,
+    })
+}
 
 // 退出家庭
 
