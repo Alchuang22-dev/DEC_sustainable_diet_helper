@@ -24,5 +24,10 @@ func RegisterUserRoutes(router *gin.Engine, db *gorm.DB) {
             authGroup.PUT("/:id/set_nickname", userController.SetNickname) // 更新用户名
             authGroup.PUT("/:id/set_avator", userController.SetNickname) // 更新密码
         }
+
+        // TODO
+        // 查询用户点赞的新闻
+        // 查询用户收藏的新闻
+        // 查询用户最近浏览的新闻
     }
 }

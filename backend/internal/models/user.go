@@ -13,7 +13,6 @@ type User struct {
     CreatedAt   time.Time `json:"created_at"`                   // 用户创建时间
     UpdatedAt   time.Time `json:"updated_at"`                   // 用户更新时间
 
-
     FamilyID    uint      `gorm:"unique" json:"family_id"`       // 所属家庭 ID，唯一
     Family      *Family   `gorm:"foreignKey:FamilyID" json:"family"` // 与家庭的外键关系
 

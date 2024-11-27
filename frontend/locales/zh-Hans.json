@@ -185,7 +185,7 @@
 	"total_emission": "总排放量",
 	"name": "名称",
 	"please_enter_food_name": "请输入食品名称",
-	"total_weight": "总重量 (g)",
+	"total_weight": "总重量 (Kg)",
 	"please_enter_food_weight": "请输入食品重量",
 	"total_price": "总价格 (元)",
 	"please_enter_food_price": "请输入食品价格",

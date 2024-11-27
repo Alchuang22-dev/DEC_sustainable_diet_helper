@@ -54,6 +54,9 @@ func main() {
     // 注册食物路由
     routes.RegisterFoodRoutes(router, db)
 
+    // 注册家庭路由
+    routes.RegisterFamilyRoutes(router, db)
+
     // 启动服务器
     err = router.Run(":8080")
     if err != nil {
