@@ -55,25 +55,17 @@ func (f *Food) DeleteFood(db *gorm.DB) error {
 
 // FoodNameResponse 定义返回的食物名称结构
 type FoodNameResponse struct {
-    ID   uint   `json:"id"`
-    Name string `json:"name"`
+    ID      uint   `json:"id"`
+    ZhName string `json:"zh_name"` // 导出字段
+    EnName string `json:"en_name"` // 导出字段
 }
 
 // GetAllFoodNames 获取所有食物名称
-func GetAllFoodNames(db *gorm.DB, language string) ([]FoodNameResponse, error) {
+func GetAllFoodNames(db *gorm.DB) ([]FoodNameResponse, error) {
     var results []FoodNameResponse
     query := db.Model(&Food{})
-    
-    switch language {
-    case "zh":
-        err := query.Select("id, zh_food_name as name").Find(&results).Error
-        return results, err
-    case "en":
-        err := query.Select("id, en_food_name as name").Find(&results).Error
-        return results, err
-    default:
-        return nil, fmt.Errorf("unsupported language: %s", language)
-    }
+    err := query.Select("id, zh_food_name as zh_name, en_food_name as en_name").Find(&results).Error
+    return results, err
 }
 
 // FoodCalculateRequest 定义单个食物的计算请求
