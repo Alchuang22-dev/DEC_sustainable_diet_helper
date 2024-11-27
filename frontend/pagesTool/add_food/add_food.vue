@@ -82,8 +82,8 @@ const food = reactive({
   id: null, // 添加 id 字段
   weight: '',
   price: '',
-  transportMethod: 'transport_land',
-  foodSource: 'source_local',
+  transportMethod: t('transport_land'),
+  foodSource: t('source_local'),
   imagePath: '',
 });
 
@@ -133,6 +133,7 @@ const priceError = ref(false);
 
 // 运输方式和食品来源下拉选项数据
 const transportMethods = [t('transport_land'), t('transport_sea'), t('transport_air')];
+console.log('transportMethods:', transportMethods);
 const foodSources = [t('source_local'), t('source_imported')];
 
 // 当前选择的索引
@@ -142,7 +143,9 @@ const sourceIndex = ref(0);
 // 运输方式选择改变
 const onTransportChange = (e) => {
   transportIndex.value = e.detail.value;
+  console.log('transportIndex:', transportIndex.value);
   food.transportMethod = transportMethods[transportIndex.value];
+  console.log('food.transportMethod:', food.transportMethod);
 };
 
 // 食品来源选择改变
@@ -193,6 +196,8 @@ const submitFoodDetails = () => {
     foodSource,
     imagePath
   } = food;
+
+  console.log('food:', food);
 
   // 输入验证
   let valid = true;

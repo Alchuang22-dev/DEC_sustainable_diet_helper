@@ -100,9 +100,9 @@ const showFoodList = ref(false);
 // 模糊匹配过滤食物列表
 const filteredFoods = computed(() => {
   if (foodNameInput.value === '') {
-    return availableFoods.value;
+    return availableFoods;
   } else {
-    return availableFoods.value.filter((f) => f.name.includes(foodNameInput.value));
+    return availableFoods.filter((f) => f.name.includes(foodNameInput.value));
   }
 });
 
@@ -294,7 +294,7 @@ onLoad((loadedOptions) => {
 // 页面加载时执行
 onMounted(() => {
   // 如果 availableFoods 为空，调用获取函数
-  if (availableFoods.value.length === 0) {
+  if (availableFoods.length === 0) {
     fetchAvailableFoods();
   }
 });

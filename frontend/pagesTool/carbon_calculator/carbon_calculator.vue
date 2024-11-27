@@ -14,16 +14,16 @@
 
     <!-- 可滑动的食物列表 -->
     <scroll-view scroll-y="true" class="food-list scroll-view">
-      <view v-for="(food, index) in foodList" :key="index" class="card-container">
+      <view v-for="(food, index) in foodList" :key="food.id" class="card-container">
         <uni-card
-            :title="food.name || $t('default_food_name')"
-            :thumbnail="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
-            :sub-title="`${$t('weight')}: ${food.weight || '1.2kg'} ${$t('price')}: ${food.price || '5元'}`"
-            shadow=1
-            @click="animateCard(index)"
-            :class="{ clicked: food.isAnimating }"
-            :extra="`${food.transportMethod} ${food.foodSource}`"
-            :style="{ animationDelay: `${index * 0.1}s` }"
+          :title="food.name || $t('default_food_name')"
+          :thumbnail="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
+          :sub-title="`${$t('weight')}: ${food.weight || '1.2kg'} ${$t('price')}: ${food.price || '5元'}`"
+          shadow=1
+          @click="animateCard(index)"
+          :class="{ clicked: food.isAnimating }"
+          :extra="`${food.transportMethod} ${food.foodSource}`"
+          :style="{ animationDelay: `${index * 0.1}s` }"
         >
           <view class="card-actions">
             <button class="delete-button" @click.stop="handleDelete(index)">{{ $t('delete') }}</button>
@@ -50,19 +50,19 @@
     <view class="result" v-if="showResult">
       <text class="result-title">{{ $t('your_carbon_footprint') }}</text>
       <qiun-data-charts
-          :canvas2d="true"
-          canvas-id="carbonEmissionChart"
-          type="ring"
-          :opts="ringOpts"
-          :chartData="chartEmissionData"
+        :canvas2d="true"
+        canvas-id="carbonEmissionChart"
+        type="ring"
+        :opts="ringOpts"
+        :chartData="chartEmissionData"
       />
       <text class="result-title">{{ $t('your_nutrition_intake') }}</text>
       <qiun-data-charts
-          :canvas2d="true"
-          canvas-id="nutritionChart"
-          type="bar"
-          :opts="barOpts"
-          :chartData="chartNutritionData"
+        :canvas2d="true"
+        canvas-id="nutritionChart"
+        type="bar"
+        :opts="barOpts"
+        :chartData="chartNutritionData"
       />
       <button class="save-button" @click="saveEmissionData">{{ $t('save') }}</button>
     </view>
@@ -71,7 +71,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n'; // Import useI18n
 import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
 
@@ -82,7 +82,7 @@ const { t } = useI18n();
 const foodStore = useFoodListStore();
 
 // 解构需要使用的状态和方法
-const { foodList, deleteFood, saveFoodList, loadFoodList, fetchAvailableFoods } = foodStore;
+const { foodList, deleteFood, updateFood, saveFoodList, loadFoodList, fetchAvailableFoods } = foodStore;
 
 // 碳排放数据，仅包含CO2
 const emission = ref({
@@ -247,12 +247,13 @@ const calculateData = () => {
         totalData.forEach((item, index) => {
           const foodIndex = foodList.findIndex(food => food.id === item.id);
           if (foodIndex !== -1) {
-            foodList[foodIndex].emission = item.emission;
-            foodList[foodIndex].calories = item.calories;
-            foodList[foodIndex].protein = item.protein;
-            foodList[foodIndex].fat = item.fat;
-            foodList[foodIndex].carbohydrates = item.carbohydrates;
-            foodList[foodIndex].sodium = item.sodium;
+            const currentFood = foodList[foodIndex];
+            currentFood.emission = item.emission;
+            currentFood.calories = item.calories;
+            currentFood.protein = item.protein;
+            currentFood.fat = item.fat;
+            currentFood.carbohydrates = item.carbohydrates;
+            currentFood.sodium = item.sodium;
           }
         });
 
@@ -411,7 +412,6 @@ const navigateTo = (page) => {
     });
   }
 };
-
 
 // 页面跳转到修改页面
 const navigateToModify = (index) => {
