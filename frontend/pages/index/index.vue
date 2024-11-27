@@ -11,7 +11,8 @@
     </view>
 
     <!-- 碳排放信息 -->
-    <view class="carbon-info">
+    <!-- 碳排放信息 -->
+   <view class="carbon-info">
       <view class="carbon-progress">
         <text class="carbon-description">{{$t('carbon_description')}}</text>
         <text class="carbon-number">{{ days }}{{$t('carbon_days')}}</text>
@@ -42,6 +43,7 @@
 
       </view>
     </view>
+
 
     <!-- 实用工具 -->
     <view class="useful-tools">
@@ -398,29 +400,43 @@ const navigateTo = (page) => {
 		font-weight: bold;
 	}
 
-	/* 图表部分 */
-	.charts {
-		display: flex;
-		flex-direction: column;
-		width: 100%;
-		align-items: center;
-		will-change: contents;
+	/* 图表容器的通用样式 */
+	.chart {
+		background-color: rgba(255, 255, 255, 0.9); /* 半透明白色背景 */
+		padding: 20rpx;
+		border-radius: 15rpx;
+		box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.1);
+		margin-bottom: 40rpx;
+		width: 90%; /* 调整宽度以适应不同屏幕 */
+		transition: transform 0.3s, box-shadow 0.3s;
 	}
 
-	.chart {
-		transform: translateZ(0);
-		will-change: transform;
-		width: 100%;
-		margin-bottom: 40rpx;
+	/* 单独为不同类型的图表添加背景 */
+	.chart.today {
+		background-color: rgba(24, 144, 255, 0.1); /* 蓝色调 */
+	}
+
+	.chart.history {
+		background-color: rgba(255, 193, 7, 0.1); /* 黄色调 */
+	}
+
+	.chart.nutrition {
+		background-color: rgba(76, 175, 80, 0.1); /* 绿色调 */
+	}
+
+	/* 图表容器悬停效果 */
+	.chart:hover {
+		transform: translateY(-5rpx);
+		box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.2);
 	}
 
 	.chart-title {
-		text-align: center;
-		margin-bottom: 15rpx;
-		font-size: 28rpx;
-		color: var(--primary-color);
-		font-weight: bold;
-	}
+			text-align: center;
+			margin-bottom: 15rpx;
+			font-size: 28rpx;
+			color: var(--primary-color);
+			font-weight: bold;
+		}
 
 	.today-charts,
 	.nutrition-charts {
@@ -455,23 +471,30 @@ const navigateTo = (page) => {
 		gap: 20rpx;
 	}
 
-	.tool {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		background-color: rgba(255, 255, 255, 0.9);
-		padding: 15rpx;
-		border-radius: 10rpx;
-		box-shadow: 0 2rpx 5rpx var(--shadow-color);
-		cursor: pointer;
-		transition: transform 0.3s, box-shadow 0.3s;
-		animation: fadeInUp 1s ease;
-	}
+/* 实用工具 */
+.tool {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 15rpx;
+    border-radius: 10rpx;
+    box-shadow: 0 2rpx 5rpx var(--shadow-color);
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s;
+    animation: fadeInUp 1s ease;
+}
 
-	.tool:hover {
-		transform: translateY(-5rpx) scale(1.05);
-		box-shadow: 0 4rpx 10rpx var(--shadow-color);
-	}
+.tool:hover {
+    transform: translateY(-5rpx) scale(1.05);
+    box-shadow: 0 4rpx 10rpx var(--shadow-color);
+    background-color: rgba(255, 255, 255, 1); /* 提升背景不透明度 */
+}
+
+.tool:active {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 2rpx 5rpx var(--shadow-color);
+}
 
 	.tool-icon {
 		width: 120rpx;
