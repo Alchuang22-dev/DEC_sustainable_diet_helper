@@ -13,14 +13,6 @@ const (
     NewsTypeExternal NewsType = "external" // 外部新闻，仅链接
 )
 
-type NewsCategory string
-
-const (
-    NewsCategoryA   NewsCategory = "A"
-    NewsCategoryB   NewsCategory = "B"
-    // TODO 仅示例, 待定
-)
-
 // 公共新闻结构
 type News struct {
     ID              uint         `gorm:"primaryKey" json:"id"`
@@ -28,12 +20,18 @@ type News struct {
     Description     string       `gorm:"type:text" json:"description"`
     UploadTime      time.Time    `json:"upload_time"`
     ViewCount       int          `json:"view_count"`
+    LikeCount       int          `json:"like_count"`
+    FavoriteCount   int          `json:"favorite_count"`
+    DislikeCount    int          `json:"dislike_count"`
+    ShareCount      int          `json:"share_count"`
     Comments        []Comment    `gorm:"foreignKey:NewsID" json:"comments"`
-    NewsType        NewsType     `gorm:"size:10;not null" json:"news_type"`     // 视频新闻/常规新闻/外部新闻 todo 需要一种新的，只保存链接
-    Type            string       `gorm:"size:50" json:"type"`                   // 新闻分类
+    NewsType        NewsType     `gorm:"size:10;not null" json:"news_type"`     // 视频新闻/常规新闻/外部新闻
 
-    AuthorID        uint         `json:"author_id"`                             // 作者ID
+    // 作者信息
+    AuthorID        uint         `json:"author_id"`
     Author          User         `gorm:"foreignKey:AuthorID" json:"author"`
+    AuthorName      string       `gorm:"size:255" json:"authorName"`               // 对应前端的 authorName
+    AuthorAvatar    string       `gorm:"size:255" json:"authorAvatar"`             // 对应前端的 authorAvatar
 
     // 关联的用户列表
     LikedByUsers    []User       `gorm:"many2many:user_likes_news;"`

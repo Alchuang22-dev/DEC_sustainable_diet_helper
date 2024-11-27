@@ -14,16 +14,16 @@
 
     <!-- 可滑动的食物列表 -->
     <scroll-view scroll-y="true" class="food-list scroll-view">
-      <view v-for="(food, index) in foodList" :key="index" class="card-container">
+      <view v-for="(food, index) in foodList" :key="food.id" class="card-container">
         <uni-card
-            :title="food.name || $t('default_food_name')"
-            :thumbnail="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
-            :sub-title="`${$t('weight')}: ${food.weight || '1.2kg'} ${$t('price')}: ${food.price || '5元'}`"
-            shadow=1
-            @click="animateCard(index)"
-            :class="{ clicked: food.isAnimating }"
-            :extra="`${food.transportMethod} ${food.foodSource}`"
-            :style="{ animationDelay: `${index * 0.1}s` }"
+          :title="food.name || $t('default_food_name')"
+          :thumbnail="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
+          :sub-title="`${$t('weight')}: ${food.weight || '1.2kg'} ${$t('price')}: ${food.price || '5元'}`"
+          shadow=1
+          @click="animateCard(index)"
+          :class="{ clicked: food.isAnimating }"
+          :extra="`${food.transportMethod} ${food.foodSource}`"
+          :style="{ animationDelay: `${index * 0.1}s` }"
         >
           <view class="card-actions">
             <button class="delete-button" @click.stop="handleDelete(index)">{{ $t('delete') }}</button>
@@ -50,38 +50,28 @@
     <view class="result" v-if="showResult">
       <text class="result-title">{{ $t('your_carbon_footprint') }}</text>
       <qiun-data-charts
-          :canvas2d="true"
-          canvas-id="carbonEmissionChart"
-          type="ring"
-          :opts="ringOpts"
-          :chartData="chartEmissionData"
+        :canvas2d="true"
+        canvas-id="carbonEmissionChart"
+        type="ring"
+        :opts="ringOpts"
+        :chartData="chartEmissionData"
       />
       <text class="result-title">{{ $t('your_nutrition_intake') }}</text>
       <qiun-data-charts
-          :canvas2d="true"
-          canvas-id="nutritionChart"
-          type="bar"
-          :opts="barOpts"
-          :chartData="chartNutritionData"
+        :canvas2d="true"
+        canvas-id="nutritionChart"
+        type="bar"
+        :opts="barOpts"
+        :chartData="chartNutritionData"
       />
       <button class="save-button" @click="saveEmissionData">{{ $t('save') }}</button>
     </view>
 
-    <!-- 实用工具 -->
-    <view class="useful-tools">
-      <view class="tool" @click="navigateTo('recommendMenu')">
-        <image src="../static/toufu.png" class="tool-image" alt="推荐菜单"></image>
-        <view class="tool-description">
-          <text class="tool-title">{{ $t('recommend_menu') }}</text>
-          <text class="tool-text">{{ $t('try_our_sustainable_menu') }}</text>
-        </view>
-      </view>
-    </view>
   </view>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n'; // Import useI18n
 import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
 
@@ -92,7 +82,7 @@ const { t } = useI18n();
 const foodStore = useFoodListStore();
 
 // 解构需要使用的状态和方法
-const { foodList, deleteFood, saveFoodList, loadFoodList } = foodStore;
+const { foodList, deleteFood, updateFood, saveFoodList, loadFoodList, fetchAvailableFoods } = foodStore;
 
 // 碳排放数据，仅包含CO2
 const emission = ref({
@@ -243,153 +233,121 @@ const calculateData = () => {
     method: 'POST',
     data: {
       foodList: foodList.map(food => ({
+        id: food.id,
         name: food.name,
         weight: food.weight,
         // 其他需要发送的字段
       }))
     },
-    fail: (res) => {
-      // 假设后端返回的数据结构与 mockResponse 相同
-      const mockResponse = {
-        totalData: [
-          {
-            name: "西红柿",
-            emission: 2,
-            calories: 100,
-            protein: 200,
-            fat: 400,
-            carbohydrates: 300,
-            sodium: 500,
-          },
-          {
-            name: "苹果",
-            emission: 3,
-            calories: 100,
-            protein: 200,
-            fat: 400,
-            carbohydrates: 300,
-            sodium: 500,
-          },
-          {
-            name: "牛肉",
-            emission: 10,
-            calories: 100,
-            protein: 200,
-            fat: 400,
-            carbohydrates: 300,
-            sodium: 500,
-          },
-          {
-            name: "豆腐",
-            emission: 1.5,
-            calories: 100,
-            protein: 200,
-            fat: 400,
-            carbohydrates: 300,
-            sodium: 500,
-          },
-          // ...
-        ],
-      };
+    success: (res) => {
+      if (res.statusCode === 200) {
+        const totalData = res.data.totalData;
 
-      const totalData = mockResponse.totalData;
+        // 更新 foodList 中的每个食物项，添加多个字段
+        totalData.forEach((item, index) => {
+          const foodIndex = foodList.findIndex(food => food.id === item.id);
+          if (foodIndex !== -1) {
+            const currentFood = foodList[foodIndex];
+            currentFood.emission = item.emission;
+            currentFood.calories = item.calories;
+            currentFood.protein = item.protein;
+            currentFood.fat = item.fat;
+            currentFood.carbohydrates = item.carbohydrates;
+            currentFood.sodium = item.sodium;
+          }
+        });
 
-      // 更新 foodList 中的每个食物项，添加多个字段
-      totalData.forEach((item, index) => {
-        if (foodList[index]) {
-          foodList[index].emission = item.emission;
-          foodList[index].calories = item.calories;
-          foodList[index].protein = item.protein;
-          foodList[index].fat = item.fat;
-          foodList[index].carbohydrates = item.carbohydrates;
-          foodList[index].sodium = item.sodium;
-        }
-      });
+        // 更新环形图的数据和总排放量
+        let totalCO2 = 0;
+        chartEmissionData.value.series[0].data = totalData.map(item => {
+          totalCO2 += item.emission;
+          return {
+            name: item.name,
+            value: item.emission
+          };
+        });
 
-      // 更新环形图的数据和总排放量
-      let totalCO2 = 0;
-      chartEmissionData.value.series[0].data = totalData.map(item => {
-        totalCO2 += item.emission;
-        return {
-          name: item.name,
-          value: item.emission
+        // 更新环形图中心显示的总排放量
+        ringOpts.value.subtitle.name = `${totalCO2} kg`;
+
+        // 更新条形图的营养数据
+        const totalNutrition = {
+          calories: 0,
+          protein: 0,
+          fat: 0,
+          carbohydrates: 0,
+          sodium: 0
         };
-      });
 
-      // 更新环形图中心显示的总排放量
-      ringOpts.value.subtitle.name = `${totalCO2} kg`;
-
-      // 更新条形图的营养数据
-      const totalNutrition = {
-        calories: 0,
-        protein: 0,
-        fat: 0,
-        carbohydrates: 0,
-        sodium: 0
-      };
-
-      totalData.forEach(item => {
-        totalNutrition.calories += item.calories;
-        totalNutrition.protein += item.protein;
-        totalNutrition.fat += item.fat;
-        totalNutrition.carbohydrates += item.carbohydrates;
-        totalNutrition.sodium += item.sodium;
-      });
-
-      chartNutritionData.value.series[0].data = [
-        totalNutrition.calories,
-        totalNutrition.protein,
-        totalNutrition.fat,
-        totalNutrition.carbohydrates,
-        totalNutrition.sodium
-      ];
-
-      // TODO: 从后端获取用户目标值，现在省去
-      chartNutritionData.value.series[1].data = [
-        totalNutrition.calories + 100,
-        totalNutrition.protein + 100,
-        totalNutrition.fat + 100,
-        totalNutrition.carbohydrates + 100,
-        totalNutrition.sodium + 100
-      ];
-
-      // 显示结果
-      showResult.value = true;
-
-      // 初始化并绘制环形图
-      uni.createSelectorQuery().select('#carbonEmissionChart').fields({
-        node: true,
-        size: true
-      }, (res) => {
-        const canvas = res.node;
-        const ctx = canvas.getContext('2d');
-        const chart = new qCharts({
-          canvas: ctx,
-          type: 'ring',
-          data: chartEmissionData.value,
-          options: ringOpts.value
+        totalData.forEach(item => {
+          totalNutrition.calories += item.calories;
+          totalNutrition.protein += item.protein;
+          totalNutrition.fat += item.fat;
+          totalNutrition.carbohydrates += item.carbohydrates;
+          totalNutrition.sodium += item.sodium;
         });
-        chart.draw();
-      }).exec();
 
-      // 初始化并绘制条形图
-      uni.createSelectorQuery().select('#nutritionChart').fields({
-        node: true,
-        size: true
-      }, (res) => {
-        const canvas = res.node;
-        const ctx = canvas.getContext('2d');
-        const chart = new qCharts({
-          canvas: ctx,
-          type: 'bar',
-          data: chartNutritionData.value,
-          options: barOpts.value
+        chartNutritionData.value.series[0].data = [
+          totalNutrition.calories,
+          totalNutrition.protein,
+          totalNutrition.fat,
+          totalNutrition.carbohydrates,
+          totalNutrition.sodium
+        ];
+
+        // TODO: 从后端获取用户目标值，现在省去
+        chartNutritionData.value.series[1].data = [
+          totalNutrition.calories + 100,
+          totalNutrition.protein + 100,
+          totalNutrition.fat + 100,
+          totalNutrition.carbohydrates + 100,
+          totalNutrition.sodium + 100
+        ];
+
+        // 显示结果
+        showResult.value = true;
+
+        // 初始化并绘制环形图
+        uni.createSelectorQuery().select('#carbonEmissionChart').fields({
+          node: true,
+          size: true
+        }, (res) => {
+          const canvas = res.node;
+          const ctx = canvas.getContext('2d');
+          const chart = new qCharts({
+            canvas: ctx,
+            type: 'ring',
+            data: chartEmissionData.value,
+            options: ringOpts.value
+          });
+          chart.draw();
+        }).exec();
+
+        // 初始化并绘制条形图
+        uni.createSelectorQuery().select('#nutritionChart').fields({
+          node: true,
+          size: true
+        }, (res) => {
+          const canvas = res.node;
+          const ctx = canvas.getContext('2d');
+          const chart = new qCharts({
+            canvas: ctx,
+            type: 'bar',
+            data: chartNutritionData.value,
+            options: barOpts.value
+          });
+          chart.draw();
+        }).exec();
+      } else {
+        console.error('计算失败:', res.data.error);
+        uni.showToast({
+          title: t('calculation_failed'),
+          icon: 'none',
+          duration: 2000,
         });
-        chart.draw();
-      }).exec();
+      }
     },
-    success: (err) => {
-      // 处理请求失败的情况
+    fail: (err) => {
       console.error('请求失败', err);
       uni.showToast({
         title: t('calculation_failed'),
@@ -407,6 +365,7 @@ const saveEmissionData = () => {
     method: 'POST',
     data: {
       foodList: foodList.map(food => ({
+        id: food.id,
         name: food.name,
         weight: food.weight,
         price: food.price,
@@ -417,11 +376,20 @@ const saveEmissionData = () => {
       }))
     },
     success: (res) => {
-      uni.showToast({
-        title: t('save_success'),
-        icon: 'success',
-        duration: 2000,
-      });
+      if (res.statusCode === 200) {
+        uni.showToast({
+          title: t('save_success'),
+          icon: 'success',
+          duration: 2000,
+        });
+      } else {
+        console.error('保存失败:', res.data.error);
+        uni.showToast({
+          title: t('save_failed'),
+          icon: 'none',
+          duration: 2000,
+        });
+      }
     },
     fail: (err) => {
       console.error('保存失败', err);
@@ -444,7 +412,6 @@ const navigateTo = (page) => {
     });
   }
 };
-
 
 // 页面跳转到修改页面
 const navigateToModify = (index) => {
@@ -470,6 +437,8 @@ onMounted(() => {
   if (!foodStore.loaded) {
     loadFoodList();
   }
+  // 调用获取食物列表的函数
+  fetchAvailableFoods();
   handleLoad();
 });
 </script>
@@ -662,53 +631,6 @@ onMounted(() => {
   background-color: var(--secondary-color);
   transform: translateY(-2rpx);
   box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.2);
-}
-
-
-/* 实用工具 */
-.useful-tools {
-  background-color: #ffffff;
-  padding: 20rpx 30rpx;
-  border-radius: 20rpx;
-  box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.1);
-  margin: 20rpx;
-  animation: fadeInUp 1s ease-out;
-}
-
-.tool {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.tool:hover {
-  transform: translateY(-5rpx);
-}
-
-.tool-image {
-  width: 140rpx;
-  height: 140rpx;
-  margin-right: 20rpx;
-  border-radius: 10rpx;
-  object-fit: cover;
-}
-
-.tool-description {
-  display: flex;
-  flex-direction: column;
-}
-
-.tool-title {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: var(--primary-color);
-  margin-bottom: 5rpx;
-}
-
-.tool-text {
-  font-size: 28rpx;
-  color: var(--text-color);
 }
 
 /* 动画 */
