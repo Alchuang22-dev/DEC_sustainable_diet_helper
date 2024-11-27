@@ -21,7 +21,8 @@
 		{
 			"path": "pages/news_index/news_index",
 			"style": {
-				"navigationBarTitleText": "资讯"
+				"navigationBarTitleText": "资讯",
+				"enablePullDownRefresh": true
 			}
 		},
 		{
