@@ -1,4 +1,4 @@
-package main
+package show_recipe_dataset
 
 import (
     "database/sql"
