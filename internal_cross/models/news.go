@@ -24,9 +24,7 @@ type News struct {
     LikeCount       int          `json:"likeCount"`                                // 对应前端的 likeCount
     FavoriteCount   int          `json:"favoriteCount"`                            // 对应前端的 favoriteCount
     DislikeCount    int          `json:"dislikeCount"`                             // 对应前端的 dislikeCount
-    FollowCount     int          `json:"followCount"`                              // 对应前端的 followCount
     NewsType        NewsType     `gorm:"size:10;not null" json:"news_type"`
-    Type            string       `gorm:"size:50" json:"type"`                      // 对应前端的 type
 
     // 作者信息
     AuthorID        uint         `json:"author_id"`
