@@ -39,7 +39,7 @@ function switchToEn() {
 }
 
 function switchToZhHans() {
-  locale.value = 'zh-hans';
+  locale.value = 'zh-Hans';
 }
 
 function resetLocale() {

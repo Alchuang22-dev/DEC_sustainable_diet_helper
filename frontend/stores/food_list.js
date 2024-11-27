@@ -164,6 +164,74 @@ export const useFoodListStore = defineStore('foodList', () => {
         }
     };
 
+    // 辅助函数：从字符串中提取数字
+    function extractNumber(value) {
+        if (typeof value === 'string') {
+            const num = parseFloat(value.replace(/[^\d.]/g, ''));
+            return isNaN(num) ? 0 : num;
+        }
+        return Number(value) || 0;
+    }
+
+    // 新增函数：向后端请求计算营养和碳排放的数据
+    const calculateNutritionAndEmission = async () => {
+        try {
+            // 准备请求数据
+            const requestData = foodList.map(food => ({
+                id: Number(food.id),
+                price: extractNumber(food.price),
+                weight: extractNumber(food.weight)
+            }));
+
+            // 发送POST请求
+            const response = await new Promise((resolve, reject) => {
+                uni.request({
+                    url: 'http://122.51.231.155:8080/foods/calculate',
+                    method: 'POST',
+                    data: requestData,
+                    header: {
+                        'Content-Type': 'application/json'
+                    },
+                    success: resolve,
+                    fail: reject
+                });
+            });
+
+            if (response.statusCode === 200) {
+                const responseData = response.data;
+                // 更新 foodList 中的每个食物项，添加返回的数据
+                responseData.forEach(item => {
+                    const food = foodList.find(f => Number(f.id) === item.id);
+                    if (food) {
+                        food.emission = item.co2_emission;
+                        food.calories = item.calories;
+                        food.protein = item.protein;
+                        food.fat = item.fat;
+                        food.carbohydrates = item.carbs;
+                        food.sodium = item.sodium;
+                        console.log('更新食物数据:', food.emission);
+                    }
+                });
+                // 保存更新后的数据
+                saveFoodList();
+            } else {
+                console.error('计算失败:', response.data.error);
+                uni.showToast({
+                    title: '计算失败',
+                    icon: 'none',
+                    duration: 2000,
+                });
+            }
+        } catch (err) {
+            console.error('请求失败', err);
+            uni.showToast({
+                title: '请求失败',
+                icon: 'none',
+                duration: 2000,
+            });
+        }
+    };
+
     // 初始化加载
     if (!loaded.value) {
         loadFoodList();
@@ -177,8 +245,9 @@ export const useFoodListStore = defineStore('foodList', () => {
         saveFoodList,
         loadFoodList,
         loaded,
-        availableFoods, // 现在是包含中英文名称的 reactive 数组
+        availableFoods,
         fetchAvailableFoods,
-        getFoodName
+        getFoodName,
+        calculateNutritionAndEmission // 导出新添加的函数
     };
 });
