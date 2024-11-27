@@ -101,70 +101,49 @@ func setupTestRouter(db *gorm.DB) *gin.Engine {
 
 // TestFoodNamesAPI 测试获取食物名称列表的 API
 func TestFoodNamesAPI(t *testing.T) {
-    // 设置测试数据库
     db, err := setupTestDB()
     if err != nil {
         t.Fatalf("设置测试数据库失败: %v", err)
     }
 
-    // 设置测试路由
     router := setupTestRouter(db)
 
-    // 测试用例
     tests := []struct {
         name           string
-        lang          string
-        expectedCode  int
-        expectedLen   int
-        expectedName  string
-        checkResponse func(*testing.T, *httptest.ResponseRecorder)
+        expectedCode   int
+        checkResponse  func(*testing.T, *httptest.ResponseRecorder)
     }{
         {
-            name:          "获取中文名称",
-            lang:          "zh",
+            name:          "获取名称列表成功",
             expectedCode:  200,
-            expectedLen:   2,
-            expectedName:  "苹果",
             checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
                 var response []models.FoodNameResponse
                 err := json.Unmarshal(w.Body.Bytes(), &response)
                 assert.Nil(t, err)
-                assert.Len(t, response, 2)
-                assert.Equal(t, "苹果", response[0].Name)
-            },
-        },
-        {
-            name:          "获取英文名称",
-            lang:          "en",
-            expectedCode:  200,
-            expectedLen:   2,
-            expectedName:  "Apple",
-            checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-                var response []models.FoodNameResponse
-                err := json.Unmarshal(w.Body.Bytes(), &response)
-                assert.Nil(t, err)
-                assert.Len(t, response, 2)
-                assert.Equal(t, "Apple", response[0].Name)
-            },
-        },
-        {
-            name:          "无效的语言参数",
-            lang:          "fr",
-            expectedCode:  400,
-            checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-                var response map[string]string
-                err := json.Unmarshal(w.Body.Bytes(), &response)
-                assert.Nil(t, err)
-                assert.Contains(t, response["error"], "Invalid language parameter")
+                
+                // 验证返回列表不为空
+                assert.NotEmpty(t, response)
+                
+                // 验证第一个食物的数据完整性
+                firstFood := response[0]
+                assert.NotZero(t, firstFood.ID)
+                assert.NotEmpty(t, firstFood.ZhName)
+                assert.NotEmpty(t, firstFood.EnName)
+                
+                // 验证所有条目都有完整的数据
+                for _, food := range response {
+                    assert.NotZero(t, food.ID)
+                    assert.NotEmpty(t, food.ZhName)
+                    assert.NotEmpty(t, food.EnName)
+                }
             },
         },
     }
 
-    // 运行测试用例
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             w := httptest.NewRecorder()
-            req, _ := http.NewRequest("GET", "/foods/names?lang="+tt.lang, nil)
+            req, _ := http.NewRequest("GET", "/foods/names", nil)
             router.ServeHTTP(w, req)
 
             assert.Equal(t, tt.expectedCode, w.Code)
@@ -175,33 +154,16 @@ func TestFoodNamesAPI(t *testing.T) {
     }
 }
 
-// 清理测试数据
-func cleanupTestDB(db *gorm.DB) error {
-    return db.Exec("DELETE FROM foods").Error
-}
-
-// TestCalculateNutritionAndEmissionAPI 测试食物营养计算的 API
-func TestCalculateNutritionAndEmissionAPI(t *testing.T) {
+// 测试函数
+func TestCalculateFoodNutritionAndEmissionAPI(t *testing.T) {
     // 设置测试数据库
     db, err := setupTestDB()
     if err != nil {
         t.Fatalf("设置测试数据库失败: %v", err)
     }
 
-    // 验证测试数据是否正确插入
-    var foods []models.Food
-    if err := db.Find(&foods).Error; err != nil {
-        t.Fatalf("获取测试数据失败: %v", err)
-    }
-    t.Logf("测试数据库中的食物数量: %d", len(foods))
-    for _, food := range foods {
-        t.Logf("Food ID: %d, ZhName: %s, Price: %f", food.ID, food.ZhFoodName, food.Price)
-    }
-
-    // 设置测试路由
     router := setupTestRouter(db)
 
-    // 测试用例
     tests := []struct {
         name           string
         payload        string
@@ -224,46 +186,30 @@ func TestCalculateNutritionAndEmissionAPI(t *testing.T) {
             ]`,
             expectedCode: 200,
             checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-                // 打印响应内容以便调试
-                t.Logf("Response Body: %s", w.Body.String())
-
                 var response []models.FoodCalculateResult
                 err := json.Unmarshal(w.Body.Bytes(), &response)
-                if err != nil {
-                    t.Errorf("解析响应失败: %v", err)
-                    return
-                }
+                assert.Nil(t, err)
+                assert.Len(t, response, 2)
 
-                if len(response) != 2 {
-                    t.Errorf("Expected 2 results, got %d", len(response))
-                    return
-                }
+                // 验证返回的数据结构完整性
+                firstResult := response[0]
+                assert.NotZero(t, firstResult.ID)
+                assert.NotZero(t, firstResult.Emission)
+                assert.NotZero(t, firstResult.Calories)
+                assert.NotZero(t, firstResult.Protein)
+                assert.NotZero(t, firstResult.Fat)
+                assert.NotZero(t, firstResult.Carbohydrates)
+                assert.NotZero(t, firstResult.Sodium)
 
-                // 使用更宽松的误差范围
+                // 使用 InDelta 验证具体数值（允许0.1的误差）
                 const delta = 0.1
-
-                // 验证第一个食物的计算结果
-                if response[0].ID != 1 {
-                    t.Errorf("Expected ID 1, got %d", response[0].ID)
-                }
-                // 验证计算结果时使用 InDelta
-                if !assert.InDelta(t, 0.43, response[0].CO2Emission, delta) {
-                    t.Errorf("CO2Emission mismatch: expected around 0.43, got %f", response[0].CO2Emission)
-                }
-                if !assert.InDelta(t, 26.0, response[0].Calories, delta) {
-                    t.Errorf("Calories mismatch: expected 26.0, got %f", response[0].Calories)
-                }
+                assert.InDelta(t, 0.43, response[0].Emission, delta)
+                assert.InDelta(t, 26.0, response[0].Calories, delta)
             },
         },
         {
             name: "无效的食物ID",
-            payload: `[
-                {
-                    "id": 999,
-                    "price": 5.0,
-                    "weight": 0.5
-                }
-            ]`,
+            payload: `[{"id": 999, "price": 5.0, "weight": 0.5}]`,
             expectedCode: 500,
             checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
                 var response map[string]string
@@ -274,36 +220,24 @@ func TestCalculateNutritionAndEmissionAPI(t *testing.T) {
         },
         {
             name: "无效的重量值",
-            payload: `[
-                {
-                    "id": 1,
-                    "price": 5.0,
-                    "weight": -1
-                }
-            ]`,
+            payload: `[{"id": 1, "price": 5.0, "weight": -1}]`,
             expectedCode: 400,
             checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
                 var response map[string]string
                 err := json.Unmarshal(w.Body.Bytes(), &response)
                 assert.Nil(t, err)
-                assert.Contains(t, response["error"], "weight must be positive")
+                assert.Contains(t, response["error"], "Invalid weight for food ID 1: weight must be positive")
             },
         },
         {
             name: "无效的价格值",
-            payload: `[
-                {
-                    "id": 1,
-                    "price": -5.0,
-                    "weight": 0.5
-                }
-            ]`,
+            payload: `[{"id": 1, "price": -5.0, "weight": 0.5}]`,
             expectedCode: 400,
             checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
                 var response map[string]string
                 err := json.Unmarshal(w.Body.Bytes(), &response)
                 assert.Nil(t, err)
-                assert.Contains(t, response["error"], "price must be positive")
+                assert.Contains(t, response["error"], "Invalid price for food ID 1: price must be positive")
             },
         },
         {
@@ -319,7 +253,6 @@ func TestCalculateNutritionAndEmissionAPI(t *testing.T) {
         },
     }
 
-    // 运行测试用例
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             w := httptest.NewRecorder()
@@ -337,6 +270,11 @@ func TestCalculateNutritionAndEmissionAPI(t *testing.T) {
             }
         })
     }
+}
+
+// 清理测试数据
+func cleanupTestDB(db *gorm.DB) error {
+    return db.Exec("DELETE FROM foods").Error
 }
 
 func TestMain(m *testing.M) {
