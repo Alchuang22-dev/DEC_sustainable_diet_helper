@@ -9,9 +9,6 @@
       :style="{ height: '100vh' }"
     >
       <!-- Header 部分 -->
-      <view class="header">
-        <text class="back-button" @click="goBack">&larr;</text>
-      </view>
 
       <!-- 视频标题 -->
       <view :class="['video-header', { 'video-header-shrink': isTabSticky }]">

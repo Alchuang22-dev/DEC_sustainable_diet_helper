@@ -1,7 +1,6 @@
 <template>
   <view class="settings">
     <view class="header">
-      <view @click="goBack" class="back-icon">返回</view>
       <text class="title">{{ $t('settings_user_settings') }}</text>
       <view class="header-actions">
         <button class="menu-icon"></button>
