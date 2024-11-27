@@ -21,11 +21,11 @@ func RegisterFamilyRoutes(router *gin.Engine, db *gorm.DB) {
             // 创建家庭
             authGroup.POST("/create", familyController.CreateFamily)
             // 查看自己的家庭的信息
-            authGroup.POST("/details", familyController.FamilyDetails)
+            authGroup.GET("/details", familyController.FamilyDetails)
             // 查看搜索家庭结果
-            authGroup.POST("/search", familyController.SearchFamily)
+            authGroup.GET("/search", familyController.SearchFamily)
             // 发送加入家庭请求
-            authGroup.POST("/join", familyController.JoinFamily)
+            authGroup.POST("/:id/join", familyController.JoinFamily)
             // 批准加入家庭
             authGroup.POST("/admit", familyController.AdmitJoinFamily)
         }
