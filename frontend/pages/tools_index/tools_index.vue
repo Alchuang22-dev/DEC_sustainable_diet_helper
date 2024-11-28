@@ -66,11 +66,34 @@
 	import {
 		useI18n
 	} from 'vue-i18n'
+  import { onShow } from '@dcloudio/uni-app';
 
 	// 初始化 i18n
 	const {
-		t
+		t,
 	} = useI18n()
+
+  onShow(() => {
+    uni.setNavigationBarTitle({
+      title: t('tools_index')
+    })
+    uni.setTabBarItem({
+      index: 0,
+      text: t('index')
+    })
+    uni.setTabBarItem({
+      index: 1,
+      text: t('tools_index')
+    })
+    uni.setTabBarItem({
+      index: 2,
+      text: t('news_index')
+    })
+    uni.setTabBarItem({
+      index: 3,
+      text: t('my_index')
+    })
+  });
 
 	// 页面跳转方法
 	const navigateTo = (page) => {

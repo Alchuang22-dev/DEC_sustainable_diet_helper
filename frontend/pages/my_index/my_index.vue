@@ -73,7 +73,9 @@
 <script setup>
 import { ref, nextTick } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
+import { useI18n } from 'vue-i18n'; // Import useI18n
 
+const { t, } = useI18n()
 const uid = ref('');
 const avatarSrc = ref('/static/images/index/background_img.jpg');
 const avatarSrc_ori = ref('/static/images/index/background_img.jpg');
@@ -172,6 +174,25 @@ function submitUsername() {
 }
 
 onShow(() => {
+    uni.setNavigationBarTitle({
+      title: t('my_index')
+    })
+    uni.setTabBarItem({
+      index: 0,
+      text: t('index')
+    })
+    uni.setTabBarItem({
+      index: 1,
+      text: t('tools_index')
+    })
+    uni.setTabBarItem({
+      index: 2,
+      text: t('news_index')
+    })
+    uni.setTabBarItem({
+      index: 3,
+      text: t('my_index')
+    })
   console.log("in onShow");
   // 在页面显示时调用检查登录状态
   checkLoginStatus();

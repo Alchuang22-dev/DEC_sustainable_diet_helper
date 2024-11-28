@@ -201,7 +201,6 @@
 	"add_success": "Add Successful",
 	"invalid_food_item": "Invalid Food Item",
 	"modify_success": "Modification Successful",
-	"method_default": "average",
 	"transport_land": "Land Transport",
 	"transport_sea": "Sea Transport",
 	"transport_air": "Air Transport",
@@ -257,11 +256,9 @@
     "change_binding_phone": "You are changing the phone number bound to your account.",
     "confirm_binding": "Confirm Binding",
     "input_verification_code": "Enter verification code",
-	//tab
-	"home": "home"
-},
-{
-	"navigationBarTitleText": {
-		"home": "home"
-	}
+
+	"index": "Home",
+	"news_index": "News",
+	"my_index": "My",
+	"tools_index": "Tools"
 }

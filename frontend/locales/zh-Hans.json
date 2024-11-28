@@ -201,7 +201,6 @@
 	"add_success": "添加成功",
 	"invalid_food_item": "无效的食物项",
 	"modify_success": "修改成功",
-	"method_default": "默认",
 	"transport_land": "陆运",
 	"transport_sea": "海运",
 	"transport_air": "空运",
@@ -258,11 +257,9 @@
 	"confirm_binding": "确认绑定",
 	"input_verification_code": "请输入验证码",
 	"settings_back": "返回",
-	//tab
-	"home": "主页"
-},
-{
-	"navigationBarTitleText": {
-		"home": "主页"
-	}
+
+	"index": "首页",
+	"my_index": "我的",
+	"news_index": "新闻",
+	"tools_index": "工具",
 }
