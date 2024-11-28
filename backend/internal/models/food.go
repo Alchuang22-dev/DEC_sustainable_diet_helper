@@ -54,10 +54,10 @@ func (f *Food) DeleteFood(db *gorm.DB) error {
 }
 
 // FoodNameResponse 定义返回的食物名称结构
+// FoodNameResponse 定义返回的食物名称结构
 type FoodNameResponse struct {
-    ID      uint   `json:"id"`
-    ZhName string `json:"zh_name"` // 导出字段
-    EnName string `json:"en_name"` // 导出字段
+    ID   uint   `json:"id"`
+    Name string `json:"name"`
 }
 
 // GetAllFoodNames 获取所有食物名称
