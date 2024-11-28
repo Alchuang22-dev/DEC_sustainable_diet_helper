@@ -61,11 +61,20 @@ type FoodNameResponse struct {
 }
 
 // GetAllFoodNames 获取所有食物名称
-func GetAllFoodNames(db *gorm.DB) ([]FoodNameResponse, error) {
+func GetAllFoodNames(db *gorm.DB, language string) ([]FoodNameResponse, error) {
     var results []FoodNameResponse
     query := db.Model(&Food{})
-    err := query.Select("id, zh_food_name as zh_name, en_food_name as en_name").Find(&results).Error
-    return results, err
+    
+    switch language {
+    case "zh":
+        err := query.Select("id, zh_food_name as name").Find(&results).Error
+        return results, err
+    case "en":
+        err := query.Select("id, en_food_name as name").Find(&results).Error
+        return results, err
+    default:
+        return nil, fmt.Errorf("unsupported language: %s", language)
+    }
 }
 
 // FoodCalculateRequest 定义单个食物的计算请求
@@ -78,11 +87,11 @@ type FoodCalculateItem struct {
 // FoodCalculateResponse 定义单个食物的计算响应
 type FoodCalculateResult struct {
     ID          uint    `json:"id"`
-    CO2Emission float64 `json:"co2_emission"`
+    Emission float64 `json:"emission"`
     Calories    float64 `json:"calories"`
     Protein     float64 `json:"protein"`
     Fat         float64 `json:"fat"`
-    Carbs       float64 `json:"carbs"`
+    Carbohydrates       float64 `json:"carbohydrates"`
     Sodium      float64 `json:"sodium"`
 }
 
@@ -119,12 +128,12 @@ func CalculateFoodNutritionAndEmission(db *gorm.DB, items []FoodCalculateItem) (
         result := FoodCalculateResult{
             ID: item.ID,
             // CO2Emission = (GHG * weight * item.price) / food.price
-            CO2Emission: (food.GHG * item.Weight * item.Price) / food.Price,
+            Emission: (food.GHG * item.Weight * item.Price) / food.Price,
             // 其他营养成分直接按照重量比例计算
             Calories:    food.Calories * item.Weight,
             Protein:     food.Protein * item.Weight,
             Fat:         food.Fat * item.Weight,
-            Carbs:      food.Carbohydrates * item.Weight,
+            Carbohydrates:      food.Carbohydrates * item.Weight,
             Sodium:      food.Sodium * item.Weight,
         }
 
