@@ -97,6 +97,13 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
             OpenID:     wxResponse.OpenID,
             SessionKey: wxResponse.SessionKey,
             Nickname:   authRequest.Nickname,
+            FamilyID:   0,
+            CreatedAt:  time.Now(),
+            UpdatedAt:  time.Now(),
+            LikedNews:  []models.News{},
+            FavoritedNews:  []models.News{},
+            DislikedNews:   []models.News{},
+            ViewedNews: []models.News{},
         }
 
         // 如果未提供昵称，生成随机昵称
@@ -181,6 +188,7 @@ func (uc *UserController) SetNickname(c *gin.Context) {
     }
 
     user.Nickname = request.Nickname
+    user.UpdatedAt = time.Now()
     if err := uc.DB.Save(&user).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update nickname"})
         return
@@ -243,6 +251,7 @@ func (uc *UserController) SetAvatar(c *gin.Context) {
     // 更新用户头像路径
     relativePath := fmt.Sprintf("avatars/%d_%d", user.ID, timestamp)
     user.AvatarURL = relativePath
+    user.UpdatedAt = time.Now()
     if err := uc.DB.Save(&user).Error; err != nil {
         log.Println("更新用户头像失败:", err)
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update avatar"})

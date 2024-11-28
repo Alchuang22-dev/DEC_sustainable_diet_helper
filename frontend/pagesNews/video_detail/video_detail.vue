@@ -1,5 +1,5 @@
 <template>
-  <view class="container">
+  <view v-if="videoData.length > 0" class="container">
     <!-- 主滚动视图 -->
     <scroll-view
       class="main-scroll"
@@ -9,9 +9,6 @@
       :style="{ height: '100vh' }"
     >
       <!-- Header 部分 -->
-      <view class="header">
-        <text class="back-button" @click="goBack">&larr;</text>
-      </view>
 
       <!-- 视频标题 -->
       <view :class="['video-header', { 'video-header-shrink': isTabSticky }]">
@@ -145,6 +142,13 @@
       </view>
     </scroll-view>
   </view>
+  <!-- Loading State -->
+  <view v-else-if="loadingError" class="loading-container">
+    <text>加载失败，请稍后重试</text>
+  </view>
+  <view v-else class="loading-container">
+    <text>加载中...</text>
+  </view>
 </template>
 
 
@@ -163,6 +167,8 @@ const comments = reactive([
 const newComment = ref("");
 const replyingTo = ref(null); // 当前正在回复的评论的索引
 const newReply = ref(""); // 回复内容
+const loadingError = ref(false); // 加载错误标志
+const timeout = 15000; // 超时时间：15秒
 
 // Tab 相关
 const selectedTab = ref("简介");
@@ -197,6 +203,9 @@ const userId = ref(uni.getStorageSync('UserId'));
 
 // 数据获取函数
 const fetchData = async () => {
+	const timer = setTimeout(() => {
+	    loadingError.value = true; // 超时后显示加载失败
+	  }, timeout);
   try {
     uni.request({
       url: "https://122.51.231.155/news/{id}", // 后端接口URL

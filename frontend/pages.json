@@ -9,7 +9,7 @@
 	"pages": [{
 			"path": "pages/index/index",
 			"style": {
-				"navigationBarTitleText": "首页"
+				"navigationBarTitleText": "主页"
 			}
 		},
 		{
@@ -21,7 +21,8 @@
 		{
 			"path": "pages/news_index/news_index",
 			"style": {
-				"navigationBarTitleText": "资讯"
+				"navigationBarTitleText": "资讯",
+				"enablePullDownRefresh": true
 			}
 		},
 		{

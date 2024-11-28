@@ -1,5 +1,5 @@
 <template>
-  <view @touchstart="refreshPage">
+  <view>
     <!-- Header Section -->
     <image src="/static/images/index/background_img.jpg" class="background-image"></image>
     <view class="header">
@@ -29,6 +29,13 @@
       </button>
     </view>
 
+    <!-- Loading Indicator -->
+    <view v-if="isRefreshing" class="loading-overlay">
+      <text class="loading-text">正在加载...</text>
+      <!-- 可选：添加动画 -->
+      <view class="loading-spinner"></view>
+    </view>
+
     <!-- News Section -->
     <view class="news-section">
       <view
@@ -56,20 +63,17 @@ import {
 		useI18n
   } from 'vue-i18n'
 import { onShow } from '@dcloudio/uni-app';
+import { onPullDownRefresh } from '@dcloudio/uni-app';
+import { storeToRefs } from 'pinia';
 
 const newsStore = useNewsStore();
 
 const activeIndex = ref(null);
 
 // 从 Store 获取数据和方法
-const {
-  filteredNewsItems,
-  selectedSection,
-  isRefreshing,
-  setSection,
-  refreshNews,
-  fetchNews,
-} = newsStore;
+// 使用 storeToRefs 保持响应性
+const { filteredNewsItems, selectedSection, isRefreshing } = storeToRefs(newsStore);
+const { setSection, refreshNews, fetchNews } = newsStore;
 
 const { t, } = useI18n()
 
@@ -123,15 +127,25 @@ function refreshPage() {
   refreshNews();
 }
 
+// 异步函数处理下拉刷新
+const handlePullDownRefresh = async () => {
+  try {
+    await newsStore.refreshNews();  // 等待 refreshNews 完成
+    uni.stopPullDownRefresh();      // 完成后停止下拉刷新动画
+  } catch (error) {
+    console.error('Error during refresh:', error);
+    uni.stopPullDownRefresh();      // 即使出错也停止刷新
+  }
+};
+
+// 使用 uni.onPullDownRefresh() 将处理函数绑定到下拉刷新事件
+onPullDownRefresh(handlePullDownRefresh);
+
 // 在组件挂载时获取数据
 onMounted(() => {
   fetchNews();
 });
 </script>
-
-<style scoped>
-/* 保留原样式 */
-</style>
 
 <style scoped>
 /* Body */
@@ -151,7 +165,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: 0;
+  z-index: -1;
   opacity: 0.1;
 }
 
@@ -178,25 +192,45 @@ body {
   font-weight: bold; /* 选中状态加粗 */
 }
 
+/* Loading Overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(240, 244, 247, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10; /* 确保在最上层 */
+}
+
+.loading-text {
+  font-size: 18px;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+/* 加载动画 */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #ccc;
+  border-top-color: #4caf50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* News Section */
 .news-section {
   padding: 20px;
   position: relative;
-}
-
-.news-section::before {
-  content: "正在更新...";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 16px;
-  color: #333;
-  display: none;
-}
-
-.news-section[data-refreshing="true"]::before {
-  display: block;
 }
 
 .news-item {

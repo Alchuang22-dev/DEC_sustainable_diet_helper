@@ -72,6 +72,7 @@ const autoLogin = () => {
   });
 };
 
+// 更新后的 testLogin 函数
 const testLogin = () => {
   uni.showLoading({
     title: t('loggingIn') || '正在登录...',
