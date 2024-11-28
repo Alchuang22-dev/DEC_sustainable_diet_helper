@@ -3,14 +3,14 @@ package controllers
 
 import (
 	"net/http"
-	"time"
+    "strconv"
+    "time"
+    // "fmt"
 
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	// "fmt"
-    "strconv"
 )
 
 type FamilyController struct {
@@ -720,6 +720,86 @@ func (fc *FamilyController) SetAdmin(c *gin.Context) {
 }
 
 // 退出家庭
+func (fc* FamilyController) LeaveFamily(c *gin.Context) {
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    var user models.User
+    if err := fc.DB.First(&user, userID).Error; err != nil {
+        c.JSON(http.StatusNotFound, "User not found")
+        return
+    }
+
+    if user.FamilyID == 0 {
+        c.JSON(http.StatusBadRequest, "You are not part of any family")
+        return
+    }
+
+    var family models.Family
+    if err := fc.DB.Preload("Admins").Preload("Members").First(&family, &user.FamilyID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve family"})
+        return
+    }
+
+    // 检查用户是不是唯一家庭成员。如果是，自动解散家庭
+    if family.MemberCount > 1 {
+        isAdmin := false
+        isMember := false
+
+        for _, admin := range family.Admins {
+            if admin.ID == userID {
+                isAdmin = true
+                break
+            }
+        }
+        for _, member := range family.Members {
+            if member.ID == userID {
+                isMember = true
+                break
+            }
+        }
+
+        if isAdmin && isMember {
+            // TODO 处理错误
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "The user is currently both an admin and a member"})
+            return
+        }
+        if !isAdmin && !isMember {
+            // TODO 处理错误
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "error": "The user is currently neighther an admin or a member"})
+            return
+        }
+        if isAdmin {
+            if err := fc.DB.Model(&family).Association("Admins").Delete(&user); err != nil {
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove user from admin list"})
+                return
+            }
+        }
+        if isAdmin {
+            if err := fc.DB.Model(&family).Association("Members").Delete(&user); err != nil {
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove user from admin list"})
+                return
+            }
+        }
+
+        user.FamilyID = 0
+        if err := fc.DB.Save(&user).Error; err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "error": "Failed to update user's family information"})
+            return
+        }
+    } else if family.MemberCount == 1 {
+
+    } else {
+        // c.JSON()
+    }
+}
+
+// 踢出家庭
 
 
 // 解散家庭
