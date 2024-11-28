@@ -185,7 +185,7 @@
 	"total_emission": "总排放量",
 	"name": "名称",
 	"please_enter_food_name": "请输入食品名称",
-	"total_weight": "总重量 (g)",
+	"total_weight": "总重量 (Kg)",
 	"please_enter_food_weight": "请输入食品重量",
 	"total_price": "总价格 (元)",
 	"please_enter_food_price": "请输入食品价格",
@@ -201,6 +201,7 @@
 	"add_success": "添加成功",
 	"invalid_food_item": "无效的食物项",
 	"modify_success": "修改成功",
+	"method_default": "默认",
 	"transport_land": "陆运",
 	"transport_sea": "海运",
 	"transport_air": "空运",
@@ -257,4 +258,11 @@
 	"confirm_binding": "确认绑定",
 	"input_verification_code": "请输入验证码",
 	"settings_back": "返回",
+	//tab
+	"home": "主页"
+},
+{
+	"navigationBarTitleText": {
+		"home": "主页"
+	}
 }

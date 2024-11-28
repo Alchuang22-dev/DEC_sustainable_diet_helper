@@ -1,10 +1,6 @@
 <template>
   <view>
     <!-- Header Section -->
-    <view class="header">
-      <text class="back-button" @click="goBack">&larr;</text>
-    </view>
-
     <!-- Content Section with Sidebar -->
     <view class="content-container">
       <!-- Main Content Section -->
@@ -14,6 +10,16 @@
 		  <view class="author-header">
 		  	<view class="author-avatar"></view>
 		    <text class="author-username">{{newsData[0].authorName}}</text>
+			<button
+			  class="stable-button"
+			  @click="toggleInteraction('follow')"
+			  :style="{ 
+			    color: ifFollowed ? 'black' : 'white', 
+			    backgroundColor: ifFollowed ? 'lightgrey' : 'green' 
+			  }"
+			>
+			  {{ ifFollowed ? '已关注' : '关注' }}
+			</button>
 		  </view>
           <view class="news-body">
             {{newsData[0].newsbody}}
@@ -99,6 +105,7 @@ const ifLike = ref(false);
 const ifFavourite = ref(false);
 const ifDislike = ref(false);
 const ifShare = ref(false);
+const ifFollowed = ref(false);
 
 const fetchData = async () => {
   try {
@@ -357,7 +364,43 @@ const toggleInteraction = (type) => {
 		  });
 	  }
   } else if (type === "follow") {
-    newsData.value[0].followCount++;
+    if (ifFollowed.value === false) {
+      // 向后端发送关注请求
+      uni.request({
+        url: `http://122.51.231.155:8080/user/${userId.value}/follow`,
+        method: "POST",
+        header: {
+          "Content-type": "application/json",
+        },
+        data: {
+          target_id: newsData.value[0].authorName, // 示例参数
+        },
+        success: () => {
+          ifFollowed.value = true;
+        },
+        fail: (err) => {
+          console.error("Error following user:", err);
+        },
+      });
+    } else {
+      // 向后端发送取消关注请求
+      uni.request({
+        url: `http://122.51.231.155:8080/user/${userId.value}/unfollow`,
+        method: "POST",
+        header: {
+          "Content-type": "application/json",
+        },
+        data: {
+          target_id: newsData.value[0].authorName, // 示例参数
+        },
+        success: () => {
+          ifFollowed.value = false;
+        },
+        fail: (err) => {
+          console.error("Error unfollowing user:", err);
+        },
+      });
+    }
   } else if (type === "share") {
     newsData.value[0].shareCount++;
   } else if (type === "dislike"){
@@ -569,6 +612,22 @@ body {
 
 .inline-interaction-buttons button:hover {
   color: #4caf50;
+}
+
+.stable-button {
+  width: 100px; /* 固定宽度 */
+  height: 40px; /* 固定高度 */
+  display: inline-flex; /* 使内容居中对齐 */
+  align-items: center; /* 垂直居中 */
+  justify-content: center; /* 水平居中 */
+  border: 1px solid #ccc; /* 可选：边框样式 */
+  border-radius: 5px; /* 可选：圆角 */
+  background-color: #f5f5f5; /* 可选：背景颜色 */
+  cursor: pointer; /* 鼠标悬浮时的样式 */
+  overflow: hidden; /* 防止内容溢出 */
+  text-align: center; /* 文本居中 */
+  font-size: 14px; /* 可选：字体大小 */
+  box-sizing: border-box; /* 包括 padding 和 border */
 }
 
 /* Comments Section */
