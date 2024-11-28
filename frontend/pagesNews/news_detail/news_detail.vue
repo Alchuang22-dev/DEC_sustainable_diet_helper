@@ -1,36 +1,35 @@
 <template>
   <view>
-    <!-- Header Section -->
-    <!-- Content Section with Sidebar -->
-    <view class="content-container">
+    <!-- 条件渲染，确保数据加载完成后才渲染内容 -->
+    <view v-if="newsData.length > 0" class="content-container">
       <!-- Main Content Section -->
       <view class="main-content">
         <view class="news-content">
           <view class="news-title">{{ webTitle }}</view>
-		  <view class="author-header">
-		  	<view class="author-avatar"></view>
-		    <text class="author-username">{{newsData[0].authorName}}</text>
-			<button
-			  class="stable-button"
-			  @click="toggleInteraction('follow')"
-			  :style="{ 
-			    color: ifFollowed ? 'black' : 'white', 
-			    backgroundColor: ifFollowed ? 'lightgrey' : 'green' 
-			  }"
-			>
-			  {{ ifFollowed ? '已关注' : '关注' }}
-			</button>
-		  </view>
+          <view class="author-header">
+            <view class="author-avatar"></view>
+            <text class="author-username">{{ newsData[0].authorName }}</text>
+            <button
+              class="stable-button"
+              @click="toggleInteraction('follow')"
+              :style="{ 
+                color: ifFollowed ? 'black' : 'white', 
+                backgroundColor: ifFollowed ? 'lightgrey' : 'green' 
+              }"
+            >
+              {{ ifFollowed ? '已关注' : '关注' }}
+            </button>
+          </view>
           <view class="news-body">
-            {{newsData[0].newsbody}}
+            {{ newsData[0].newsbody }}
           </view>
 
-          <!-- Interaction Buttons - Merged into News Content -->
+          <!-- Interaction Buttons -->
           <view class="inline-interaction-buttons">
             <button @click="toggleInteraction('like')">👍 {{ formatCount(newsData[0].likeCount) }}</button>
             <button @click="toggleInteraction('favorite')">⭐ {{ formatCount(newsData[0].favoriteCount) }}</button>
             <button @click="toggleInteraction('share')">🔄 {{ formatCount(newsData[0].shareCount)}}</button>
-			      <button @click="toggleInteraction('dislike')" :style="{ color: ifDislike ? 'green' : 'black' }">👎 dis</button>
+            <button @click="toggleInteraction('dislike')" :style="{ color: ifDislike ? 'green' : 'black' }">👎 dis</button>
           </view>
         </view>
 
@@ -78,11 +77,22 @@
         <view class="sidebar-header">相关推荐</view>
         <view v-for="(recommendation, index) in recommendations" :key="index" class="recommendation-item">
           <image :src="recommendation.image" mode="widthFix" />
-          <view class="recommendation-title" @click="goRecommend(recommendation.title, recommendation.form, recommendation.id)">{{ recommendation.title }}</view>
+          <view class="recommendation-title" @click="goRecommend(recommendation.title, recommendation.form, recommendation.id)">
+            {{ recommendation.title }}
+          </view>
           <view class="recommendation-info">{{ recommendation.info }}</view>
         </view>
       </view>
     </view>
+
+    <!-- Loading State -->
+       <!-- Loading State -->
+       <view v-else-if="loadingError" class="loading-container">
+         <text>加载失败，请稍后重试</text>
+       </view>
+       <view v-else class="loading-container">
+         <text>加载中...</text>
+       </view>
   </view>
 </template>
 
@@ -100,6 +110,8 @@ const newComment = ref("");
 const replyingTo = ref(null); // 当前正在回复的评论的索引
 const newReply = ref(""); // 回复内容
 const recommendations = ref([]);
+const loadingError = ref(false); // 加载错误标志
+const timeout = 15000; // 超时时间：15秒
 
 const ifLike = ref(false);
 const ifFavourite = ref(false);
@@ -108,9 +120,12 @@ const ifShare = ref(false);
 const ifFollowed = ref(false);
 
 const fetchData = async () => {
+	const timer = setTimeout(() => {
+	    loadingError.value = true; // 超时后显示加载失败
+	  }, timeout);
   try {
     uni.request({
-      url: "https://122.51.231.155/news/{id}", // 模拟的后端接口URL
+      url: "https://122.51.231.155/news/1", // 模拟的后端接口URL
       method: "GET",
       data: {
         id: 1,
