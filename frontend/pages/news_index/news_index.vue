@@ -52,6 +52,10 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useNewsStore } from '@/stores/news_list';
+import {
+		useI18n
+  } from 'vue-i18n'
+import { onShow } from '@dcloudio/uni-app';
 
 const newsStore = useNewsStore();
 
@@ -67,6 +71,29 @@ const {
   fetchNews,
 } = newsStore;
 
+const { t, } = useI18n()
+
+onShow(() => {
+      uni.setNavigationBarTitle({
+      title: t('news_index')
+    })
+    uni.setTabBarItem({
+      index: 0,
+      text: t('index')
+    })
+    uni.setTabBarItem({
+      index: 1,
+      text: t('tools_index')
+    })
+    uni.setTabBarItem({
+      index: 2,
+      text: t('news_index')
+    })
+    uni.setTabBarItem({
+      index: 3,
+      text: t('my_index')
+    })
+});
 // 页面跳转方法
 function navigateTo(link, name) {
   setTimeout(() => {

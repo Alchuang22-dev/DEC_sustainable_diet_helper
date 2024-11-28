@@ -255,5 +255,10 @@
     "unbind_account_notice": "After unbinding, the original phone number cannot be used to log in to this account.",
     "change_binding_phone": "You are changing the phone number bound to your account.",
     "confirm_binding": "Confirm Binding",
-    "input_verification_code": "Enter verification code"
+    "input_verification_code": "Enter verification code",
+
+	"index": "Home",
+	"news_index": "News",
+	"my_index": "My",
+	"tools_index": "Tools"
 }
