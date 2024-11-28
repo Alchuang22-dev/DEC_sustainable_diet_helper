@@ -61,11 +61,20 @@ type FoodNameResponse struct {
 }
 
 // GetAllFoodNames 获取所有食物名称
-func GetAllFoodNames(db *gorm.DB) ([]FoodNameResponse, error) {
+func GetAllFoodNames(db *gorm.DB, language string) ([]FoodNameResponse, error) {
     var results []FoodNameResponse
     query := db.Model(&Food{})
-    err := query.Select("id, zh_food_name as zh_name, en_food_name as en_name").Find(&results).Error
-    return results, err
+    
+    switch language {
+    case "zh":
+        err := query.Select("id, zh_food_name as name").Find(&results).Error
+        return results, err
+    case "en":
+        err := query.Select("id, en_food_name as name").Find(&results).Error
+        return results, err
+    default:
+        return nil, fmt.Errorf("unsupported language: %s", language)
+    }
 }
 
 // FoodCalculateRequest 定义单个食物的计算请求

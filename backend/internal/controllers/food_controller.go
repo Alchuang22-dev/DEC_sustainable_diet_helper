@@ -31,14 +31,20 @@ func NewFoodController(db *gorm.DB) *FoodController {
 // @Success 200 {array} models.FoodNameResponse
 // @Router /foods/names [get]
 func (fc *FoodController) GetFoodNames(c *gin.Context) {
-    names, err := models.GetAllFoodNames(fc.DB)
+    language := c.Query("lang")
+    if language != "zh" && language != "en" {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": "Invalid language parameter. Use 'zh' or 'en'",
+        })
+        return
+    }
+    names, err := models.GetAllFoodNames(fc.DB, language)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{
             "error": err.Error(),
         })
         return
     }
-
     c.JSON(http.StatusOK, names)
 }
 
