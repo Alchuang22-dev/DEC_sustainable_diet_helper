@@ -203,11 +203,11 @@ export const useFoodListStore = defineStore('foodList', () => {
                 responseData.forEach(item => {
                     const food = foodList.find(f => Number(f.id) === item.id);
                     if (food) {
-                        food.emission = item.co2_emission;
+                        food.emission = item.emission;
                         food.calories = item.calories;
                         food.protein = item.protein;
                         food.fat = item.fat;
-                        food.carbohydrates = item.carbs;
+                        food.carbohydrates = item.carbohydrates;
                         food.sodium = item.sodium;
                         console.log('更新食物数据:', food.emission);
                     }
