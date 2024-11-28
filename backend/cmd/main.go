@@ -37,6 +37,7 @@ func main() {
         &models.Comment{},
         &models.Food{},
         &models.Recipe{},
+        &models.Family{},
     )
     if err != nil {
         log.Fatal("自动迁移失败:", err)
