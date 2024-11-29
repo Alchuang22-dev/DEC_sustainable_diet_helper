@@ -260,5 +260,10 @@
 	"index": "Home",
 	"news_index": "News",
 	"my_index": "My",
-	"tools_index": "Tools"
+	"tools_index": "Tools",
+	
+	"viewNutritionGoals": "View daily nutrition goals",
+	"targetValue": "target",
+	"addOrUpdateTarget": "add/update target",
+	"pleaseFillTargetNameAndValue": "Please put in all the blanks"
 }
