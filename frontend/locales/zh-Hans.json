@@ -262,4 +262,9 @@
 	"my_index": "我的",
 	"news_index": "新闻",
 	"tools_index": "工具",
+
+	"viewNutritionGoals": "查看您的一日营养目标",
+	"targetValue": "目标值",
+	"addOrUpdateTarget": "添加/修改目标",
+	"pleaseFillTargetNameAndValue": "请填写营养成分和目标值"
 }
