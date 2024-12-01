@@ -20,28 +20,36 @@
         <view v-for="(option, index) in preferenceOptions" :key="index" class="modal-option" @click="selectPreference(option)">
           <image :src="option.icon" class="option-icon" />
           <text class="option-name">{{ option.name }}</text>
-        </view>
-        <button class="close-button" @click="closeModal">{{$t('close_button')}}</button>
+        </view> 
       </view>
+	  <view class="button-content">
+		  <button class="close-button" @click="closeModal">{{$t('close_button')}}</button>
+	  </view>
     </view>
   </view>
 </template>
 
 <script setup>
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+const { t, locale } = useI18n();
+
 
 const preferences = ref([
-  { name: '避免乳制品', icon: 'https://via.placeholder.com/50' },
-  { name: '喜欢的水果', icon: 'https://via.placeholder.com/50' },
-  { name: '素食主义', icon: 'https://via.placeholder.com/50' },
-  { name: '高蛋白饮食', icon: 'https://via.placeholder.com/50' },
+  { name: t('foodpreference_greeting'), icon: 'https://via.placeholder.com/50' },
 ]);
 
 const preferenceOptions = ref([
-  { name: '高蛋白食品', icon: 'https://via.placeholder.com/50' },
-  { name: '低脂饮食', icon: 'https://via.placeholder.com/50' },
-  { name: '无麸质饮食', icon: 'https://via.placeholder.com/50' },
-  { name: '避免乳制品', icon: 'https://via.placeholder.com/50' },
+  { name: t('highProtein'), icon: 'https://via.placeholder.com/50' },
+  { name: t('highEnergy'), icon: 'https://via.placeholder.com/50' },
+  { name: t('lowFat'), icon: 'https://via.placeholder.com/50' },
+  { name: t('lowCH'), icon: 'https://via.placeholder.com/50' },
+  { name: t('lowsodium'), icon: 'https://via.placeholder.com/50' },
+  { name: t('vegan'), icon: 'https://via.placeholder.com/50' },
+  { name: t('vegetarian'), icon: 'https://via.placeholder.com/50' },
+  { name: t('glulenFree'), icon: 'https://via.placeholder.com/50' },
+  { name: t('alcoholFree'), icon: 'https://via.placeholder.com/50' },
+  { name: t('dairyFree'), icon: 'https://via.placeholder.com/50' },
 ]);
 
 const showModal = ref(false);
@@ -158,19 +166,26 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column; /* 设置垂直排列 */
 }
+
 .modal-content {
   background-color: #fff;
   padding: 20px;
   border-radius: 8px;
   width: 80%;
   max-width: 400px;
+  max-height: 400px;
+  overflow-y: auto; /* 允许垂直滚动 */
+  margin-bottom: 20px; /* 添加底部间距 */
 }
+
 .modal-title {
   font-size: 20px;
   font-weight: bold;
   margin-bottom: 20px;
 }
+
 .modal-option {
   display: flex;
   align-items: center;
@@ -180,14 +195,23 @@ body {
   margin-bottom: 10px;
   cursor: pointer;
 }
+
 .option-icon {
   width: 40px;
   height: 40px;
   margin-right: 10px;
 }
+
 .option-name {
   font-size: 16px;
 }
+
+.button-content {
+  display: flex;
+  justify-content: center; /* 按钮居中 */
+  width: 100%; /* 确保按钮容器宽度充满 */
+}
+
 .close-button {
   background-color: #ff4d4f;
   color: #fff;
@@ -197,4 +221,5 @@ body {
   cursor: pointer;
   margin-top: 20px;
 }
+
 </style>
