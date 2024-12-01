@@ -265,5 +265,17 @@
 	"viewNutritionGoals": "View daily nutrition goals",
 	"targetValue": "target",
 	"addOrUpdateTarget": "add/update target",
-	"pleaseFillTargetNameAndValue": "Please put in all the blanks"
+	"pleaseFillTargetNameAndValue": "Please put in all the blanks",
+	
+	"foodpreference_greeting": "please add your food preference:",
+	"highProtein": "high protein",
+	"highEnergy": "high energy",
+	"lowCH": "low sugar",
+	"lowFat": "low fat",
+	"lowsodium": "low sodium",
+	"vegan": "vegan",
+	"vegetarian": "vegetarian",
+	"glulenFree": "glulen free",
+	"dairyFree": "dairy free",
+	"alcoholFree": "alcohol free"
 }

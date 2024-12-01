@@ -266,5 +266,17 @@
 	"viewNutritionGoals": "查看您的一日营养目标",
 	"targetValue": "目标值",
 	"addOrUpdateTarget": "添加/修改目标",
-	"pleaseFillTargetNameAndValue": "请填写营养成分和目标值"
+	"pleaseFillTargetNameAndValue": "请填写营养成分和目标值",
+	
+	"foodpreference_greeting": "请在此处添加饮食偏好",
+	"highProtein": "高蛋白饮食",
+	"highEnergy": "能量饮食",
+	"lowCH": "低糖饮食",
+	"lowFat": "低脂饮食",
+	"lowsodium": "低钠饮食",
+	"vegan": "严格素食",
+	"vegetarian": "素食",
+	"glulenFree": "无麸质饮食",
+	"dairyFree": "避免乳制品",
+	"alcoholFree": "无酒精饮食"
 }
