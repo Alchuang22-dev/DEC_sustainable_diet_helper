@@ -278,5 +278,8 @@
 	"vegetarian": "素食",
 	"glulenFree": "无麸质饮食",
 	"dairyFree": "避免乳制品",
-	"alcoholFree": "无酒精饮食"
+	"alcoholFree": "无酒精饮食",
+	
+	"enterNickname": "请输入昵称",
+	"Nickname":"昵称"
 }
