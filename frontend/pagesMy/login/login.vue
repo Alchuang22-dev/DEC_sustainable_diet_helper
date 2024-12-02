@@ -29,12 +29,12 @@
         <span>{{ $t('loginWithWeChat') }}</span>
       </button>
     </view>
-	<view class="wechat-login">
-	  <button class="wechat-button" @click="autoLogin">
-	    <img src="/static/logo.png" alt="WeChat" class="wechat-icon" />
-	    <span>测试登录</span>
-	  </button>
-	</view>
+    <view class="wechat-login">
+      <button class="wechat-button" @click="autoLogin">
+        <img src="/static/logo.png" alt="WeChat" class="wechat-icon" />
+        <span>测试登录</span>
+      </button>
+    </view>
   </view>
 </template>
 
@@ -54,6 +54,9 @@ const phoneNumber = ref('');
 const password = ref('');
 const repeatPassword = ref('');
 const showRepeatPassword = ref(false);
+const avatarUrl = ref(''); // 用户头像
+const nickName = ref('');  // 用户昵称
+
 
 const switchLanguage = (lang) => {
   locale.value = lang;
@@ -74,61 +77,86 @@ const autoLogin = () => {
 
 // 更新后的 testLogin 函数
 const testLogin = () => {
-  uni.showLoading({
-    title: '正在登录...',
-    mask: true
-  });
+ uni.navigateTo({
+ 	url: "/pagesMy/wechatLogin/wechatLogin",
+ })
+};
 
-  uni.getUserProfile({
-    desc: '用于完善会员资料',
-    success: function(infoRes) {
-      const userInfo = infoRes.userInfo;
-      console.log('用户信息:', userInfo); // 打印用户信息（昵称和头像）
+// 选择头像并输入昵称
+const selectAvatarAndInputNickName = () => {
+  if (uni.getSystemInfoSync().platform !== 'h5') {
+    // 小程序平台使用 chooseAvatar
+    uni.chooseAvatar({
+      success: (avatarRes) => {
+        avatarUrl.value = avatarRes.avatarUrl;
+        promptForNickName();
+      },
+      fail: (err) => {
+        uni.showToast({
+          title: '头像选择失败',
+          icon: 'none',
+        });
+      }
+    });
+  } else {
+    // H5 使用文件选择
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          avatarUrl.value = event.target.result; // 设置头像为选择的图片路径
+          promptForNickName(); // 弹出输入昵称的提示框
+        };
+        reader.readAsDataURL(file); // 将文件转为Base64
+      }
+    };
+    input.click();
+  }
+};
 
-      // 展示头像和昵称，并询问用户是否确认
-      uni.showModal({
-        title: '确认信息',
-        content: `<view>头像: <image src="${userInfo.avatarUrl}" style="width: 50px; height: 50px;" /></view><view>昵称: ${userInfo.nickName}</view>`,
-        success: function(res) {
-          if (res.confirm) {
-            // 用户确认，保存信息到本地
-            uni.setStorageSync('userInfo', {
-              nickName: userInfo.nickName,
-              avatarUrl: userInfo.avatarUrl
-            });
-			uni.setStorageSync('uid', userInfo.nickName);
-
-            // 显示登录成功提示
-            uni.showToast({
-              title: '登录成功',
-              icon: 'success',
-              duration: 2000
-            });
-
-            // 跳转到首页
-            login();
-          } else if (res.cancel) {
-            // 用户取消，可以提供修改昵称或头像的操作
-            uni.showToast({
-              title: '您可以修改头像或昵称',
-              icon: 'none',
-              duration: 2000
-            });
-            // 在这里提供进一步的修改操作，例如弹出输入框修改昵称
-          }
-        }
-      });
-    },
-    fail: function(err) {
-      uni.hideLoading();
-      uni.showToast({
-        icon: 'none',
-        title: '获取用户信息失败',
-        duration: 2000
-      });
-      console.error('获取用户信息失败:', err);
+const promptForNickName = () => {
+  uni.showModal({
+    title: '输入昵称',
+    content: '请输入您的昵称',
+    showCancel: true,
+    confirmText: '确认',
+    cancelText: '取消',
+    success: (inputRes) => {
+      if (inputRes.confirm) {
+        nickName.value = inputRes.content;
+        saveUserInfo();
+      } else {
+        uni.showToast({
+          title: '您可以稍后再输入昵称',
+          icon: 'none',
+        });
+      }
     }
   });
+};
+
+// 保存用户信息并跳转
+const saveUserInfo = () => {
+  // 保存头像和昵称到本地存储
+  uni.setStorageSync('userInfo', {
+    nickName: nickName.value,
+    avatarUrl: avatarUrl.value
+  });
+  uni.setStorageSync('uid', nickName.value);
+
+  // 显示登录成功提示
+  uni.showToast({
+    title: '登录成功',
+    icon: 'success',
+    duration: 2000
+  });
+
+  // 跳转到首页
+  login();
 };
 
 const check = () => {

@@ -57,6 +57,8 @@
 				"path": "setGoals/setGoals"
 			}, {
 				"path": "userSettings/userSettings"
+			}, {
+				"path": "wechatLogin/wechatLogin"
 			}]
 		},
 		{

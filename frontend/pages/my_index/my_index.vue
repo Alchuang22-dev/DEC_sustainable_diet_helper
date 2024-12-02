@@ -37,31 +37,31 @@
         <image src="@/pages/static/search.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_search_tools')}}</text>
       </view>
-      <view class="menu-item" @click="navigateTo('setGoals')">
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('setGoals')">
         <image src="@/pages/static/setgoals.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_set_goals')}}</text>
       </view>
-      <view class="menu-item" @click="navigateTo('foodPreferences')">
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('foodPreferences')">
         <image src="@/pages/static/food.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_food_preferences')}}</text>
       </view>
-      <view class="menu-item" @click="navigateTo('myFamily')">
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('myFamily')">
         <image src="@/pages/static/family.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_my_family')}}</text>
       </view>
-      <view class="menu-item" @click="navigateTo('favorites')">
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('favorites')">
         <image src="@/pages/static/favorites.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_favorites')}}</text>
       </view>
-      <view class="menu-item" @click="navigateTo('historyData')">
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('historyData')">
         <image src="@/pages/static/historicaldata.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_history_data')}}</text>
       </view>
-      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('appSettings')">
+      <view  class="menu-item" @click="navigateTo('appSettings')">
         <image src="@/pages/static/setting.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_app_settings')}}</text>
       </view>
-      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('userSettings')">
+      <view  class="menu-item" @click="navigateTo('userSettings')">
         <image src="@/pages/static/user.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_user_settings')}}</text>
       </view>
@@ -178,6 +178,7 @@ function submitUsername() {
 }
 
 onShow(() => {
+	isLoggedIn.value = false; // 显式设置为未登录状态
     uni.setNavigationBarTitle({
       title: t('my_index')
     })

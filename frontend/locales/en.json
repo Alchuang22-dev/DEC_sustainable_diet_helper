@@ -277,5 +277,8 @@
 	"vegetarian": "vegetarian",
 	"glulenFree": "glulen free",
 	"dairyFree": "dairy free",
-	"alcoholFree": "alcohol free"
+	"alcoholFree": "alcohol free",
+	
+	"enterNickname": "Enter Nickname",
+	"Nickname": "Nickname"
 }
