@@ -27,7 +27,7 @@
             </view>
 
             <!-- 生成菜谱按钮 -->
-            <button class="generate-button fade-in-up delay-5" @click="generateRecipe">
+            <button class="generate-button fade-in-up delay-6" @click="generateRecipe">
                 {{$t('generate_recipe')}}
             </button>
         </view>
@@ -56,21 +56,21 @@ const { t } = useI18n()
 // 响应式数据
 const showRecipeBoxes = ref(false)
 const dishes = ref([
-    { name: t('dish_1'), image: 'https://cdn.pixabay.com/photo/2016/03/17/23/30/salad-1264107_1280.jpg', liked: false },
-    { name: t('dish_2'), image: 'https://cdn.pixabay.com/photo/2016/03/05/19/02/dish-1238243_1280.jpg', liked: false },
-    { name: t('dish_3'), image: 'https://cdn.pixabay.com/photo/2016/11/18/17/44/chicken-1835703_1280.jpg', liked: false },
-    { name: t('dish_4'), image: 'https://cdn.pixabay.com/photo/2016/11/18/14/40/pasta-1836457_1280.jpg', liked: false },
-    { name: t('dish_5'), image: 'https://cdn.pixabay.com/photo/2016/06/15/19/09/soup-1457213_1280.jpg', liked: false },
-    { name: t('dish_6'), image: 'https://cdn.pixabay.com/photo/2016/06/16/23/37/pizza-1460595_1280.jpg', liked: false },
-    { name: t('dish_7'), image: 'https://cdn.pixabay.com/photo/2017/12/09/08/18/food-3007395_1280.jpg', liked: false },
-    { name: t('dish_8'), image: 'https://cdn.pixabay.com/photo/2016/11/29/06/15/food-1869239_1280.jpg', liked: false }
+    { name: t('dish_1'), image: 'https://cdn.pixabay.com/photo/2015/03/14/14/00/carrots-673184_1280.jpg', liked: false },
+    { name: t('dish_2'), image: 'https://cdn.pixabay.com/photo/2017/11/09/18/52/white-radish-2934281_1280.jpg', liked: false },
+    { name: t('dish_3'), image: 'https://cdn.pixabay.com/photo/2016/08/11/08/43/potatoes-1585060_1280.jpg', liked: false },
+    { name: t('dish_4'), image: 'https://cdn.pixabay.com/photo/2020/09/12/21/12/tomatoes-5566741_1280.jpg', liked: false },
+    { name: t('dish_5'), image: 'https://cdn.pixabay.com/photo/2018/02/08/15/02/meat-3139641_640.jpg', liked: false },
+    { name: t('dish_6'), image: 'https://cdn.pixabay.com/photo/2018/10/03/22/08/kohl-3722517_1280.jpg', liked: false },
 ])
 
 const availableNewDishes = ref([
-    { name: t('dish_9'), image: 'https://cdn.pixabay.com/photo/2017/07/16/10/43/taco-2518064_1280.jpg', liked: false },
-    { name: t('dish_10'), image: 'https://cdn.pixabay.com/photo/2016/04/15/11/44/breakfast-1330033_1280.jpg', liked: false },
-    { name: t('dish_11'), image: 'https://cdn.pixabay.com/photo/2014/10/23/18/05/burger-500054_1280.jpg', liked: false },
-    { name: t('dish_12'), image: 'https://cdn.pixabay.com/photo/2017/12/10/14/47/dessert-3013894_1280.jpg', liked: false },
+	{ name: t('dish_7'), image: 'https://cdn.pixabay.com/photo/2020/09/03/14/40/lettuce-5541474_1280.jpg', liked: false },
+	{ name: t('dish_8'), image: 'https://cdn.pixabay.com/photo/2020/04/18/18/23/vegetables-5060432_1280.jpg', liked: false },
+    { name: t('dish_9'), image: 'https://cdn.pixabay.com/photo/2015/01/12/11/35/slice-the-tofu-597229_640.jpg', liked: false },
+    { name: t('dish_10'), image: 'https://cdn.pixabay.com/photo/2022/10/03/15/07/pumpkin-7496159_1280.jpg', liked: false },
+    { name: t('dish_11'), image: 'https://cdn.pixabay.com/photo/2017/12/15/16/10/squid-3021304_1280.jpg', liked: false },
+    { name: t('dish_12'), image: 'https://cdn.pixabay.com/photo/2015/07/31/12/07/soup-greens-869075_1280.jpg', liked: false },
     // 添加更多菜品
 ])
 
