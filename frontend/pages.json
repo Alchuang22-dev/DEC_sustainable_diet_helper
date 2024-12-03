@@ -5,7 +5,7 @@
 			"^uni-(.*)": "@dcloudio/uni-ui/lib/uni-$1/uni-$1.vue"
 		}
 	},
-	
+
 	"pages": [{
 			"path": "pages/index/index",
 			"style": {
@@ -57,6 +57,8 @@
 				"path": "setGoals/setGoals"
 			}, {
 				"path": "userSettings/userSettings"
+			}, {
+				"path": "wechatLogin/wechatLogin"
 			}]
 		},
 		{
@@ -73,82 +75,82 @@
 			"root": "pagesSetting",
 			"pages": [{
 				"path": "language/language"
-			},{
+			}, {
 				"path": "Authorizations/Authorizations",
 				"style": {
 					"navigationBarTitleText": "个人信息与权限"
 				}
-			},{
+			}, {
 				"path": "Bend/Bend",
 				"style": {
 					"navigationBarTitleText": "账户绑定"
 				}
-			},{
+			}, {
 				"path": "ConnectUs/ConnectUs",
 				"style": {
 					"navigationBarTitleText": "联系我们"
 				}
-			},{
+			}, {
 				"path": "DeleteData/DeleteData",
 				"style": {
 					"navigationBarTitleText": "删除数据"
 				}
-			},{
+			}, {
 				"path": "DeleteId/DeleteId",
 				"style": {
 					"navigationBarTitleText": "账户注销"
 				}
-			},{
+			}, {
 				"path": "DevelopingFunc/DevelopingFunc",
 				"style": {
 					"navigationBarTitleText": "开发中功能"
 				}
-			},{
+			}, {
 				"path": "FeedBack/FeedBack",
 				"style": {
 					"navigationBarTitleText": "帮助与反馈"
 				}
-			},{
+			}, {
 				"path": "Fonts/Fonts",
 				"style": {
 					"navigationBarTitleText": "调整字体"
 				}
-			},{
+			}, {
 				"path": "Idinfo/Idinfo",
 				"style": {
 					"navigationBarTitleText": "账号与安全"
 				}
-			},{
+			}, {
 				"path": "InfoShared/InfoShared",
 				"style": {
 					"navigationBarTitleText": "通信权限"
 				}
-			},{
+			}, {
 				"path": "newsSetting/newsSetting",
 				"style": {
 					"navigationBarTitleText": "消息通知"
 				}
-			},{
+			}, {
 				"path": "Permissions/Permissions",
 				"style": {
 					"navigationBarTitleText": "个人信息收集清单"
 				}
-			},{
+			}, {
 				"path": "PIConnected/PIConnected",
 				"style": {
 					"navigationBarTitleText": "第三方信息共享清单"
 				}
-			},{
+			}, {
 				"path": "recoSetting/recoSetting",
 				"style": {
 					"navigationBarTitleText": "个性化推荐设置"
 				}
-			},{
+			}, {
 				"path": "SoftwareInfo/SoftwareInfo",
 				"style": {
 					"navigationBarTitleText": "关于软件"
 				}
-			},{
+			}, {
 				"path": "Storage/Storage",
 				"style": {
 					"navigationBarTitleText": "存储空间"
@@ -188,10 +190,9 @@
 					}
 				},
 				{
-					"path" : "modify_food/modify_food",
-					"style" : 
-					{
-						"navigationBarTitleText" : "修改食品"
+					"path": "modify_food/modify_food",
+					"style": {
+						"navigationBarTitleText": "修改食品"
 					}
 				}
 			]

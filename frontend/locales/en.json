@@ -201,7 +201,6 @@
 	"add_success": "Add Successful",
 	"invalid_food_item": "Invalid Food Item",
 	"modify_success": "Modification Successful",
-	"method_default": "average",
 	"transport_land": "Land Transport",
 	"transport_sea": "Sea Transport",
 	"transport_air": "Air Transport",
@@ -257,11 +256,29 @@
     "change_binding_phone": "You are changing the phone number bound to your account.",
     "confirm_binding": "Confirm Binding",
     "input_verification_code": "Enter verification code",
-	//tab
-	"home": "home"
-},
-{
-	"navigationBarTitleText": {
-		"home": "home"
-	}
+
+	"index": "Home",
+	"news_index": "News",
+	"my_index": "My",
+	"tools_index": "Tools",
+	
+	"viewNutritionGoals": "View daily nutrition goals",
+	"targetValue": "target",
+	"addOrUpdateTarget": "add/update target",
+	"pleaseFillTargetNameAndValue": "Please put in all the blanks",
+	
+	"foodpreference_greeting": "please add your food preference:",
+	"highProtein": "high protein",
+	"highEnergy": "high energy",
+	"lowCH": "low sugar",
+	"lowFat": "low fat",
+	"lowsodium": "low sodium",
+	"vegan": "vegan",
+	"vegetarian": "vegetarian",
+	"glulenFree": "glulen free",
+	"dairyFree": "dairy free",
+	"alcoholFree": "alcohol free",
+	
+	"enterNickname": "Enter Nickname",
+	"Nickname": "Nickname"
 }

@@ -1,0 +1,82 @@
+{
+	"highProtein":{
+		"name_en": "high protein",
+		"name_zh-Hans": "高蛋白饮食",
+		"nutrition_pos": "protein",
+		"nutrition_neg": "",
+		"food_pos": [],
+		"food_neg": []
+	},
+	"highEnergy":{
+		"name_en": "high energy",
+		"name_zh-Hans": "能量饮食",
+		"nutrition_pos": "energy",
+		"nutrition_neg": "",
+		"food_pos": [],
+		"food_neg": []
+	},
+	"lowFat":{
+		"name_en": "low fat",
+		"name_zh-Hans": "低脂饮食",
+		"nutrition_pos": "",
+		"nutrition_neg": "fat",
+		"food_pos": [],
+		"food_neg": []
+	},
+	"lowCH":{
+		"name_en": "low sugar",
+		"name_zh-Hans": "低糖饮食",
+		"nutrition_pos": "",
+		"nutrition_neg": "carbohydrates",
+		"food_pos": [],
+		"food_neg": []
+	},
+	"lowsodium":{
+		"name_en": "low sodium",
+		"name_zh-Hans": "低钠饮食",
+		"nutrition_pos": "",
+		"nutrition_neg": "carbohydrates",
+		"food_pos": [],
+		"food_neg": []
+	},
+	"vegan":{
+		"name_en": "vegan",
+		"name_zh-Hans": "严格素食",
+		"nutrition_pos": "",
+		"nutrition_neg": "",
+		"food_pos": ["Chinese cabbage","carrot","White radish","potato","tomato","lettuce","Green beans","bean curd/Tofu","Noodles","eggplant","Bean sprouts","Cucumber","pumpkin","mushroom","spinach","broccoli","bamboo shoots","kelp","green pepper","leek/Chives","crumbs/Breadcrumbs","Bread","chestnut","pineapple","Strawberry","orange","soybean","sweet potato","walnut","Black rice","Red beans","peanut","soybean","peach","lotus root","celery","yam","Minced garlic","courgette/Zucchini","Barley","rapeseed","corn","Kidney beans","sorghum","barley","millet","lentil","pea","Beans","cauliflower","cabbage","Fennel","Romaine lettuce","Amaranth","Olive","black beans","corn flakes","onion","apple","banana","grape","oatmeal","pear","kiwi fruit","oat","flour","mango","rice"],
+		"food_neg": []
+	},
+	"vegetarian":{
+		"name_en": "vegetarian",
+		"name_zh-Hans": "素食",
+		"nutrition_pos": "",
+		"nutrition_neg": "",
+		"food_pos": ["Chinese cabbage","carrot","White radish","potato","tomato","lettuce","Green beans","bean curd/Tofu","Noodles","eggplant","Bean sprouts","Cucumber","pumpkin","mushroom","spinach","broccoli","bamboo shoots","kelp","green pepper","leek/Chives","crumbs/Breadcrumbs","Bread","chestnut","pineapple","Strawberry","orange","soybean","sweet potato","walnut","Black rice","Red beans","peanut","soybean","peach","lotus root","celery","yam","Minced garlic","courgette/Zucchini","Barley","rapeseed","corn","Kidney beans","sorghum","barley","millet","lentil","pea","Beans","cauliflower","cabbage","Fennel","Romaine lettuce","Amaranth","Olive","black beans","corn flakes","onion","apple","banana","grape","oatmeal","pear","kiwi fruit","oat","flour","mango","rice","honey","Egg","Milk","cheese"],
+		"food_neg": []
+	},
+	"glulenFree":{
+		"name_en": "glulen free",
+		"name_zh-Hans": "无麸质饮食",
+		"nutrition_pos": "",
+		"nutrition_neg": "",
+		"food_pos": [],
+		"food_neg": ["oat","Pasta/Spaghetti","flour","Noodles","wheat","barley","Bread","crumbs/Breadcrumbs"]
+	},
+	"alcohalFree":{
+		"name_en": "alcohal free",
+		"name_zh-Hans": "无酒精饮食",
+		"nutrition_pos": "",
+		"nutrition_neg": "",
+		"food_pos": [],
+		"food_neg": ["wine","beer"]
+	},
+	"dairyFree":{
+		"name_en": "dairy free",
+		"name_zh-Hans": "避免乳制品",
+		"nutrition_pos": "",
+		"nutrition_neg": "",
+		"food_pos": [],
+		"food_neg": ["cheese","Milk"]
+	}
+}

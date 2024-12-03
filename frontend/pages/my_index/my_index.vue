@@ -6,66 +6,70 @@
     <view class="profile-section">
       <view class="profile-top">
         <image :src="avatarSrc" class="avatar" @click="handleAvatarClick"></image>
-        <view class="profile-text">
-          <template v-if="isEditingUsername">
-            <input
-              v-model="newUsername"
-              class="username-input"
-              @keyup.enter="submitUsername"
-              @blur="submitUsername"
-              ref="usernameInput"
-            />
-          </template>
-          <view v-else @click="handleUsernameClick">
-            <text class="greeting">{{ isLoggedIn ? uid : $t('profile_greeting') }}</text>
-          </view>
-		  <view>
-			  <text class="login-prompt">{{ isLoggedIn ? $t('profile_logged_in') : $t('profile_login_prompt') }}</text>
-		  </view>
-        </view>
+			<view class="profile-text">
+			  <template v-if="isEditingUsername">
+				<input
+				  v-model="newUsername"
+				  class="username-input"
+				  @keyup.enter="submitUsername"
+				  @blur="submitUsername"
+				  ref="usernameInput"
+				/>
+			  </template>
+			  <view v-else @click="handleUsernameClick" class="username-container">
+				<text class="greeting">{{ isLoggedIn ? uid : $t('profile_greeting') }}</text>
+				<!-- 只在用户登录后显示编辑图标 -->
+				<image v-if="isLoggedIn" src="@/pages/static/editor.svg" class="edit-icon" @click="handleUsernameClick" />
+			  </view>
+			  <view>
+				<text class="login-prompt">{{ isLoggedIn ? $t('profile_logged_in') : $t('profile_login_prompt') }}</text>
+			  </view>
+			</view>
       </view>
       <button class="login-button" @click="handleLoginButtonClick">
         {{ isLoggedIn ? $t('profile_switch_account') : $t('profile_register_login') }}
-      </button>
-      <button v-if="isLoggedIn" class="login-button" @click="logout">
-        {{ $t('profile_logout') }}
       </button>
     </view>
 
     <!-- 菜单部分 -->
     <view class="menu-section">
-      <view class="menu-item" @click="navigateTo('setGoals')">
-        <text class="icon">🎯</text>
-        <text class="menu-text">{{$t('menu_set_goals')}}</text>
-      </view>
-      <view class="menu-item" @click="navigateTo('foodPreferences')">
-        <text class="icon">🍲</text>
-        <text class="menu-text">{{$t('menu_food_preferences')}}</text>
-      </view>
-      <view class="menu-item" @click="navigateTo('myFamily')">
-        <text class="icon">👪</text>
-        <text class="menu-text">{{$t('menu_my_family')}}</text>
-      </view>
-      <view class="menu-item" @click="navigateTo('favorites')">
-        <text class="icon">❤️</text>
-        <text class="menu-text">{{$t('menu_favorites')}}</text>
-      </view>
-      <view class="menu-item" @click="navigateTo('historyData')">
-        <text class="icon">📊</text>
-        <text class="menu-text">{{$t('menu_history_data')}}</text>
-      </view>
-      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('appSettings')">
-        <text class="icon">⚙️</text>
-        <text class="menu-text">{{$t('menu_app_settings')}}</text>
-      </view>
-      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('userSettings')">
-        <text class="icon">👤</text>
-        <text class="menu-text">{{$t('menu_user_settings')}}</text>
-      </view>
-      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('searchTools')">
-        <text class="icon">🔍</text>
+	  <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('searchTools')">
+        <image src="@/pages/static/search.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_search_tools')}}</text>
       </view>
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('setGoals')">
+        <image src="@/pages/static/setgoals.svg" class="icon_svg"></image>
+        <text class="menu-text">{{$t('menu_set_goals')}}</text>
+      </view>
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('foodPreferences')">
+        <image src="@/pages/static/food.svg" class="icon_svg"></image>
+        <text class="menu-text">{{$t('menu_food_preferences')}}</text>
+      </view>
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('myFamily')">
+        <image src="@/pages/static/family.svg" class="icon_svg"></image>
+        <text class="menu-text">{{$t('menu_my_family')}}</text>
+      </view>
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('favorites')">
+        <image src="@/pages/static/favorites.svg" class="icon_svg"></image>
+        <text class="menu-text">{{$t('menu_favorites')}}</text>
+      </view>
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('historyData')">
+        <image src="@/pages/static/historicaldata.svg" class="icon_svg"></image>
+        <text class="menu-text">{{$t('menu_history_data')}}</text>
+      </view>
+      <view  class="menu-item" @click="navigateTo('appSettings')">
+        <image src="@/pages/static/setting.svg" class="icon_svg"></image>
+        <text class="menu-text">{{$t('menu_app_settings')}}</text>
+      </view>
+      <view  class="menu-item" @click="navigateTo('userSettings')">
+        <image src="@/pages/static/user.svg" class="icon_svg"></image>
+        <text class="menu-text">{{$t('menu_user_settings')}}</text>
+      </view>
+      
+	  <view v-if="isLoggedIn" class="menu-item" @click="logout">
+		<image src="@/pages/static/logout.svg" class="icon_svg"></image>
+	    <text class="menu-text">{{$t('profile_logout')}}</text>
+	  </view>
     </view>
   </view>
 </template>
@@ -73,7 +77,9 @@
 <script setup>
 import { ref, nextTick } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
+import { useI18n } from 'vue-i18n'; // Import useI18n
 
+const { t, } = useI18n()
 const uid = ref('');
 const avatarSrc = ref('/static/images/index/background_img.jpg');
 const avatarSrc_ori = ref('/static/images/index/background_img.jpg');
@@ -172,6 +178,26 @@ function submitUsername() {
 }
 
 onShow(() => {
+	isLoggedIn.value = false; // 显式设置为未登录状态
+    uni.setNavigationBarTitle({
+      title: t('my_index')
+    })
+    uni.setTabBarItem({
+      index: 0,
+      text: t('index')
+    })
+    uni.setTabBarItem({
+      index: 1,
+      text: t('tools_index')
+    })
+    uni.setTabBarItem({
+      index: 2,
+      text: t('news_index')
+    })
+    uni.setTabBarItem({
+      index: 3,
+      text: t('my_index')
+    })
   console.log("in onShow");
   // 在页面显示时调用检查登录状态
   checkLoginStatus();
@@ -254,6 +280,20 @@ onShow(() => {
     color: var(--text-color);
     cursor: pointer;
   }
+  
+ /* 用户名编辑图标样式 */
+  .username-container {
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
+
+  .edit-icon {
+    width: 24rpx;
+    height: 24rpx;
+    margin-left: 10rpx;
+    cursor: pointer;
+  }
 
   .login-prompt {
     color: var(--secondary-text-color);
@@ -268,11 +308,28 @@ onShow(() => {
     cursor: pointer;
     border-radius: 10rpx;
     transition: background-color 0.3s;
+    width: 60%;
+    margin-top: 10rpx;
+  }
+  
+  .logout-button {
+    padding: 20rpx 40rpx;
+    border: none;
+    background-color: var(--primary-color);
+    color: #ffffff;
+    font-size: 32rpx;
+    cursor: pointer;
+    border-radius: 10rpx;
+    transition: background-color 0.3s;
     width: 80%;
     margin-top: 10rpx;
   }
 
   .login-button:hover {
+    background-color: #45a049;
+  }
+  
+  .logout-button:hover {
     background-color: #45a049;
   }
 
@@ -306,6 +363,19 @@ onShow(() => {
     font-size: 48rpx;
     color: var(--primary-color);
     margin-right: 30rpx;
+  }
+  
+  .icon_svg{
+	width: 50rpx;
+	height: 50rpx;
+	margin-left: 10rpx;
+	margin-right: 30rpx;
+	cursor: pointer;
+  }
+  
+  .icon_svg:hover {
+      transform: scale(1.2); /* 悬停时放大 20% */
+      fill: #45a049; /* 悬停时改变图标颜色 */
   }
 
   .menu-text {

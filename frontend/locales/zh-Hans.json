@@ -201,7 +201,6 @@
 	"add_success": "添加成功",
 	"invalid_food_item": "无效的食物项",
 	"modify_success": "修改成功",
-	"method_default": "默认",
 	"transport_land": "陆运",
 	"transport_sea": "海运",
 	"transport_air": "空运",
@@ -258,11 +257,29 @@
 	"confirm_binding": "确认绑定",
 	"input_verification_code": "请输入验证码",
 	"settings_back": "返回",
-	//tab
-	"home": "主页"
-},
-{
-	"navigationBarTitleText": {
-		"home": "主页"
-	}
+
+	"index": "首页",
+	"my_index": "我的",
+	"news_index": "新闻",
+	"tools_index": "工具",
+
+	"viewNutritionGoals": "查看您的一日营养目标",
+	"targetValue": "目标值",
+	"addOrUpdateTarget": "添加/修改目标",
+	"pleaseFillTargetNameAndValue": "请填写营养成分和目标值",
+	
+	"foodpreference_greeting": "请在此处添加饮食偏好",
+	"highProtein": "高蛋白饮食",
+	"highEnergy": "能量饮食",
+	"lowCH": "低糖饮食",
+	"lowFat": "低脂饮食",
+	"lowsodium": "低钠饮食",
+	"vegan": "严格素食",
+	"vegetarian": "素食",
+	"glulenFree": "无麸质饮食",
+	"dairyFree": "避免乳制品",
+	"alcoholFree": "无酒精饮食",
+	
+	"enterNickname": "请输入昵称",
+	"Nickname":"昵称"
 }
