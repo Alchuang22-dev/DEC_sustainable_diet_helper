@@ -1,6 +1,7 @@
 <template>
   <view>
-    <web-view :src="webUrl"></web-view>
+	<text>小程序端暂不支持外部跳转，请移至PC端获取更多内容</text>
+	<text>需要投稿者请联系DEC公众号</text>
   </view>
 </template>
 
