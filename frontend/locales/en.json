@@ -155,10 +155,19 @@
 
 	//饮食推荐
 	"recommend_image_alt": "Recommended Image",
-	"dish_1": "Steamed Cabbage",
-	"dish_2": "Sweet Potato",
-	"dish_3": "Dapanji",
-	"dish_4": "Pasta",
+	"dish_1": "carrot",
+	"dish_2": "white radish",
+	"dish_3": "potato",
+	"dish_4": "tomato",
+	"dish_5": "beef",
+	"dish_6": "Chinese cabbage",
+	"dish_7": "lettuce",
+	"dish_8": "beans",
+	"dish_9": "tofu",
+	"dish_10": "pumpkin",
+	"dish_11": "squid",
+	"dish_12": "celery",
+	"default_dish": "No more dishes...",
 	"generate_recipe": "Generate Recipe",
 	"recommended_recipe": "Recommended Recipe",
 	"recommended_recipe_info": "Based on your region, we recommend Dapanji!",
@@ -258,7 +267,7 @@
     "input_verification_code": "Enter verification code",
 
 	"index": "Home",
-	"news_index": "News",
+	"news_index": "Post",
 	"my_index": "My",
 	"tools_index": "Tools",
 	
@@ -280,5 +289,6 @@
 	"alcoholFree": "alcohol free",
 	
 	"enterNickname": "Enter Nickname",
-	"Nickname": "Nickname"
+	"Nickname": "Nickname",
+	"needNickname": "please enter nickname"
 }

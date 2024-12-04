@@ -155,10 +155,19 @@
 
 	//饮食推荐
 	"recommend_image_alt": "推荐图片",
-	"dish_1": "蒸白菜",
-	"dish_2": "大地瓜",
-	"dish_3": "大盘鸡",
-	"dish_4": "通心粉",
+	"dish_1": "胡萝卜",
+	"dish_2": "白萝卜",
+	"dish_3": "土豆",
+	"dish_4": "西红柿",
+	"dish_5": "牛肉",
+	"dish_6": "青菜",
+	"dish_7": "生菜",
+	"dish_8": "青豆",
+	"dish_9": "豆腐",
+	"dish_10": "南瓜",
+	"dish_11": "鱿鱼",
+	"dish_12": "芹菜",
+	"default_dish": "暂无菜品",
 	"generate_recipe": "生成菜谱",
 	"recommended_recipe": "推荐菜谱",
 	"recommended_recipe_info": "根据您所在的地区，推荐大盘鸡！",
@@ -260,7 +269,7 @@
 
 	"index": "首页",
 	"my_index": "我的",
-	"news_index": "新闻",
+	"news_index": "社区",
 	"tools_index": "工具",
 
 	"viewNutritionGoals": "查看您的一日营养目标",
@@ -281,5 +290,6 @@
 	"alcoholFree": "无酒精饮食",
 	
 	"enterNickname": "请输入昵称",
-	"Nickname":"昵称"
+	"Nickname":"昵称",
+	"needNickname": "昵称不能为空"
 }

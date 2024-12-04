@@ -28,6 +28,9 @@
 	    <text>开源库</text>
 	    <text class="arrow">></text>
 	  </view>
+	  <view v-if ="showBase" class="list-item" @click="switchtoBase">
+	    <text>https://github.com/Alchuang22-dev/DEC_sustainable_diet_helper</text>
+	  </view>
       <view class="divider"></view>
       </view>
     </view>
@@ -39,6 +42,7 @@ import { ref } from 'vue';
 // 定义字体大小
 const fontSize = ref(16);
 const fontSizeBig = fontSize.value + 4;
+const showBase = ref(false);
 
 function goBack() {
   uni.navigateBack();
@@ -51,9 +55,13 @@ function navigateTo(link) {
 }
 
 function switchtoBase(){
-	uni.navigateTo({
-	  url: `/pagesNews/web_detail/web_detail?url=${'https://github.com/Alchuang22-dev/DEC_sustainable_diet_helper'}`,
-	});
+	if(showBase.value === false){
+		showBase.value = true;
+	}
+	else{
+		showBase.value = false;
+	}
+	
 }
 </script>
 
