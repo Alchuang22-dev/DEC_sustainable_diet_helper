@@ -793,9 +793,11 @@ func (fc* FamilyController) LeaveFamily(c *gin.Context) {
             return
         }
     } else if family.MemberCount == 1 {
-
+        // 直接解散家庭
+        
     } else {
-        // c.JSON()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "There is no member or admin in the family"})
+        return
     }
 }
 
