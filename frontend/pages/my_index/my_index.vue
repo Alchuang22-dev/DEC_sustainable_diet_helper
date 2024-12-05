@@ -111,20 +111,29 @@ function handleLoginButtonClick() {
 
 function checkLoginStatus() {
   console.log("in check");
-  const query = uni.getStorageSync('uid');
+  const query = uni.getStorageSync('userInfo');  // 获取存储的用户信息
   console.log(query);
-  if (query && query !== '') {
-    uid.value = query;
+  if (query && query.nickName) {  // 判断 userInfo 是否存在并且有 nickName 字段
+    uid.value = query.nickName;   // 将 nickName 设置为 uid
+    
+    // 如果 avatarUrl 是相对路径，就拼接成完整的 URL
+    if (query.avatarUrl && !query.avatarUrl.startsWith('http')) {
+      avatarSrc.value = "http://122.51.231.155:8080/static/" + query.avatarUrl;
+    } else {
+      avatarSrc.value = query.avatarUrl; // 如果是完整 URL，直接使用
+    }
+
     isLoggedIn.value = true;
   } else {
     isLoggedIn.value = false;
   }
 }
 
+
 function logout() {
   isLoggedIn.value = false;
   avatarSrc.value = avatarSrc_ori.value;
-  uni.removeStorageSync('uid');
+  uni.removeStorageSync('userInfo');
 }
 
 function handleAvatarClick() {

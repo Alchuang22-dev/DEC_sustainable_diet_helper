@@ -1,50 +1,45 @@
 <template>
-    <view class="container">
-        <!-- 全屏背景图片 -->
-        <image src="/static/images/index/background_img.jpg" class="background-image"></image>
-
-        <!-- 推荐区域 -->
-        <view class="recommendation-section">
-            <!-- 替换图片为文字 -->
-            <text class="recommend-title">{{ $t('recommendation_title') }}</text>
-
-            <!-- 推荐菜品列表 -->
-            <view class="dishes">
-                <view class="dish" v-for="(dish, index) in dishes" :key="index"
-                    :class="'fade-in-up delay-' + (index + 1)">
-                    <image :src="dish.image" :alt="dish.name" class="dish-image"></image>
-                    <view class="dish-title">{{ dish.name }}</view>
-                    <view class="dish-actions">
-                        <button :class="['like-button', { liked: dish.liked }]" @click="likeDish(index)">
-                            <span v-if="dish.liked">❤️</span>
-                            <span v-else>🤍</span>
-                        </button>
-                        <button class="delete-button" @click="deleteDish(index)">
-                            🗑️
-                        </button>
-                    </view>
-                </view>
-            </view>
-
-            <!-- 生成菜谱按钮 -->
-            <button class="generate-button fade-in-up delay-6" @click="generateRecipe">
-                {{$t('generate_recipe')}}
-            </button>
-        </view>
-
-
-        <!-- 推荐菜谱 -->
-        <view class="recipe-boxes" v-if="showRecipeBoxes">
-            <view class="box fade-in-up delay-6" @click="goToRecipe('dapanji')">
-                <image src="/static/images/dapanji.png" alt="大盘鸡" class="box-image"></image>
-                <view class="box-description">
-                    <text class="box-title">{{$t('recommended_recipe')}}</text>
-                    <text class="box-text">{{$t('recommended_recipe_info')}}</text>
-                </view>
-            </view>
-        </view>
-    </view>
+	<view class="recommendation-section">
+	    <text class="recommend-title">{{ $t('recommendation_title') }}</text>
+	
+	    <view class="dishes">
+	        <view class="dish" v-for="(dish, index) in dishes" :key="index"
+	            :class="'fade-in-up delay-' + (index + 1)">
+	            <image :src="dish.image" :alt="dish.name" class="dish-image"></image>
+	            <view class="dish-title">{{ dish.name }}</view>
+	            <view class="dish-actions">
+	                <button :class="['like-button', { liked: dish.liked }]" @click="likeDish(index)">
+	                    <span v-if="dish.liked">❤️</span>
+	                    <span v-else>🤍</span>
+	                </button>
+	                <button class="delete-button" @click="deleteDish(index)">
+	                    🗑️
+	                </button>
+	            </view>
+			</view>
+	    </view>
+		
+		<!-- 生成菜谱按钮 -->
+		<view class="button-container">
+		    <button class="generate-button fade-in-up delay-6" @click="generateRecipe">
+		        {{$t('change_food')}}
+		    </button>
+		    <button class="generate-button fade-in-up delay-6" @click="generateRecipe">
+		        {{$t('generate_recipe')}}
+		    </button>
+		</view>
+	</view>
+	   <view class="recipe-boxes" v-if="showRecipeBoxes">
+	            <view class="box fade-in-up delay-6" @click="goToRecipe('dapanji')">
+	                <image src="/static/images/dapanji.png" alt="大盘鸡" class="box-image"></image>
+	                <view class="box-description">
+	                    <text class="box-title">{{$t('recommended_recipe')}}</text>
+	                    <text class="box-text">{{$t('recommended_recipe_info')}}</text>
+	                </view>
+	            </view>
+	        </view>
 </template>
+
 
 <script setup>
 import { ref } from 'vue'
@@ -76,7 +71,8 @@ const availableNewDishes = ref([
 
 // 方法
 const generateRecipe = () => {
-    showRecipeBoxes.value = true
+	console.log("推荐菜谱");
+    showRecipeBoxes.value = true;
 }
 
 const goToRecipe = (recipeName) => {
@@ -88,18 +84,18 @@ const goToRecipe = (recipeName) => {
 
 // 喜欢菜品
 const likeDish = (index) => {
-    dishes.value[index].liked = !dishes.value[index].liked
+    dishes.value[index].liked = !dishes.value[index].liked;
     // 可以在这里添加进一步的处理，例如向后端发送喜欢状态
 }
 
 // 删除菜品
 const deleteDish = async (index) => {
-    const removedDish = dishes.value.splice(index, 1)[0]
+    const removedDish = dishes.value.splice(index, 1)[0];
     // 模拟向后端发送删除请求
-    await simulateBackendDelete(removedDish)
+    await simulateBackendDelete(removedDish);
     // 模拟从后端获取新的菜品
-    const newDish = await simulateFetchNewDish()
-    dishes.value.push(newDish)
+    const newDish = await simulateFetchNewDish();
+    dishes.value.push(newDish);
 }
 
 // 模拟删除请求
@@ -107,7 +103,7 @@ const simulateBackendDelete = (dish) => {
     return new Promise((resolve) => {
         console.log(`Simulating deletion of dish: ${dish.name}`)
         setTimeout(() => {
-            resolve()
+            resolve();
         }, 1000) // 模拟1秒的网络延迟
     })
 }
@@ -117,14 +113,14 @@ const simulateFetchNewDish = () => {
     return new Promise((resolve) => {
         if (availableNewDishes.value.length === 0) {
             // 如果没有更多新菜品，返回一个默认菜品
-            resolve({ name: t('default_dish'), image: 'https://cdn.pixabay.com/photo/2016/11/18/14/40/pasta-1836457_1280.jpg', liked: false })
-            return
+            resolve({ name: t('default_dish'), image: 'https://cdn.pixabay.com/photo/2016/11/18/14/40/pasta-1836457_1280.jpg', liked: false });
+            return;
         }
-        const randomIndex = Math.floor(Math.random() * availableNewDishes.value.length)
-        const newDish = availableNewDishes.value.splice(randomIndex, 1)[0]
-        console.log(`Simulating fetching new dish: ${newDish.name}`)
+        const randomIndex = Math.floor(Math.random() * availableNewDishes.value.length);
+        const newDish = availableNewDishes.value.splice(randomIndex, 1)[0];
+        console.log(`Simulating fetching new dish: ${newDish.name}`);
         setTimeout(() => {
-            resolve(newDish)
+            resolve(newDish);
         }, 1000) // 模拟1秒的网络延迟
     })
 }
@@ -272,19 +268,32 @@ const simulateFetchNewDish = () => {
     }
 
     /* 生成菜谱按钮 */
-    .generate-button {
-        background-color: var(--primary-color);
-        color: #ffffff;
-        padding: 20rpx 40rpx;
-        border: none;
-        border-radius: 30rpx;
-        font-size: 32rpx;
-        cursor: pointer;
-        margin: 30rpx auto 0;
-        opacity: 0;
-        transform: translateY(20px);
-        animation: fadeInUp 0.5s forwards;
-    }
+	.button-container {
+	    display: flex;
+	    justify-content: space-between; /* 按钮左右排布 */
+	    width: 75%;
+	    gap: 20rpx; /* 按钮之间的间距 */
+	}
+	
+	.generate-button {
+		background-color: var(--primary-color);
+		color: #ffffff;
+		padding: 20rpx 40rpx;
+		border: none;
+		border-radius: 30rpx;
+		font-size: 32rpx;
+		cursor: pointer;
+		opacity: 0;
+		transform: translateY(20px);
+		animation: fadeInUp 0.5s forwards;
+		width: auto; /* 修改为自适应宽度 */
+		margin: 0; /* 去除按钮的默认外边距 */
+	}
+
+	.recommendation-section button {
+		width: auto;
+		margin: 0 10rpx;
+	}
 
     /* 推荐菜谱 */
     .recipe-boxes {

@@ -60,7 +60,7 @@ const removePreference = (index) => {
     url: 'http://122.51.231.155:8080/preferences',
     method: 'DELETE',
     data: {
-      preference_name: preferenceToRemove.key // 使用存储的 key 字段
+		preference_name: preferenceToRemove.key // 使用存储的 key 字段
     },
     success: (res) => {
       if (res.statusCode === 200) {
