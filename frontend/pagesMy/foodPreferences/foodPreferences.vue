@@ -32,30 +32,47 @@
 <script setup>
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+
 const { t, locale } = useI18n();
 
-
 const preferences = ref([
-  { name: t('foodpreference_greeting'), icon: 'https://via.placeholder.com/50' },
+  { name: t('foodpreference_greeting'), key: 'foodpreference_greeting', icon: 'https://via.placeholder.com/50' },
 ]);
 
 const preferenceOptions = ref([
-  { name: t('highProtein'), icon: 'https://via.placeholder.com/50' },
-  { name: t('highEnergy'), icon: 'https://via.placeholder.com/50' },
-  { name: t('lowFat'), icon: 'https://via.placeholder.com/50' },
-  { name: t('lowCH'), icon: 'https://via.placeholder.com/50' },
-  { name: t('lowsodium'), icon: 'https://via.placeholder.com/50' },
-  { name: t('vegan'), icon: 'https://via.placeholder.com/50' },
-  { name: t('vegetarian'), icon: 'https://via.placeholder.com/50' },
-  { name: t('glulenFree'), icon: 'https://via.placeholder.com/50' },
-  { name: t('alcoholFree'), icon: 'https://via.placeholder.com/50' },
-  { name: t('dairyFree'), icon: 'https://via.placeholder.com/50' },
+  { name: t('highProtein'), key: 'highProtein', icon: 'https://via.placeholder.com/50' },
+  { name: t('highEnergy'), key: 'highEnergy', icon: 'https://via.placeholder.com/50' },
+  { name: t('lowFat'), key: 'lowFat', icon: 'https://via.placeholder.com/50' },
+  { name: t('lowCH'), key: 'lowCH', icon: 'https://via.placeholder.com/50' },
+  { name: t('lowsodium'), key: 'lowsodium', icon: 'https://via.placeholder.com/50' },
+  { name: t('vegan'), key: 'vegan', icon: 'https://via.placeholder.com/50' },
+  { name: t('vegetarian'), key: 'vegetarian', icon: 'https://via.placeholder.com/50' },
+  { name: t('glutenFree'), key: 'glutenFree', icon: 'https://via.placeholder.com/50' },
+  { name: t('alcoholFree'), key: 'alcoholFree', icon: 'https://via.placeholder.com/50' },
+  { name: t('dairyFree'), key: 'dairyFree', icon: 'https://via.placeholder.com/50' },
 ]);
 
 const showModal = ref(false);
 
 const removePreference = (index) => {
-  preferences.value.splice(index, 1);
+  const preferenceToRemove = preferences.value[index];
+  uni.request({
+    url: 'http://122.51.231.155:8080/preferences',
+    method: 'DELETE',
+    data: {
+      preference_name: preferenceToRemove.key // 使用存储的 key 字段
+    },
+    success: (res) => {
+      if (res.statusCode === 200) {
+        console.log(res.data.message); // 打印成功信息
+        // 删除本地数组中的偏好
+        preferences.value.splice(index, 1);
+      }
+    },
+    fail: (err) => {
+      console.error('Error removing preference:', err);
+    }
+  });
 };
 
 const showPreferenceOptions = () => {
@@ -67,8 +84,24 @@ const closeModal = () => {
 };
 
 const selectPreference = (option) => {
-  preferences.value.push({ name: option.name, icon: option.icon });
-  closeModal();
+  uni.request({
+    url: 'http://122.51.231.155:8080/preferences',
+    method: 'POST',
+    data: {
+      preference_name: option.key // 使用存储的 key 字段
+    },
+    success: (res) => {
+      if (res.statusCode === 200) {
+        console.log(res.data.message); // 打印成功信息
+        // 将新的偏好添加到本地
+        preferences.value.push({ name: option.name, key: option.key, icon: option.icon });
+        closeModal();
+      }
+    },
+    fail: (err) => {
+      console.error('Error adding preference:', err);
+    }
+  });
 };
 </script>
 
