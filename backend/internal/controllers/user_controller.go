@@ -97,7 +97,7 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
             OpenID:     wxResponse.OpenID,
             SessionKey: wxResponse.SessionKey,
             Nickname:   authRequest.Nickname,
-            FamilyID:   0,
+            FamilyID:   nil,
             CreatedAt:  time.Now(),
             UpdatedAt:  time.Now(),
             LikedNews:  []models.News{},
@@ -266,3 +266,10 @@ func (uc *UserController) SetAvatar(c *gin.Context) {
     log.Println("用户头像设置成功:", relativePath)
     c.JSON(http.StatusOK, gin.H{"message": "Avatar updated successfully", "avatar_url": relativePath})
 }
+
+//TODO
+// 查看自己的收藏新闻
+
+// 查看自己的点赞新闻
+
+// 查看自己的浏览新闻

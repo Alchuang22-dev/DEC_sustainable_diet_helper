@@ -69,6 +69,8 @@
 				"path": "video_detail/video_detail"
 			}, {
 				"path": "web_detail/web_detail"
+			}, {
+				"path": "create_news/create_news"
 			}]
 		},
 		{

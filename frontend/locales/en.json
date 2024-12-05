@@ -293,5 +293,17 @@
 	
 	"enterNickname": "Enter Nickname",
 	"Nickname": "Nickname",
-	"needNickname": "please enter nickname"
+	"needNickname": "please enter nickname",
+
+	//createNews
+	"putin_title": "Put in title...",
+	"putin_introduction": "Put in introduction...",
+	"add_description": "Add image description",
+	"add_words": "Add words module",
+	"add_image": "Add figure module",
+	"release_but": "Release",
+	"save_draft": "Save draft",
+	"issue_confirm": "Confirm",
+	"ano_issue": "Anonymous release",
+	"confirm_issue": "Release",
 }
