@@ -7,8 +7,8 @@
     </view>
     <view class="nickname">
       <text>{{ $t('Nickname') }}</text>
-      <input type="nickname" class="weui-input" :value="nickName" @blur="bindblur"
-        :placeholder= "$t('enterNickname')" @input="bindinput"/>
+      <input type="nickname" class="weui-input" :value="nickName" @blur="bindBlur"
+        :placeholder= "$t('enterNickname')" @input="bindInput"/>
     </view>
 
     <view class="btn">
@@ -53,6 +53,8 @@ function bindBlur(e) {
 
 // 绑定昵称输入框输入时的事件
 function bindInput(e) {
+	console.log("绑定昵称");
+	console.log(e.detail.value);
   nickName.value = e.detail.value; // 实时更新昵称
 }
 
@@ -82,7 +84,6 @@ function onChooseAvatar(e) {
   });
 }
 
-// 提交表单
 async function onSubmit() {
   if (nickName.value === '') {
     uni.showToast({
@@ -104,8 +105,7 @@ async function onSubmit() {
     if (!loginRes.code) {
       throw new Error('微信登录失败，请重试');
     }
-	console.log(loginRes.code);
-	console.log(nickName.value);
+
     // 发送登录凭证和昵称到后端进行微信认证
     uni.showLoading({
       title: '登录中',
@@ -124,41 +124,46 @@ async function onSubmit() {
       });
     });
 
-    if (authRes.data.code !== 200) {
-      throw new Error(authRes.data.message || '登录失败，请重试');
+    // 打印返回的数据，调试用
+	console.log("返回的完整响应：", authRes);
+    console.log("后端返回的数据：", authRes.data);
+	console.log("后端返回的数据：", authRes.code);
+	console.log("code", authRes.statusCode);
+
+    // 检查 code 是否是 200
+    if (authRes.statusCode !== 200) {
+      throw new Error(authRes.data.message || '登录失败');
     }
 
-    const { token, user } = authRes.data.data;
+    // 获取 token 和 user 数据
+    const { token } = authRes.data.token;
+	const { user } = authRes.data.user;
+	console.log(authRes.data.user);
 
     // 保存 token 和用户信息到本地存储
     uni.setStorageSync('token', token);
     uni.setStorageSync('userInfo', {
-      nickName: user.nickname,
-      avatarUrl: user.avatar_url || '/static/images/index/background_img.jpg',
+      nickName: authRes.data.user.nickname,
+      avatarUrl: authRes.data.user.avatar_url || '/static/images/index/background_img.jpg',
     });
 
     // 更新 Pinia 用户存储
-    userStore.setUid(user.id);
+    userStore.setUid(authRes.data.user.id);
     userStore.setIsLoggedIn(true);
-    //userStore.setUserInfo({
-    //  id: user.id,
-    //  nickname: user.nickname,
-    //  avatar_url: user.avatar_url,
-    //});
 
     uni.showToast({
       title: '登录成功',
       icon: 'success',
       duration: 2000,
     });
-
+	login();
     // 如果用户选择了头像，并且头像不是默认头像，则上传头像
     if (avatarUrl.value && avatarUrl.value !== '/static/images/index/background_img.jpg') {
       await uploadAvatar(token, avatarUrl.value);
     }
 
     // 跳转到首页
-    login();
+    //login();
   } catch (error) {
     uni.showToast({
       title: error.message || '登录失败，请重试',
@@ -170,11 +175,13 @@ async function onSubmit() {
   }
 }
 
+
+
 // 上传头像
 function uploadAvatar(token, filePath) {
   return new Promise((resolve, reject) => {
     uni.uploadFile({
-      url: 'http://122.51.231.155:8080/users/avatar', // 替换为实际的头像上传接口
+      url: 'http://122.51.231.155:8080/users/set_avator', // 替换为实际的头像上传接口
       filePath: filePath,
       name: 'avatar', // 根据后端要求，字段名为 "avatar"
       header: {
