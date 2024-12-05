@@ -1,4 +1,4 @@
-// internal/routes/food_preference.go
+// internal/routes/food_preference_routes.go
 package routes
 
 
