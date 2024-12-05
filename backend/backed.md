@@ -96,7 +96,7 @@
   关联的制作视频
   相关联的食物类型
 
-# 可持续饮食助手 API 文档
+# 可持续饮食助手 API 文档 v1.0
 
 ## 目录
 - [通用说明](#通用说明)
@@ -108,7 +108,7 @@
 
 ### Base URL
 ```
-https://122.51.231.155/
+https://api.example.com
 ```
 
 ### 认证方式
@@ -117,9 +117,19 @@ https://122.51.231.155/
 Authorization: Bearer <your_jwt_token>
 ```
 
+### 状态码说明
+- 200: 成功
+- 201: 创建成功
+- 400: 请求参数错误
+- 401: 未认证
+- 403: 权限不足
+- 404: 资源不存在
+- 500: 服务器内部错误
+
 ### 响应格式
-所有响应均为JSON格式，包含以下基本结构：
-- 成功响应：HTTP 2xx
+所有响应均为JSON格式：
+
+**成功响应 (HTTP 2xx)**
 ```json
 {
     "message": "操作成功信息",
@@ -128,19 +138,20 @@ Authorization: Bearer <your_jwt_token>
     }
 }
 ```
-- 错误响应：HTTP 4xx/5xx
+
+**错误响应 (HTTP 4xx/5xx)**
 ```json
 {
     "error": "错误信息"
 }
 ```
 
-## 用户相关
+## 用户相关 API
 
-### 微信登录/注册
-**POST** `/auth/wechat`
+### 1. 微信登录/注册
+**POST** `/users/auth`
 
-用微信Code进行登录或注册。
+使用微信登录凭证进行登录或注册。
 
 **请求体**：
 ```json
@@ -150,7 +161,7 @@ Authorization: Bearer <your_jwt_token>
 }
 ```
 
-**响应**：
+**成功响应 (200)**：
 ```json
 {
     "token": "jwt_token",
@@ -162,8 +173,8 @@ Authorization: Bearer <your_jwt_token>
 }
 ```
 
-### 设置用户昵称
-**PUT** `/user/nickname`
+### 2. 设置用户昵称
+**PUT** `/users/{id}/set_nickname`
 
 **请求头**：
 ```
@@ -177,7 +188,7 @@ Authorization: Bearer <token>
 }
 ```
 
-**响应**：
+**成功响应 (200)**：
 ```json
 {
     "message": "Nickname updated successfully",
@@ -185,8 +196,8 @@ Authorization: Bearer <token>
 }
 ```
 
-### 设置用户头像
-**PUT** `/user/avatar`
+### 3. 设置用户头像
+**PUT** `/users/{id}/set_avator`
 
 **请求头**：
 ```
@@ -194,10 +205,10 @@ Authorization: Bearer <token>
 Content-Type: multipart/form-data
 ```
 
-**请求参数**：
-- `avatar`: 文件(jpg格式)
+**表单参数**：
+- `avatar`: File (必需，jpg格式图片)
 
-**响应**：
+**成功响应 (200)**：
 ```json
 {
     "message": "Avatar updated successfully",
@@ -205,10 +216,10 @@ Content-Type: multipart/form-data
 }
 ```
 
-## 新闻相关
+## 新闻相关 API
 
-### 上传新闻
-**POST** `/news`
+### 1. 上传新闻
+**POST** `/news/upload`
 
 **请求头**：
 ```
@@ -243,7 +254,7 @@ Content-Type: application/json
 }
 ```
 
-**响应**：
+**成功响应 (201)**：
 ```json
 {
     "id": 1,
@@ -260,15 +271,15 @@ Content-Type: application/json
 }
 ```
 
-### 获取新闻详情
+### 2. 获取新闻详情
 **GET** `/news/{id}`
 
-**请求头**：
-```
-Authorization: Bearer <token>
-```
+无需认证。
 
-**响应**：
+**路径参数**：
+- `id`: number (必需，新闻ID)
+
+**响应 (200)**：
 ```json
 {
     "id": 1,
@@ -296,74 +307,28 @@ Authorization: Bearer <token>
 }
 ```
 
-### 获取新闻列表
-**GET** `/news`
-
-**请求头**：
+### 3. 新闻互动 API
+以下所有互动API都需要认证头：
 ```
 Authorization: Bearer <token>
 ```
 
-**查询参数**：
-- `category`: string (可选，新闻类别)
-- `page`: number (可选，默认1)
-- `size`: number (可选，默认10)
-- `sort_by`: string (可选，排序字段：upload_time/view_count/like_count)
-- `order`: string (可选，排序方式：asc/desc)
+#### 点赞相关
+- **点赞**: POST `/news/like`
+- **取消点赞**: POST `/news/cancel_like`
 
-**响应**：
-```json
-{
-    "total": 100,
-    "page": 1,
-    "size": 10,
-    "data": [
-        {
-            "id": 1,
-            "title": "标题",
-            "description": "描述",
-            "upload_time": "时间",
-            "view_count": 0,
-            "share_count": 0,
-            "like_count": 0,
-            "favorite_count": 0,
-            "dislike_count": 0,
-            "news_type": "类型",
-            "author_name": "作者",
-            "author_avatar": "头像",
-            "tags": ["标签"],
-            "extra_field": "预览信息"
-        }
-    ]
-}
-```
+#### 收藏相关
+- **收藏**: POST `/news/favourite`
+- **取消收藏**: POST `/news/cancel_favourite`
 
-### 新闻互动API
+#### 点踩相关
+- **点踩**: POST `/news/dislike`
+- **取消点踩**: POST `/news/cancel_dislike`
 
-#### 点赞新闻
-**POST** `/news/{id}/like`
+#### 查看新闻
+- **记录浏览**: POST `/news/view`
 
-#### 取消点赞
-**DELETE** `/news/{id}/like`
-
-#### 收藏新闻
-**POST** `/news/{id}/favorite`
-
-#### 取消收藏
-**DELETE** `/news/{id}/favorite`
-
-#### 点踩新闻
-**POST** `/news/{id}/dislike`
-
-#### 取消点踩
-**DELETE** `/news/{id}/dislike`
-
-所有互动API都需要以下请求头：
-```
-Authorization: Bearer <token>
-```
-
-响应格式：
+所有互动API的响应格式：
 ```json
 {
     "message": "操作成功消息",
@@ -371,7 +336,7 @@ Authorization: Bearer <token>
 }
 ```
 
-### 添加评论
+### 4. 评论 API
 **POST** `/news/comment`
 
 **请求头**：
@@ -389,29 +354,29 @@ Authorization: Bearer <token>
 }
 ```
 
-**响应**：
+**成功响应 (201)**：
 ```json
 {
     "message": "Comment added successfully",
     "comment": {
         "id": 1,
-        "content": "内容",
+        "content": "评论内容",
         "user_id": 1,
-        "publish_time": "时间",
+        "publish_time": "2024-12-05T00:00:00Z",
         "like_count": 0
     }
 }
 ```
 
-## 家庭相关
+## 家庭相关 API
 
-### 创建家庭
-**POST** `/family`
-
-**请求头**：
+所有家庭相关API都需要以下认证头：
 ```
 Authorization: Bearer <token>
 ```
+
+### 1. 创建家庭
+**POST** `/families/create`
 
 **请求体**：
 ```json
@@ -420,7 +385,7 @@ Authorization: Bearer <token>
 }
 ```
 
-**响应**：
+**成功响应 (201)**：
 ```json
 {
     "message": "Family created successfully",
@@ -432,15 +397,10 @@ Authorization: Bearer <token>
 }
 ```
 
-### 查看家庭详情
-**GET** `/family`
+### 2. 查看家庭详情
+**GET** `/families/details`
 
-**请求头**：
-```
-Authorization: Bearer <token>
-```
-
-**响应**：
+**成功响应 (200)**：
 ```json
 {
     "id": 1,
@@ -464,18 +424,13 @@ Authorization: Bearer <token>
 }
 ```
 
-### 搜索家庭
-**GET** `/family/search`
-
-**请求头**：
-```
-Authorization: Bearer <token>
-```
+### 3. 搜索家庭
+**GET** `/families/search`
 
 **查询参数**：
 - `family_id`: string (必需，家庭唯一标识)
 
-**响应**：
+**成功响应 (200)**：
 ```json
 {
     "id": 1,
@@ -485,28 +440,23 @@ Authorization: Bearer <token>
 }
 ```
 
-### 申请加入家庭
-**POST** `/family/{id}/join`
+### 4. 家庭成员管理 API
 
-**请求头**：
-```
-Authorization: Bearer <token>
-```
+#### 申请加入家庭
+**POST** `/families/{id}/join`
 
-**响应**：
+**路径参数**：
+- `id`: number (必需，家庭ID)
+
+**成功响应 (200)**：
 ```json
 {
     "message": "Join request sent successfully"
 }
 ```
 
-### 管理员审批加入申请
-**POST** `/family/admit`
-
-**请求头**：
-```
-Authorization: Bearer <token>
-```
+#### 批准加入申请
+**POST** `/families/admit`
 
 **请求体**：
 ```json
@@ -515,22 +465,8 @@ Authorization: Bearer <token>
 }
 ```
 
-**响应**：
-```json
-{
-    "message": "User successfully admitted to the family",
-    "family_id": 1,
-    "user_id": 1
-}
-```
-
-### 拒绝加入申请
-**POST** `/family/reject`
-
-**请求头**：
-```
-Authorization: Bearer <token>
-```
+#### 拒绝加入申请
+**POST** `/families/reject`
 
 **请求体**：
 ```json
@@ -539,58 +475,40 @@ Authorization: Bearer <token>
 }
 ```
 
-**响应**：
+#### 取消加入申请
+**POST** `/families/cancel_join`
+
+#### 查看待处理的家庭申请
+**POST** `/families/pending_family_details`
+
+**成功响应 (200)**：
 ```json
 {
-    "message": "User's join request rejected successfully",
-    "family_id": 1,
-    "user_id": 1
+    "id": 1,
+    "name": "家庭名称",
+    "token": "家庭标识"
 }
 ```
 
-### 取消加入申请
-**DELETE** `/family/join`
+### 错误处理
+所有API在遇到错误时会返回对应的HTTP状态码和错误信息：
 
-**请求头**：
-```
-Authorization: Bearer <token>
-```
-
-**响应**：
 ```json
 {
-    "message": "Join request canceled successfully",
-    "family_id": 1,
-    "user_id": 1
+    "error": "具体错误信息"
 }
 ```
 
-### 管理员权限设置
-#### 设置为普通成员
-**POST** `/family/set-member`
+常见错误：
+- 未认证：401 Unauthorized
+- 参数错误：400 Bad Request
+- 权限不足：403 Forbidden
+- 资源不存在：404 Not Found
+- 服务器错误：500 Internal Server Error
 
-#### 设置为管理员
-**POST** `/family/set-admin`
-
-两个API都需要以下：
-
-**请求头**：
-```
-Authorization: Bearer <token>
-```
-
-**请求体**：
-```json
-{
-    "user_id": 1  // 必需，目标用户ID
-}
-```
-
-**响应**：
-```json
-{
-    "message": "Successfully set user to member/admin",
-    "family_id": 1,
-    "user_id": 1
-}
-```
+### 注意事项
+1. 所有需要认证的API必须在请求头中包含有效的JWT token
+2. 文件上传的容量限制为5MB
+3. 所有时间字段均使用ISO 8601格式
+4. API的版本信息包含在URL路径中
+5. 分页相关的参数默认值：page=1, size=10
