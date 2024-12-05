@@ -27,6 +27,11 @@
       >
         环保专栏
       </button>
+	  <button
+	    @click="createNews()"
+	  >
+	    写文章
+	  </button>
     </view>
 
     <!-- Loading Indicator -->
@@ -52,9 +57,6 @@
         </view>
         <view class="news-description">{{ item.description }}</view>
       </view>
-	  <view v-if="isLoggedIn" class="addnewsbutton">
-	    <button @click="CreateNews">+</button>
-	  </view>
     </view>
   </view>
 </template>
@@ -110,7 +112,9 @@ function refreshPage() {
 
 //跳转至新建图文页面
 function createNews(){
-	
+	uni.navigateTo({
+		url: "/pagesNews/create_news/create_news",
+	})
 }
 
 // 异步函数处理下拉刷新
@@ -189,23 +193,37 @@ body {
 }
 
 /* Header Section */
+/* Header Section */
 .header {
   display: flex;
   align-items: center;
   padding: 10px;
   background-color: #ffffff;
   border-bottom: 1px solid #e0e0e0;
-  justify-content: space-around;
+  justify-content: flex-start;
+  position: fixed; /* 固定头部 */
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 10; /* 确保在页面的最上层 */
+  overflow-x: scroll; /* 允许水平滚动 */
+  white-space: nowrap; /* 防止内容换行 */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 可选，增加阴影效果 */
 }
 
+/* 防止按钮换行，确保每个按钮都保持在一行 */
 .header button {
   border: none;
   background-color: transparent;
   font-size: 16px;
   cursor: pointer;
   transition: color 0.3s;
+  white-space: nowrap; /* 防止按钮文本换行 */
+  padding: 5px 15px;
+  flex-shrink: 0; /* 防止按钮被压缩 */
 }
 
+/* 选中的按钮样式 */
 .header button.active {
   color: #4caf50; /* 选中状态颜色 */
   font-weight: bold; /* 选中状态加粗 */
@@ -246,50 +264,13 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* 添加图文按钮 */
-/* AddNewsButton */
-.addnewsbutton {
-  position: fixed;               /* 固定定位 */
-  bottom: 20px;                  /* 距离底部20px，根据需要调整 */
-  left: 50%;                     /* 水平居中 */
-  transform: translateX(-50%);   /* 精确居中 */
-  width: 90%;                    /* 宽度为页面的90%，可根据需求调整为100% */
-  padding: 8px 0;                /* 减小上下内边距以减小高度 */
-  background-color: #ffffff;
-  text-align: center;
-  z-index: 1000;                 /* 确保按钮在最上层 */
-  border-radius: 25px;           /* 圆角效果 */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); /* 阴影效果 */
-}
-
-.addnewsbutton button {
-  width: 100%;
-  padding: 8px 0;                 /* 减小按钮内边距 */
-  background-color: #4caf50;      /* 背景色 */
-  color: white;
-  font-size: 24px;
-  font-weight: bold;
-  border: none;
-  border-radius: 20px;            /* 圆角按钮 */
-  cursor: pointer;
-  transition: background-color 0.3s, transform 0.2s;
-}
-
-.addnewsbutton button:hover {
-  background-color: #45a049;      /* Hover 状态颜色 */
-  transform: scale(1.05);         /* 放大效果 */
-}
-
-.addnewsbutton button:active {
-  background-color: #388e3c;      /* 按下状态颜色 */
-  transform: scale(1);            /* 按下时恢复正常大小 */
-}
+/* 修改头部 */
 
 /* News Section */
 .news-section {
   padding: 20px;
-  padding-bottom: 80px;           /* 为固定按钮预留空间，确保内容不被遮挡 */
-  position: relative;
+  padding-top: 70px; /* 根据header的高度调整，确保内容不被遮挡 */
+  padding-bottom: 80px;
 }
 
 .news-item {
