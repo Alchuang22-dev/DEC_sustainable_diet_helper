@@ -10,6 +10,8 @@ import (
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
+
+    "log"
 )
 
 type FoodPreferenceController struct {
@@ -36,6 +38,8 @@ func validatePreference(preferenceName string) bool {
 
 // AddFoodPreference 添加食物偏好
 func (fpc *FoodPreferenceController) AddFoodPreference(c *gin.Context) {
+    rawData, _ := c.GetRawData()
+    log.Printf("原始请求数据: %s\n", string(rawData))
     userID, exists := c.Get("user_id")
     if !exists {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -51,8 +55,9 @@ func (fpc *FoodPreferenceController) AddFoodPreference(c *gin.Context) {
         return
     }
 
-    // 验证偏好是否存在
+    // 验证偏好是否存在 
     if !validatePreference(request.PreferenceName) {
+        log.Printf("偏好不存在: %s\n", request.PreferenceName)
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid preference name"})
         return
     }
@@ -78,7 +83,7 @@ func (fpc *FoodPreferenceController) AddFoodPreference(c *gin.Context) {
 
     c.JSON(http.StatusOK, gin.H{
         "message": "Food preference added successfully",
-        "preference": preference,
+        "preference": preference.Name,
     })
 }
 
@@ -113,6 +118,7 @@ func (fpc *FoodPreferenceController) DeleteFoodPreference(c *gin.Context) {
 
     c.JSON(http.StatusOK, gin.H{
         "message": "Food preference deleted successfully",
+		"preference": request.PreferenceName,
     })
 }
 // 添加新的方法到 FoodPreferenceController

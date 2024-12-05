@@ -78,7 +78,7 @@ func main() {
     // 注册家庭路由
     routes.RegisterFamilyRoutes(router, db)
 
-    // 注册偏好路由
+    // 注册食材偏好路由
     routes.RegisterFoodPreferenceRoutes(router, db)
 
     // 启动服务器

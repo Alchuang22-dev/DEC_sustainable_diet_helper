@@ -169,6 +169,7 @@
 	"dish_12": "celery",
 	"default_dish": "No more dishes...",
 	"generate_recipe": "Generate Recipe",
+	"change_food": "Change food",
 	"recommended_recipe": "Recommended Recipe",
 	"recommended_recipe_info": "Based on your region, we recommend Dapanji!",
 	"recommendation_title": "Suitable for Your Area Today",
@@ -240,6 +241,10 @@
 	"family_name_required": "Family name cannot be empty",
 	"family_id_placeholder": "Enter family ID",
 	"family_id_required": "Family ID cannot be empty",
+	"family_not_found": "Family not found",
+	"create_family_failed": "Failed to create family",
+	"not_admin": "Only the family admin can do this",
+	"join_family_failed": "Failed to join family",
 	"confirm": "Confirm",
 	"cancel": "Cancel",
 	"carbon_emission_unit": "Carbon Emission(Kg)",
@@ -302,5 +307,5 @@
 	"save_draft": "Save draft",
 	"issue_confirm": "Confirm",
 	"ano_issue": "Anonymous release",
-	"confirm_issue": "Release",
+	"confirm_issue": "Release"
 }
