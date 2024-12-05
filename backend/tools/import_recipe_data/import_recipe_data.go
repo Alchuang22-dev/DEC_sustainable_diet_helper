@@ -1,5 +1,5 @@
-// tools/import_recipe_data.go
-package import_recipe_data
+// cmd/import_recipe_data.go
+package main
 
 import (
     "encoding/csv"
@@ -282,12 +282,14 @@ func main() {
 
     // 导入食物数据
     log.Println("Starting food data import...")
+
     if err := importFoodsData(db, "../data/foods_dataset/foods_dataset.csv"); err != nil {
         log.Fatal("Error importing foods data:", err)
     }
 
     // 导入菜谱数据
     log.Println("Starting recipe data import...")
+
     if err := importRecipesData(db, "../data/recipes_dataset/recipes_dataset.csv"); err != nil {
         log.Fatal("Error importing recipes data:", err)
     }

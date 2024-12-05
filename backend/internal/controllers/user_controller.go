@@ -27,18 +27,16 @@ func NewUserController(db *gorm.DB) *UserController {
 func (uc *UserController) WeChatAuth(c *gin.Context) {
     log.Println("WeChatAuth 被调用")
 
-    // 定义请求体结构
-    var authRequest struct {
-        Code     string `json:"code" binding:"required"` // 微信登录凭证
-        Nickname string `json:"nickname"`               // 可选用户昵称
-    }
-
-    // 绑定请求体
-    if err := c.ShouldBindJSON(&authRequest); err != nil {
-        log.Println("绑定JSON失败:", err)
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+    code := c.PostForm("code")
+    nickname := c.PostForm("nickname")
+    
+    if code == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Code is required"})
         return
     }
+
+    // 获取上传的文件
+    file, _ := c.FormFile("avatar") // 头像文件是可选的
 
     // 调用微信 API 获取 open_id 和 session_key
     // 获取微信 API URL，优先使用环境变量
@@ -50,7 +48,7 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
     // 构建请求 URL
     wxAPI := fmt.Sprintf(
         "%s?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
-        wechatAPIURL, os.Getenv("APP_ID"), os.Getenv("APP_SECRET"), authRequest.Code,
+        wechatAPIURL, os.Getenv("APP_ID"), os.Getenv("APP_SECRET"), code,
     )
 
     resp, err := http.Get(wxAPI)
@@ -59,6 +57,8 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to call WeChat API"})
         return
     }
+    fmt.Println(resp.Body)
+
     defer resp.Body.Close()
 
     var wxResponse struct {
@@ -96,7 +96,7 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
         user = models.User{
             OpenID:     wxResponse.OpenID,
             SessionKey: wxResponse.SessionKey,
-            Nickname:   authRequest.Nickname,
+            Nickname:   nickname,
             FamilyID:   nil,
             CreatedAt:  time.Now(),
             UpdatedAt:  time.Now(),
@@ -111,15 +111,6 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
             user.Nickname = utils.GenerateRandomNickname()
         }
 
-        // 初始化头像路径为默认值
-        BaseUploadPath := os.Getenv("BASE_UPLOAD_PATH")
-        if BaseUploadPath == "" {
-            BaseUploadPath = "./uploads" // 默认路径
-        }
-        timestamp := time.Now().Unix()
-        relativePath := fmt.Sprintf("avatars/%d_%d.jpg", user.ID, timestamp)
-        user.AvatarURL = relativePath
-
         // 创建用户
         if err := uc.DB.Create(&user).Error; err != nil {
             log.Println("创建用户失败:", err)
@@ -127,12 +118,41 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
             return
         }
 
-        // 拷贝默认头像到新用户头像路径
-        defaultAvatarPath := fmt.Sprintf("%s/avatars/default.jpg", BaseUploadPath) // 默认头像路径
-        newAvatarPath := fmt.Sprintf("%s/%s", BaseUploadPath, relativePath)
-        if err := utils.CopyFile(defaultAvatarPath, newAvatarPath); err != nil {
-            log.Printf("复制默认头像失败: %v\n", err)
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default avatar"})
+        // 处理头像
+        BaseUploadPath := os.Getenv("BASE_UPLOAD_PATH")
+        if BaseUploadPath == "" {
+            BaseUploadPath = "./uploads"
+        }
+
+        var relativePath string
+        if file != nil {
+            // 保存用户上传的头像
+            timestamp := time.Now().Unix()
+            relativePath = fmt.Sprintf("avatars/%d_%d.jpg", user.ID, timestamp)
+            savePath := fmt.Sprintf("%s/%s", BaseUploadPath, relativePath)
+            if err := c.SaveUploadedFile(file, savePath); err != nil {
+                log.Println("保存用户上传的头像失败:", err)
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save uploaded avatar"})
+                return
+            }
+        } else {
+            // 使用默认头像
+            relativePath = "avatars/default.jpg"
+            defaultAvatarPath := fmt.Sprintf("%s/%s", BaseUploadPath, relativePath)
+            newAvatarPath := fmt.Sprintf("%s/avatars/%d_default.jpg", BaseUploadPath, user.ID)
+            if err := utils.CopyFile(defaultAvatarPath, newAvatarPath); err != nil {
+                log.Printf("复制默认头像失败: %v\n", err)
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default avatar"})
+                return
+            }
+            relativePath = fmt.Sprintf("avatars/%d_default.jpg", user.ID)
+        }
+
+        // 更新用户头像路径
+        user.AvatarURL = relativePath
+        if err := uc.DB.Save(&user).Error; err != nil {
+            log.Println("更新用户头像失败:", err)
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user avatar"})
             return
         }
     } else {
@@ -148,6 +168,10 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
         return
     }
+
+    fmt.Println(token)
+    fmt.Println(utils.GenerateJWT(1))
+    fmt.Println(utils.GenerateJWT(4))
 
     // 返回成功响应
     c.JSON(http.StatusOK, gin.H{
@@ -198,6 +222,7 @@ func (uc *UserController) SetNickname(c *gin.Context) {
 }
 
 // 设置头像
+// 设置头像
 func (uc *UserController) SetAvatar(c *gin.Context) {
     log.Println("SetAvatar 被调用")
 
@@ -230,26 +255,23 @@ func (uc *UserController) SetAvatar(c *gin.Context) {
 
     // 保存文件到服务器
     timestamp := time.Now().Unix()
-    savePath := fmt.Sprintf("%s/avatars/%d_%d.jpg", BaseUploadPath, user.ID, timestamp) // 文件路径
+    relativePath := fmt.Sprintf("avatars/%d_%d.jpg", user.ID, timestamp) // 文件的相对路径
+    savePath := fmt.Sprintf("%s/%s", BaseUploadPath, relativePath)       // 文件的完整路径
     if err := c.SaveUploadedFile(file, savePath); err != nil {
         log.Println("文件保存失败:", err)
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save file"})
         return
     }
 
-    // 删除旧头像文件
-    if user.AvatarURL != "" {
+    // 删除旧头像文件（如果存在）
+    if user.AvatarURL != "" && user.AvatarURL != "avatars/default.jpg" {
         oldPath := fmt.Sprintf("%s/%s", BaseUploadPath, user.AvatarURL)
         if err := os.Remove(oldPath); err != nil {
             log.Printf("无法删除旧头像文件: %s, 错误: %v\n", oldPath, err)
         }
     }
 
-    fmt.Printf("\n\ntimestamp")
-    fmt.Println(timestamp)
-
     // 更新用户头像路径
-    relativePath := fmt.Sprintf("avatars/%d_%d", user.ID, timestamp)
     user.AvatarURL = relativePath
     user.UpdatedAt = time.Now()
     if err := uc.DB.Save(&user).Error; err != nil {
@@ -257,11 +279,6 @@ func (uc *UserController) SetAvatar(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update avatar"})
         return
     }
-
-    var x models.User
-    uc.DB.Where("id=1").First((&x))
-    fmt.Println((x))
-    fmt.Println(relativePath)
 
     log.Println("用户头像设置成功:", relativePath)
     c.JSON(http.StatusOK, gin.H{"message": "Avatar updated successfully", "avatar_url": relativePath})

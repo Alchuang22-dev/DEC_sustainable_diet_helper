@@ -2,6 +2,7 @@
 package main
 
 import (
+    "os"
     "log"
 
     "github.com/gin-gonic/gin"
@@ -47,6 +48,14 @@ func main() {
 
     // 初始化Gin引擎
     router := gin.Default()
+    router.MaxMultipartMemory = 8 << 20 
+
+    // 配置静态文件服务
+    BaseUploadPath := os.Getenv("BASE_UPLOAD_PATH")
+    if BaseUploadPath == "" {
+        BaseUploadPath = "./upload" // 默认路径
+    }
+    router.Static("/static", BaseUploadPath)
 
     // 配置CORS
     router.Use(cors.New(cors.Config{
