@@ -240,6 +240,10 @@
 	"family_name_required": "家庭名称不能为空",
 	"family_id_placeholder": "请输入家庭ID",
 	"family_id_required": "家庭ID不能为空",
+	"family_not_found": "未找到该家庭",
+	"join_request_sent": "加入请求已发送",
+	"create_family_failed": "创建失败",
+	"not_admin": "只有管理员才能进行此操作",
 	"confirm": "确认",
 	"cancel": "取消",
 	"carbon_emission_unit": "碳排放（Kg）",
@@ -303,4 +307,7 @@
 	"issue_confirm": "发布确认",
 	"ano_issue": "匿名发布",
 	"confirm_issue": "确认发布",
+	"needNickname": "昵称不能为空",
+
+
 }
