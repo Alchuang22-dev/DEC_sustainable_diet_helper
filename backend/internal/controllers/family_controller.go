@@ -36,7 +36,7 @@ func (fc *FamilyController) CreateFamily(c *gin.Context) {
         c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
         return
     }
-    if user.FamilyID != 0 {
+    if user.FamilyID != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "User already belongs to a family"})
         return
     }
@@ -78,7 +78,7 @@ func (fc *FamilyController) CreateFamily(c *gin.Context) {
     }
 
     // 将家庭 ID 绑定到用户
-    user.FamilyID = family.ID
+    user.FamilyID = &family.ID
     if err := fc.DB.Save(&user).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to associate user with family"})
         return
@@ -221,7 +221,7 @@ func (fc *FamilyController) JoinFamily(c *gin.Context) {
     }
 
     // 检查是否已属于某个家庭
-    if user.FamilyID != 0 {
+    if user.FamilyID != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "You are already a member of a family"})
         return
     }
@@ -275,7 +275,7 @@ func (fc *FamilyController) AdmitJoinFamily(c *gin.Context) {
         return
     }
 
-    if adminUser.FamilyID == 0 {
+    if adminUser.FamilyID == nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
         return
     }
@@ -312,13 +312,13 @@ func (fc *FamilyController) AdmitJoinFamily(c *gin.Context) {
         return // TODO 错误处理
     }
 
-    if user.FamilyID != 0 {
+    if user.FamilyID != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "User has been in a family"})
         return // TODO 错误处理
     }
 
     // 更新用户的 FamilyID 和 PendingFamilyID 字段
-    user.FamilyID = family.ID
+    user.FamilyID = &family.ID
     user.PendingFamilyID = nil
     if err := fc.DB.Save(&user).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user's family information"})
@@ -384,7 +384,7 @@ func (fc *FamilyController) RejectJoinFamily(c *gin.Context) {
         return
     }
 
-    if adminUser.FamilyID == 0 {
+    if adminUser.FamilyID == nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
         return
     }
@@ -545,7 +545,7 @@ func (fc *FamilyController) SetMember(c *gin.Context) {
         return
     }
 
-    if adminUser.FamilyID == 0 {
+    if adminUser.FamilyID == nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
         return
     }
@@ -589,7 +589,7 @@ func (fc *FamilyController) SetMember(c *gin.Context) {
     }
 
     // 检查用户是否是家庭成员
-    if user.FamilyID != family.ID {
+    if user.FamilyID != &family.ID {
         c.JSON(http.StatusBadRequest, gin.H{"error": "The user is not in your family"})
         return
     }
@@ -647,7 +647,7 @@ func (fc *FamilyController) SetAdmin(c *gin.Context) {
         return
     }
 
-    if adminUser.FamilyID == 0 {
+    if adminUser.FamilyID == nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
         return
     }
@@ -691,7 +691,7 @@ func (fc *FamilyController) SetAdmin(c *gin.Context) {
     }
 
     // 检查用户是否是家庭成员
-    if user.FamilyID != family.ID {
+    if user.FamilyID != &family.ID {
         c.JSON(http.StatusBadRequest, gin.H{"error": "The user is not in your family"})
         return
     }
@@ -741,7 +741,7 @@ func (fc* FamilyController) LeaveFamily(c *gin.Context) {
         return
     }
 
-    if user.FamilyID == 0 {
+    if user.FamilyID == nil {
         c.JSON(http.StatusBadRequest, "You are not part of any family")
         return
     }
@@ -794,7 +794,7 @@ func (fc* FamilyController) LeaveFamily(c *gin.Context) {
             }
         }
 
-        user.FamilyID = 0
+        user.FamilyID = nil
         if err := fc.DB.Save(&user).Error; err != nil {
             c.JSON(http.StatusInternalServerError, gin.H{
                 "error": "Failed to update user's family information"})
