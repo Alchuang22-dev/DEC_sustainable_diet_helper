@@ -243,6 +243,7 @@
 	"family_not_found": "Family not found",
 	"create_family_failed": "Failed to create family",
 	"not_admin": "Only the family admin can do this",
+	"join_family_failed": "Failed to join family",
 	"confirm": "Confirm",
 	"cancel": "Cancel",
 	"carbon_emission_unit": "Carbon Emission(Kg)",

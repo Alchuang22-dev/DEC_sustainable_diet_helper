@@ -125,6 +125,9 @@
 		t
 	} = useI18n();
 
+  const token = uni.getStorageSync('token');
+  console.log('这个页面', token);
+
 	// Pinia 状态管理
 	const familyStore = useFamilyStore();
 	const family = computed(() => familyStore.family);
