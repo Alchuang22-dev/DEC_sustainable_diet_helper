@@ -90,7 +90,7 @@ func (fc *FamilyController) CreateFamily(c *gin.Context) {
         "family": gin.H{
             "id":    family.ID,
             "name":  family.Name,
-            "token": family.Token,
+            "family_id": family.Token,
         },
     })
 }
@@ -140,7 +140,7 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{
         "id":      user.Family.ID,
         "name":    user.Family.Name,
-        "token":   user.Family.Token,
+        "family_id":   user.Family.Token,
         "member_count": user.Family.MemberCount,
         "admins":  admins,
         "members": members,
@@ -156,7 +156,7 @@ func (fc *FamilyController) SearchFamily(c *gin.Context) {
     }
 
     // 获取 token 参数
-    token := c.Query("token")
+    token := c.Query("family_id")
     if token == "" {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Token is required"})
         return
@@ -177,7 +177,7 @@ func (fc *FamilyController) SearchFamily(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{
         "id":          family.ID,
         "name":        family.Name,
-        "token":       family.Token,
+        "family_id":       family.Token,
         "member_count": family.MemberCount,
     })
 }
