@@ -97,7 +97,7 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
             OpenID:     wxResponse.OpenID,
             SessionKey: wxResponse.SessionKey,
             Nickname:   authRequest.Nickname,
-            FamilyID:   0,
+            FamilyID:   nil,
             CreatedAt:  time.Now(),
             UpdatedAt:  time.Now(),
             LikedNews:  []models.News{},
