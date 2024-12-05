@@ -169,6 +169,7 @@
 	"dish_12": "芹菜",
 	"default_dish": "暂无菜品",
 	"generate_recipe": "生成菜谱",
+	"change_food": "更换食材",
 	"recommended_recipe": "推荐菜谱",
 	"recommended_recipe_info": "根据您所在的地区，推荐大盘鸡！",
 	"recommendation_title": "今日您的地区适宜",
@@ -308,7 +309,7 @@
 	"issue_confirm": "发布确认",
 	"ano_issue": "匿名发布",
 	"confirm_issue": "确认发布",
-	"needNickname": "昵称不能为空",
+	"needNickname": "昵称不能为空"
 
 
 }

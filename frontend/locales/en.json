@@ -169,6 +169,7 @@
 	"dish_12": "celery",
 	"default_dish": "No more dishes...",
 	"generate_recipe": "Generate Recipe",
+	"change_food": "Change food",
 	"recommended_recipe": "Recommended Recipe",
 	"recommended_recipe_info": "Based on your region, we recommend Dapanji!",
 	"recommendation_title": "Suitable for Your Area Today",
@@ -306,5 +307,5 @@
 	"save_draft": "Save draft",
 	"issue_confirm": "Confirm",
 	"ano_issue": "Anonymous release",
-	"confirm_issue": "Release",
+	"confirm_issue": "Release"
 }
