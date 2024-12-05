@@ -1,5 +1,5 @@
 // cmd/import_recipe_data.go
-package import_recipe_data
+package main
 
 import (
     "encoding/csv"
@@ -282,13 +282,13 @@ func main() {
 
     // 导入食物数据
     log.Println("Starting food data import...")
-    if err := importFoodsData(db, "foods_dataset.csv"); err != nil {
+    if err := importFoodsData(db, "/home/ubuntu/qiaoshenyu/DEC_sustainable_diet_helper/backend/data/food_dataset/foods_dataset.csv"); err != nil {
         log.Fatal("Error importing foods data:", err)
     }
 
     // 导入菜谱数据
     log.Println("Starting recipe data import...")
-    if err := importRecipesData(db, "recipes_dataset.csv"); err != nil {
+    if err := importRecipesData(db, "/home/ubuntu/qiaoshenyu/DEC_sustainable_diet_helper/backend/data/recipes_dataset/recipes_dataset.csv"); err != nil {
         log.Fatal("Error importing recipes data:", err)
     }
 
