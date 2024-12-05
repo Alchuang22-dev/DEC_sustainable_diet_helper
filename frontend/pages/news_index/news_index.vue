@@ -52,6 +52,9 @@
         </view>
         <view class="news-description">{{ item.description }}</view>
       </view>
+	  <view v-if="isLoggedIn" class="addnewsbutton">
+	    <button @click="CreateNews">+</button>
+	  </view>
     </view>
   </view>
 </template>
@@ -59,45 +62,23 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useNewsStore } from '@/stores/news_list';
-import {
-		useI18n
-  } from 'vue-i18n'
-import { onShow } from '@dcloudio/uni-app';
-import { onPullDownRefresh } from '@dcloudio/uni-app';
+import { useI18n } from 'vue-i18n';
+import { onShow, onPullDownRefresh } from '@dcloudio/uni-app';
 import { storeToRefs } from 'pinia';
+import { useUserStore } from '@/stores/user'; // 引入用户存储
 
 const newsStore = useNewsStore();
+const userStore = useUserStore(); // 使用用户存储
 
 const activeIndex = ref(null);
+const { uid, isLoggedIn } = storeToRefs(userStore); // 从存储中解构
 
 // 从 Store 获取数据和方法
-// 使用 storeToRefs 保持响应性
 const { filteredNewsItems, selectedSection, isRefreshing } = storeToRefs(newsStore);
 const { setSection, refreshNews, fetchNews } = newsStore;
 
-const { t, } = useI18n()
+const { t } = useI18n();
 
-onShow(() => {
-      uni.setNavigationBarTitle({
-      title: t('news_index')
-    })
-    uni.setTabBarItem({
-      index: 0,
-      text: t('index')
-    })
-    uni.setTabBarItem({
-      index: 1,
-      text: t('tools_index')
-    })
-    uni.setTabBarItem({
-      index: 2,
-      text: t('news_index')
-    })
-    uni.setTabBarItem({
-      index: 3,
-      text: t('my_index')
-    })
-});
 // 页面跳转方法
 function navigateTo(link, name) {
   setTimeout(() => {
@@ -127,6 +108,11 @@ function refreshPage() {
   refreshNews();
 }
 
+//跳转至新建图文页面
+function createNews(){
+	
+}
+
 // 异步函数处理下拉刷新
 const handlePullDownRefresh = async () => {
   try {
@@ -138,12 +124,45 @@ const handlePullDownRefresh = async () => {
   }
 };
 
+function checkLoginStatus() {
+  console.log("in check");
+  const query = userStore.uid;
+  console.log(query);
+  if (query && query !== '') {
+    uid.value = query;
+    isLoggedIn.value = true;
+  } else {
+    isLoggedIn.value = false;
+  }
+}
+
 // 使用 uni.onPullDownRefresh() 将处理函数绑定到下拉刷新事件
 onPullDownRefresh(handlePullDownRefresh);
 
-// 在组件挂载时获取数据
-onMounted(() => {
-  fetchNews();
+onShow(() => {
+	isLoggedIn.value = false; // 显式设置为未登录状态
+    uni.setNavigationBarTitle({
+      title: t('news_index')
+    })
+    uni.setTabBarItem({
+      index: 0,
+      text: t('index')
+    })
+    uni.setTabBarItem({
+      index: 1,
+      text: t('tools_index')
+    })
+    uni.setTabBarItem({
+      index: 2,
+      text: t('news_index')
+    })
+    uni.setTabBarItem({
+      index: 3,
+      text: t('my_index')
+    })
+  console.log("in onShow");
+  // 在页面显示时调用检查登录状态
+  checkLoginStatus();
 });
 </script>
 
@@ -227,9 +246,49 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* 添加图文按钮 */
+/* AddNewsButton */
+.addnewsbutton {
+  position: fixed;               /* 固定定位 */
+  bottom: 20px;                  /* 距离底部20px，根据需要调整 */
+  left: 50%;                     /* 水平居中 */
+  transform: translateX(-50%);   /* 精确居中 */
+  width: 90%;                    /* 宽度为页面的90%，可根据需求调整为100% */
+  padding: 8px 0;                /* 减小上下内边距以减小高度 */
+  background-color: #ffffff;
+  text-align: center;
+  z-index: 1000;                 /* 确保按钮在最上层 */
+  border-radius: 25px;           /* 圆角效果 */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); /* 阴影效果 */
+}
+
+.addnewsbutton button {
+  width: 100%;
+  padding: 8px 0;                 /* 减小按钮内边距 */
+  background-color: #4caf50;      /* 背景色 */
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  border: none;
+  border-radius: 20px;            /* 圆角按钮 */
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.addnewsbutton button:hover {
+  background-color: #45a049;      /* Hover 状态颜色 */
+  transform: scale(1.05);         /* 放大效果 */
+}
+
+.addnewsbutton button:active {
+  background-color: #388e3c;      /* 按下状态颜色 */
+  transform: scale(1);            /* 按下时恢复正常大小 */
+}
+
 /* News Section */
 .news-section {
   padding: 20px;
+  padding-bottom: 80px;           /* 为固定按钮预留空间，确保内容不被遮挡 */
   position: relative;
 }
 
@@ -241,8 +300,8 @@ body {
   margin-bottom: 20px;
   cursor: pointer;
   transition: transform 0.1s, box-shadow 0.1s;
-  position: relative;  /* 确保其层级设置有效 */
-  z-index: 1;          /* 确保点击事件可以被接收 */
+  position: relative;              /* 确保其层级设置有效 */
+  z-index: 1;                      /* 确保点击事件可以被接收 */
 }
 
 .news-item.active {
