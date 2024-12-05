@@ -54,7 +54,6 @@ func (f *Food) DeleteFood(db *gorm.DB) error {
 }
 
 // FoodNameResponse 定义返回的食物名称结构
-// FoodNameResponse 定义返回的食物名称结构
 type FoodNameResponse struct {
     ID   uint   `json:"id"`
     Name string `json:"name"`
@@ -141,4 +140,20 @@ func CalculateFoodNutritionAndEmission(db *gorm.DB, items []FoodCalculateItem) (
     }
 
     return results, nil
+}
+func findFoodIDByName(db *gorm.DB, name string) (uint, error) {
+    var food Food
+    if err := db.Where("zh_food_name = ? OR en_food_name = ?", name, name).First(&food).Error; err != nil {
+        return 0, err
+    }
+    return food.ID, nil
+}
+
+type Ingredient struct {
+    ID   uint   `json:"id" gorm:"primaryKey"`
+    Name string `json:"name"`
+}
+
+func (Ingredient) TableName() string {
+    return "ingredients"
 }
