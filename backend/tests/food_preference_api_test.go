@@ -243,6 +243,62 @@ func TestDeleteFoodPreference(t *testing.T) {
 	}
 }
 
+func TestGetUserPreferences(t *testing.T) {
+    // 设置测试数据库
+    db := setupTestDB(t)
+	router, fpc := setupTestRouter(db)
+	user := createTestUser(db)
+
+    // 创建一些测试偏好数据
+    preferences := []models.FoodPreference{
+        {
+            UserID: user.ID,
+            Name:   "highProtein",
+        },
+        {
+            UserID: user.ID,
+            Name:   "lowSugar",
+        },
+    }
+    for _, pref := range preferences {
+        db.Create(&pref)
+    }
+
+    // 设置测试路由
+    router.GET("/preferences", func(c *gin.Context) {
+        c.Set("user_id", user.ID)
+        fpc.GetUserPreferences(c)
+    })
+
+    // 发送测试请求
+    w := httptest.NewRecorder()
+    req, _ := http.NewRequest(http.MethodGet, "/preferences", nil)
+    router.ServeHTTP(w, req)
+
+    // 验证响应状态码
+    assert.Equal(t, http.StatusOK, w.Code)
+
+    // 解析响应
+    var response []map[string]interface{}
+    err := json.Unmarshal(w.Body.Bytes(), &response)
+    assert.NoError(t, err)
+
+    // 验证响应内容
+    assert.Equal(t, 2, len(response))
+    
+    // 验证返回的数据格式是否正确
+    for _, pref := range response {
+        // 确保只包含 id 和 name 字段
+        assert.Contains(t, pref, "id")
+        assert.Contains(t, pref, "name")
+        assert.Len(t, pref, 2)
+
+        // 验证 name 是否为预期值之一
+        name := pref["name"].(string)
+        assert.Contains(t, []string{"highProtein", "lowSugar"}, name)
+    }
+}
+
 func TestMain(m *testing.M) {
 	// Setup
 	err := os.MkdirAll(filepath.Join("data", "food_preference"), 0755)

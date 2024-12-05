@@ -115,3 +115,28 @@ func (fpc *FoodPreferenceController) DeleteFoodPreference(c *gin.Context) {
         "message": "Food preference deleted successfully",
     })
 }
+// 添加新的方法到 FoodPreferenceController
+func (fpc *FoodPreferenceController) GetUserPreferences(c *gin.Context) {
+    // 从上下文获取用户ID
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    var preferences []models.FoodPreference
+    if err := fpc.DB.Where("user_id = ?", userID).Find(&preferences).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user preferences"})
+        return
+    }
+
+	response := make([]gin.H, len(preferences))
+	for i, pref := range preferences {
+		response[i] = gin.H{
+			"id":   pref.ID,
+			"name": pref.Name,
+		}
+	}
+
+    c.JSON(http.StatusOK, response)
+}
