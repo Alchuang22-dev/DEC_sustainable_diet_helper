@@ -97,7 +97,7 @@ func TestCreateFamily(t *testing.T) {
 
 	familyData := response["family"].(map[string]interface{})
 	assert.Equal(t, "TestFamily", familyData["name"])
-	assert.NotEmpty(t, familyData["token"])
+	assert.NotEmpty(t, familyData["family_id"])
 
 	// 检查数据库更新
 	var createdFamily models.Family
@@ -108,7 +108,7 @@ func TestCreateFamily(t *testing.T) {
 	// 检查用户的 FamilyID 更新
 	var updatedUser models.User
 	db.First(&updatedUser, user.ID)
-	assert.Equal(t, createdFamily.ID, updatedUser.FamilyID)
+	assert.Equal(t, &createdFamily.ID, updatedUser.FamilyID)
 }
 
 // 测试查看家庭详情
@@ -135,7 +135,7 @@ func TestFamilyDetails(t *testing.T) {
     }
 
     // 更新用户的 FamilyID
-    user.FamilyID = family.ID
+    user.FamilyID = &family.ID
     if err := db.Save(&user).Error; err != nil {
         t.Fatalf("failed to update user's family ID: %v", err)
     }
@@ -196,7 +196,7 @@ func TestSearchFamily(t *testing.T) {
 	token, _ := utils.GenerateJWT(user.ID)
 
 	// 创建请求并设置 Authorization 头
-	req, _ := http.NewRequest("GET", "/families/search?token=test_token", nil)
+	req, _ := http.NewRequest("GET", "/families/search?family_id=test_token", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	// 执行请求
@@ -210,7 +210,7 @@ func TestSearchFamily(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &response)
 	assert.Equal(t, float64(family.ID), response["id"])
 	assert.Equal(t, "TestFamily", response["name"])
-	assert.Equal(t, "test_token", response["token"])
+	assert.Equal(t, "test_token", response["family_id"])
 	assert.Equal(t, float64(1), response["member_count"])
 }
 
@@ -233,7 +233,7 @@ func TestJoinAndAdmitFamily(t *testing.T) {
 
     // 将管理员添加到家庭
     family.Admins = append(family.Admins, admin)
-    admin.FamilyID = family.ID
+    admin.FamilyID = &family.ID
     db.Save(&family)
     db.Save(&admin)
 
@@ -292,6 +292,6 @@ func TestJoinAndAdmitFamily(t *testing.T) {
 
     var updatedUser models.User
     db.First(&updatedUser, user.ID)
-    assert.Equal(t, family.ID, updatedUser.FamilyID)
+    assert.Equal(t, &family.ID, updatedUser.FamilyID)
     assert.Nil(t, updatedUser.PendingFamilyID)
 }

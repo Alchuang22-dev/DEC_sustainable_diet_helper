@@ -4,15 +4,15 @@
 		<image src="/static/images/index/background_index_new.png" class="background-image"></image>
 
 		<!-- 头部标题 -->
-		<view v-if="family.id" class="header">
+		<view v-if="family.status === FamilyStatus.JOINED" class="header">
 			<text class="header-title">{{ family.name || $t('default_family_name') }}</text>
 		</view>
 
 		<!-- 家庭ID -->
-		<text v-if="family.id" class="list-title">{{ $t('family_info') + family.id }}</text>
+		<text v-if="family.status === FamilyStatus.JOINED" class="list-title">{{ $t('family_info') + family.id }}</text>
 
 		<!-- 用户未加入家庭时的视图 -->
-		<view v-if="!family.id" class="no-family-view">
+		<view v-if="family.status === FamilyStatus.NOT_JOINED" class="no-family-view">
 			<image src="https://cdn.pixabay.com/photo/2017/01/13/02/31/family-1976162_1280.png" class="centered-image">
 			</image>
 			<view class="family-actions">
@@ -21,9 +21,15 @@
 			</view>
 		</view>
 
+		<!-- 待审核状态的视图 -->
+		<view v-if="family.status === FamilyStatus.PENDING_APPROVAL" class="pending-view">
+			<image src="https://cdn.pixabay.com/photo/2021/09/20/22/15/hourglass-6641967_1280.png" class="pending-image"></image>
+			<text class="pending-text">待管理员审核</text>
+			<button class="cancel-button" @click="handleCancelJoin">退出等待</button>
+		</view>
 
 		<!-- 用户已加入家庭时的家庭管理部分 -->
-		<view v-else class="family-management">
+		<view v-if="family.status === FamilyStatus.JOINED" class="family-management">
 			<!-- 提出想吃的菜品 -->
 			<view class="dish-proposal">
 				<text class="section-title">{{ t('propose_dish') }}</text>
@@ -63,16 +69,15 @@
 				</view>
 			</view>
 
-			<!-- 家庭成员部分（移到最下方） -->
+			<!-- 家庭成员部分 -->
 			<view class="family-info">
 				<text class="section-title">{{ $t('family_members') }}</text>
 				<view class="family-members">
 					<view v-for="member in family.members" :key="member.id" class="member">
 						<image :src="member.avatar" class="member-avatar"></image>
-						<text class="member-name">{{ `${member.name}(${t(member.family_name)})` }}</text>
+						<text class="member-name">{{ `${member.nickname}(${t(member.family_name)})` }}</text>
 					</view>
 				</view>
-				<!-- 添加“管理成员”按钮 -->
 				<button class="manage-members-button" @click="manageMembers">{{ t('manage_members') }}</button>
 			</view>
 		</view>
@@ -104,6 +109,7 @@
 		ref,
 		computed,
 		onMounted,
+		onUnmounted,
 		reactive
 	} from 'vue';
 	import {
@@ -122,6 +128,10 @@
 	// Pinia 状态管理
 	const familyStore = useFamilyStore();
 	const family = computed(() => familyStore.family);
+	const FamilyStatus = familyStore.FamilyStatus;
+
+	// 定时器引用
+	let statusCheckTimer = null;
 
 	// 新菜品提议
 	const newDish = reactive({
@@ -129,7 +139,7 @@
 		preference: 0,
 	});
 
-	// 菜品偏好级别（响应式以支持语言切换）
+	// 菜品偏好级别
 	const dishPreferenceLevels = computed(() => [
 		t('preference_low'),
 		t('preference_medium'),
@@ -146,6 +156,36 @@
 	// 加入家庭相关
 	const joinFamilyId = ref('');
 
+	// 定时检查状态
+	const startStatusCheck = () => {
+		// 清除可能存在的旧定时器
+		if (statusCheckTimer) {
+			clearInterval(statusCheckTimer);
+		}
+		// 设置新的定时器
+		statusCheckTimer = setInterval(async () => {
+			if (family.value.status === FamilyStatus.PENDING_APPROVAL) {
+				await familyStore.getFamilyDetails();
+			}
+		}, 30000); // 30秒
+	};
+
+	// 取消加入申请
+	const handleCancelJoin = async () => {
+		try {
+			await familyStore.cancelJoinRequest();
+			uni.showToast({
+				title: '已取消申请',
+				icon: 'success'
+			});
+		} catch (error) {
+			uni.showToast({
+				title: '取消失败',
+				icon: 'error'
+			});
+		}
+	};
+
 	// 提交菜品提议
 	const submitDishProposal = () => {
 		if (newDish.name.trim() === '') {
@@ -155,7 +195,6 @@
 			});
 			return;
 		}
-		// 假设 'You' 是当前用户的名称，可以根据实际情况替换
 		familyStore.addDishProposal({
 			id: Date.now(),
 			name: newDish.name,
@@ -167,7 +206,7 @@
 	};
 
 	// 创建家庭
-	const createFamily = () => {
+	const createFamily = async () => {
 		if (newFamilyName.value.trim() === '') {
 			uni.showToast({
 				title: t('family_name_required'),
@@ -175,32 +214,68 @@
 			});
 			return;
 		}
-		familyStore.createFamily(newFamilyName.value);
-		newFamilyName.value = '';
-		showCreateFamilyModal.value = false;
-	};
-
-	// 加入家庭
-	const joinFamily = () => {
-		if (joinFamilyId.value.trim() === '') {
+		try {
+			await familyStore.createFamily(newFamilyName.value);
+			newFamilyName.value = '';
+			showCreateFamilyModal.value = false;
+		} catch (error) {
 			uni.showToast({
-				title: t('family_id_required'),
-				icon: 'none'
+				title: t('create_family_failed'),
+				icon: 'error'
 			});
-			return;
 		}
-		familyStore.joinFamily(joinFamilyId.value);
-		joinFamilyId.value = '';
-		showJoinFamilyModal.value = false;
 	};
 
-	// 家庭五大营养成分达标情况数据（示例）
+  // 加入家庭
+  const joinFamily = async () => {
+    if (joinFamilyId.value.trim() === '') {
+      uni.showToast({
+        title: t('family_id_required'),
+        icon: 'none'
+      });
+      return;
+    }
+
+    try {
+      // 先搜索家庭
+      const searchResult = await familyStore.searchFamily(joinFamilyId.value);
+
+      // 如果搜索不到家庭
+      if (!searchResult || !searchResult.id) {
+        uni.showToast({
+          title: t('family_not_found'),
+          icon: 'error'
+        });
+        return;
+      }
+
+      // 搜索到家庭后，调用加入接口
+      await familyStore.joinFamily(searchResult.id);
+      joinFamilyId.value = '';
+      showJoinFamilyModal.value = false;
+      startStatusCheck(); // 开始定时检查状态
+
+      uni.showToast({
+        title: t('join_request_sent'),
+        icon: 'success'
+      });
+
+    } catch (error) {
+      console.error('Join family error:', error);
+      uni.showToast({
+        title: t('join_family_failed'),
+        icon: 'error'
+      });
+    }
+  };
+
+	// 家庭五大营养成分达标情况数据
 	const nutrientChartData = ref({
 		categories: [],
 		series: []
 	});
 
-	// 图表配置（示例）
+	// 图表配置
 	const nutrientChartOpts = {
 		color: ["#1890FF", "#2FC25B"],
 		padding: [15, 0, 0, 0],
@@ -216,26 +291,6 @@
 			},
 		},
 	};
-
-	// 模拟获取家庭五大营养成分达标数据
-	onMounted(() => {
-		nutrientChartData.value.categories = [
-			t('energy_unit'),
-			t('protein_unit'),
-			t('fat_unit'),
-			t('carbohydrates_unit'),
-			t('sodium_unit'),
-		];
-		nutrientChartData.value.series = [{
-				name: t('user_name1'),
-				data: [80, 90, 85, 70, 75],
-			},
-			{
-				name: t('user_name2'),
-				data: [100, 100, 100, 100, 120],
-			}
-		];
-	});
 
 	// 家庭碳排放环形图数据
 	const carbonChartData = ref({
@@ -281,9 +336,58 @@
 		}
 	};
 
-	// 模拟获取家庭成员碳排放数据（硬编码示例）
-	onMounted(() => {
-		// 假设家庭成员及其碳排放数据
+	// 计算属性：排序后的菜品提议
+	const sortedDishProposals = computed(() => {
+		if (!family.value.dishProposals) return [];
+		return [...family.value.dishProposals].sort((a, b) => b.preference - a.preference);
+	});
+
+	// 处理偏好选择变化
+	const onDishPreferenceChange = (e) => {
+		newDish.preference = parseInt(e.detail.value, 10);
+	};
+
+  // 修改管理成员方法
+  const manageMembers = () => {
+      // 获取当前用户ID
+      const currentUserId = userStore.userId; // 假设用户store中有userId字段
+
+      if (familyStore.isAdmin(currentUserId)) {
+          // 是管理员，允许跳转
+          uni.navigateTo({
+              url: '/pagesMy/myFamily/myFamily'
+          });
+      } else {
+          // 不是管理员，显示错误提示
+          uni.showToast({
+              title: t('not_admin'),
+              icon: 'error',
+              duration: 2000
+          });
+      }
+  };
+
+	// 生命周期钩子
+	onMounted(async () => {
+		// 初始化营养成分数据
+		nutrientChartData.value.categories = [
+			t('energy_unit'),
+			t('protein_unit'),
+			t('fat_unit'),
+			t('carbohydrates_unit'),
+			t('sodium_unit'),
+		];
+		nutrientChartData.value.series = [{
+				name: t('user_name1'),
+				data: [80, 90, 85, 70, 75],
+			},
+			{
+				name: t('user_name2'),
+				data: [100, 100, 100, 100, 120],
+			}
+		];
+
+		// 初始化碳排放数据
 		const memberCarbonData = [{
 				name: 'Alice',
 				value: 2.5
@@ -297,34 +401,22 @@
 				value: 1.5
 			}
 		];
-
 		carbonChartData.value.series[0].data = memberCarbonData;
-
-		// 计算总碳排放
 		const totalCarbonEmission = memberCarbonData.reduce((sum, item) => sum + item.value, 0);
-
-		// 更新环形图副标题
 		carbonRingOpts.subtitle.name = `${totalCarbonEmission.toFixed(1)}Kg`;
+
+		// 如果当前是待审核状态，启动定时检查
+		if (family.value.status === FamilyStatus.PENDING_APPROVAL) {
+			startStatusCheck();
+		}
 	});
 
-	// 计算属性：按喜欢程度从高到低排序的菜品提议
-	const sortedDishProposals = computed(() => {
-		if (!family.value.dishProposals) return [];
-		return [...family.value.dishProposals].sort((a, b) => b.preference - a.preference);
+	onUnmounted(() => {
+		// 清除定时器
+		if (statusCheckTimer) {
+			clearInterval(statusCheckTimer);
+		}
 	});
-
-	// 处理 <picker> 变化
-	const onDishPreferenceChange = (e) => {
-		newDish.preference = parseInt(e.detail.value, 10);
-	};
-
-	// 管理成员功能
-	const manageMembers = () => {
-		// 跳转到家庭管理页面
-		uni.navigateTo({
-			url: '/pagesMy/myFamily/myFamily'
-		});
-	};
 </script>
 
 <style scoped>
@@ -403,6 +495,38 @@
 		margin-bottom: 30rpx;
 		object-fit: cover;
 		/* 添加其他样式如边框或阴影根据需要 */
+	}
+
+  /* 添加待审核状态的样式 */
+	.pending-view {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 20rpx;
+	}
+
+	.pending-image {
+		width: 200rpx;
+		height: 200rpx;
+		border-radius: 50%;
+		margin-bottom: 30rpx;
+		object-fit: cover;
+	}
+
+	.pending-text {
+		font-size: 32rpx;
+		color: #666;
+		margin-bottom: 40rpx;
+	}
+
+	.cancel-button {
+		background-color: #ff4d4f;
+		color: #fff;
+		padding: 15rpx 40rpx;
+		border-radius: 10rpx;
+		font-size: 28rpx;
 	}
 
 	/* 家庭管理部分 */
