@@ -3,9 +3,9 @@ package controllers
 
 import (
     "encoding/json"
-    "io/ioutil"
     "net/http"
     "path/filepath"
+    "os"
 
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
@@ -22,24 +22,25 @@ type FoodPreferenceController struct {
 func validatePreference(preferenceName string) bool {
     // 读取配置文件
     filePath := filepath.Join("data", "food_preference", "foodPreferences.json")
-    data, err := ioutil.ReadFile(filePath)
+    data, err := os.ReadFile(filePath)
     if err != nil {
+        log.Printf("读取配置文件失败: %v\n", err)
         return false
     }
 
     var preferences map[string]interface{}
     if err := json.Unmarshal(data, &preferences); err != nil {
+        log.Printf("解析配置文件失败: %v\n", err)
         return false
     }
 
     _, exists := preferences[preferenceName]
+    log.Printf("偏好 %s 存在: %v\n", preferenceName, exists)
     return exists
 }
 
 // AddFoodPreference 添加食物偏好
 func (fpc *FoodPreferenceController) AddFoodPreference(c *gin.Context) {
-    rawData, _ := c.GetRawData()
-    log.Printf("原始请求数据: %s\n", string(rawData))
     userID, exists := c.Get("user_id")
     if !exists {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -51,6 +52,8 @@ func (fpc *FoodPreferenceController) AddFoodPreference(c *gin.Context) {
     }
 
     if err := c.ShouldBindJSON(&request); err != nil {
+        // log详细的错误信息
+        log.Printf("错误信息: %v\n", err)
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
         return
     }
