@@ -15,21 +15,21 @@
     <!-- 可滑动的食物列表 -->
     <scroll-view scroll-y="true" class="food-list scroll-view">
       <view v-for="(food, index) in displayFoodList" :key="food.id" class="card-container">
-        <uni-card
-          :title="food.displayName || $t('default_food_name')"
-          :thumbnail="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
-          :sub-title="`${$t('weight')}: ${food.weight || '1.2kg'} ${$t('price')}: ${food.price || '5元'}`"
-          shadow=1
-          @click="animateCard(index)"
-          :class="{ clicked: food.isAnimating }"
-          :extra="`${t(`transport_${food.transportMethod}`)} ${t(`source_${food.foodSource}`)}`"
-          :style="{ animationDelay: `${index * 0.1}s` }"
-        >
-          <view class="card-actions">
-            <button class="delete-button" @click.stop="handleDelete(index)">{{ $t('delete') }}</button>
-            <button class="edit-button" @click.stop="handleEdit(index)">{{ $t('edit') }}</button>
-          </view>
-        </uni-card>
+			<uni-card
+			  :title="food.displayName || $t('default_food_name')"
+			  :thumbnail="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
+			  :sub-title="`${$t('weight')}: ${food.weight || '1.2kg'} ${$t('price')}: ${food.price || '5元'}`"
+			  shadow=1
+			  @click="animateCard(index)"
+			  :class="{ clicked: food.isAnimating }"
+			  :extra="`${t(`transport_${food.transportMethod}`)} ${t(`source_${food.foodSource}`)}`"
+			  :style="{ animationDelay: `${index * 0.1}s` }"
+			>
+				  <div class="button-container">
+					<button class="delete-button" @click.stop="handleDelete(index)"></button>
+					<button class="edit-button" @click.stop="handleEdit(index)"></button>
+				  </div>
+			</uni-card>   
       </view>
     </scroll-view>
 
@@ -503,27 +503,38 @@ onMounted(() => {
 }
 
 /* uni-card 相关样式 */
-.card-actions {
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-start;
+.uni-card {
   position: relative;
-  width: 100%;
 }
 
-.delete-button,
-.edit-button {
-  font-size: 18rpx;
+.button-container {
+  position: absolute;
+  top: 10px;  /* 可调整与顶部的距离 */
+  right: 10px;  /* 可调整与右边的距离 */
+  display: flex;
+  gap: 10px;  /* 按钮之间的间距 */
+}
+
+.delete-button{
+  padding: 0;
+  width: 10px;
+  height: 10px;
+  background: red;
+  border: none;
   cursor: pointer;
-  transition: color 0.3s ease;
 }
 
-.edit-button:hover {
-  color: #8BC34A;
+.edit-button{
+  padding: 0;
+  width: 10px;
+  height: 10px;
+  background: green;
+  border: none;
+  cursor: pointer;
 }
 
-.delete-button:hover {
-  color: #f44336;
+.delete-button:hover, .edit-button:hover {
+  opacity: 0.7;  /* 鼠标悬停时透明度 */
 }
 
 /* 按钮区 */

@@ -7,6 +7,8 @@ import (
     "github.com/gin-gonic/gin"
     "gorm.io/driver/mysql"
     "gorm.io/gorm"
+    "github.com/gin-contrib/cors"
+    "time"
 
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/config"
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
@@ -37,6 +39,7 @@ func main() {
         &models.Comment{},
         &models.Food{},
         &models.Recipe{},
+        &models.Family{},
     )
     if err != nil {
         log.Fatal("自动迁移失败:", err)
@@ -44,6 +47,15 @@ func main() {
 
     // 初始化Gin引擎
     router := gin.Default()
+
+    // 配置CORS
+    router.Use(cors.New(cors.Config{
+        AllowOrigins:     []string{"*"}, // 允许的前端域名
+        AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},                            // 允许的HTTP方法
+        AllowHeaders:     []string{"*"},      // 允许的HTTP头部
+        AllowCredentials: false,  // 允许跨域请求发送Cookie等凭证 当 AllowCredentials 设置为 true 时，你也需要确保 AllowOrigins 不是 "*". 如果你的前端需要发送 cookies 或其他凭证（如授权头），必须显式列出允许的域名。
+        MaxAge:           12 * time.Hour,  // 最大缓存时长
+    }))
 
     // 注册用户路由
     routes.RegisterUserRoutes(router, db)
@@ -53,6 +65,9 @@ func main() {
 
     // 注册食物路由
     routes.RegisterFoodRoutes(router, db)
+
+    // 注册家庭路由
+    routes.RegisterFamilyRoutes(router, db)
 
     // 启动服务器
     err = router.Run(":8080")

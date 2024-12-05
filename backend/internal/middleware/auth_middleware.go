@@ -3,6 +3,7 @@ package middleware
 import (
     "strings"
     "net/http"
+    "strconv"
 
     "github.com/gin-gonic/gin"
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils" // 替换为你的 utils 包路径
@@ -37,15 +38,16 @@ func AuthMiddleware() gin.HandlerFunc {
             return
         }
 
-        // 将用户 ID 存入上下文，供后续使用
-        userID := claims.Subject // 确认你的 ValidateJWT 是否将 user_id 存入 Subject
-        if userID == "" {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token: missing user_id"})
+        // 从 Token 中解析 user_id
+        userID, err := strconv.ParseUint(claims.Subject, 10, 64) // 假设 Subject 存储的是 user_id
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token: invalid user_id"})
             c.Abort()
             return
         }
 
-        c.Set("user_id", userID) // 存储为字符串类型
+        // 将用户 ID 存入上下文，供后续使用
+        c.Set("user_id", uint(userID))
         c.Next()
     }
 }

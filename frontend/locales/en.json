@@ -155,10 +155,19 @@
 
 	//饮食推荐
 	"recommend_image_alt": "Recommended Image",
-	"dish_1": "Steamed Cabbage",
-	"dish_2": "Sweet Potato",
-	"dish_3": "Dapanji",
-	"dish_4": "Pasta",
+	"dish_1": "carrot",
+	"dish_2": "white radish",
+	"dish_3": "potato",
+	"dish_4": "tomato",
+	"dish_5": "beef",
+	"dish_6": "Chinese cabbage",
+	"dish_7": "lettuce",
+	"dish_8": "beans",
+	"dish_9": "tofu",
+	"dish_10": "pumpkin",
+	"dish_11": "squid",
+	"dish_12": "celery",
+	"default_dish": "No more dishes...",
 	"generate_recipe": "Generate Recipe",
 	"recommended_recipe": "Recommended Recipe",
 	"recommended_recipe_info": "Based on your region, we recommend Dapanji!",
@@ -255,5 +264,31 @@
     "unbind_account_notice": "After unbinding, the original phone number cannot be used to log in to this account.",
     "change_binding_phone": "You are changing the phone number bound to your account.",
     "confirm_binding": "Confirm Binding",
-    "input_verification_code": "Enter verification code"
+    "input_verification_code": "Enter verification code",
+
+	"index": "Home",
+	"news_index": "Post",
+	"my_index": "My",
+	"tools_index": "Tools",
+	
+	"viewNutritionGoals": "View daily nutrition goals",
+	"targetValue": "target",
+	"addOrUpdateTarget": "add/update target",
+	"pleaseFillTargetNameAndValue": "Please put in all the blanks",
+	
+	"foodpreference_greeting": "please add your food preference:",
+	"highProtein": "high protein",
+	"highEnergy": "high energy",
+	"lowCH": "low sugar",
+	"lowFat": "low fat",
+	"lowsodium": "low sodium",
+	"vegan": "vegan",
+	"vegetarian": "vegetarian",
+	"glulenFree": "glulen free",
+	"dairyFree": "dairy free",
+	"alcoholFree": "alcohol free",
+	
+	"enterNickname": "Enter Nickname",
+	"Nickname": "Nickname",
+	"needNickname": "please enter nickname"
 }

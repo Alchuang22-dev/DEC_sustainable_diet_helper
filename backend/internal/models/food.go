@@ -54,6 +54,7 @@ func (f *Food) DeleteFood(db *gorm.DB) error {
 }
 
 // FoodNameResponse 定义返回的食物名称结构
+// FoodNameResponse 定义返回的食物名称结构
 type FoodNameResponse struct {
     ID   uint   `json:"id"`
     Name string `json:"name"`
@@ -86,11 +87,11 @@ type FoodCalculateItem struct {
 // FoodCalculateResponse 定义单个食物的计算响应
 type FoodCalculateResult struct {
     ID          uint    `json:"id"`
-    CO2Emission float64 `json:"co2_emission"`
+    Emission float64 `json:"emission"`
     Calories    float64 `json:"calories"`
     Protein     float64 `json:"protein"`
     Fat         float64 `json:"fat"`
-    Carbs       float64 `json:"carbs"`
+    Carbohydrates       float64 `json:"carbohydrates"`
     Sodium      float64 `json:"sodium"`
 }
 
@@ -127,12 +128,12 @@ func CalculateFoodNutritionAndEmission(db *gorm.DB, items []FoodCalculateItem) (
         result := FoodCalculateResult{
             ID: item.ID,
             // CO2Emission = (GHG * weight * item.price) / food.price
-            CO2Emission: (food.GHG * item.Weight * item.Price) / food.Price,
+            Emission: (food.GHG * item.Weight * item.Price) / food.Price,
             // 其他营养成分直接按照重量比例计算
             Calories:    food.Calories * item.Weight,
             Protein:     food.Protein * item.Weight,
             Fat:         food.Fat * item.Weight,
-            Carbs:      food.Carbohydrates * item.Weight,
+            Carbohydrates:      food.Carbohydrates * item.Weight,
             Sodium:      food.Sodium * item.Weight,
         }
 

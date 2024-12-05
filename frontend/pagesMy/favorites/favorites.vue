@@ -3,7 +3,6 @@
     <!-- Header Section -->
     <image src="/static/images/index/background_img.jpg" class="background-image"></image>
 	<view class="header">
-	  <view @click="goBack" class="back-icon">返回</view>
 	  <text class="title">我的收藏</text>
 	  <view class="header-actions">
 	    <button class="menu-icon"></button>
