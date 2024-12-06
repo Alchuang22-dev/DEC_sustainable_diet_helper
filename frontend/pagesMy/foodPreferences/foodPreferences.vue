@@ -20,34 +20,77 @@
         <view v-for="(option, index) in preferenceOptions" :key="index" class="modal-option" @click="selectPreference(option)">
           <image :src="option.icon" class="option-icon" />
           <text class="option-name">{{ option.name }}</text>
-        </view>
-        <button class="close-button" @click="closeModal">{{$t('close_button')}}</button>
+        </view> 
       </view>
+	  <view class="button-content">
+		  <button class="close-button" @click="closeModal">{{$t('close_button')}}</button>
+	  </view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+
+const { t, locale } = useI18n();
 
 const preferences = ref([
-  { name: '避免乳制品', icon: 'https://via.placeholder.com/50' },
-  { name: '喜欢的水果', icon: 'https://via.placeholder.com/50' },
-  { name: '素食主义', icon: 'https://via.placeholder.com/50' },
-  { name: '高蛋白饮食', icon: 'https://via.placeholder.com/50' },
+  { name: t('foodpreference_greeting'), key: 'foodpreference_greeting', icon: 'https://via.placeholder.com/50' },
 ]);
 
 const preferenceOptions = ref([
-  { name: '高蛋白食品', icon: 'https://via.placeholder.com/50' },
-  { name: '低脂饮食', icon: 'https://via.placeholder.com/50' },
-  { name: '无麸质饮食', icon: 'https://via.placeholder.com/50' },
-  { name: '避免乳制品', icon: 'https://via.placeholder.com/50' },
+  { name: t('highProtein'), key: 'highProtein', icon: 'https://via.placeholder.com/50' },
+  { name: t('highEnergy'), key: 'highEnergy', icon: 'https://via.placeholder.com/50' },
+  { name: t('lowFat'), key: 'lowFat', icon: 'https://via.placeholder.com/50' },
+  { name: t('lowCH'), key: 'lowCH', icon: 'https://via.placeholder.com/50' },
+  { name: t('lowsodium'), key: 'lowsodium', icon: 'https://via.placeholder.com/50' },
+  { name: t('vegan'), key: 'vegan', icon: 'https://via.placeholder.com/50' },
+  { name: t('vegetarian'), key: 'vegetarian', icon: 'https://via.placeholder.com/50' },
+  { name: t('glulenFree'), key: 'glulenFree', icon: 'https://via.placeholder.com/50' },
+  { name: t('alcoholFree'), key: 'alcoholFree', icon: 'https://via.placeholder.com/50' },
+  { name: t('dairyFree'), key: 'dairyFree', icon: 'https://via.placeholder.com/50' },
 ]);
 
 const showModal = ref(false);
 
+const user_id = ref('');
+
+// onMounted 生命周期钩子
+onMounted(() => {
+  // 从 localStorage 中获取 token 信息作为 user_id
+  const token = uni.getStorageSync('token');
+  if (token) {
+    user_id.value = token; // 如果存在，则将 token 存储为 user_id
+  } else {
+    console.warn('No tokens found in localStorage.');
+  }
+});
+
 const removePreference = (index) => {
-  preferences.value.splice(index, 1);
+  const preferenceToRemove = preferences.value[index];
+  console.log(preferenceToRemove.key);
+  uni.request({
+    url: 'http://122.51.231.155:8090/preferences',
+    method: 'DELETE',
+	header: {
+	      "Authorization": `Bearer ${user_id.value}`, // 替换为实际的 Token 变量
+	      "Content-Type": "application/json", // 设置请求类型
+	    },
+    data: {
+		preference_name: preferenceToRemove.key // 使用存储的 key 字段
+    },
+    success: (res) => {
+      if (res.statusCode === 200) {
+        console.log(res.data.message); // 打印成功信息
+        // 删除本地数组中的偏好
+        preferences.value.splice(index, 1);
+      }
+    },
+    fail: (err) => {
+      console.error('Error removing preference:', err);
+    }
+  });
 };
 
 const showPreferenceOptions = () => {
@@ -59,9 +102,33 @@ const closeModal = () => {
 };
 
 const selectPreference = (option) => {
-  preferences.value.push({ name: option.name, icon: option.icon });
-  closeModal();
+	console.log(option.key);
+  uni.request({
+    url: 'http://122.51.231.155:8090/preferences',
+    method: 'POST',
+	header: {
+	      "Authorization": `Bearer ${user_id.value}`, // 替换为实际的 Token 变量
+	      "Content-Type": "application/json", // 设置请求类型
+	    },
+    data: {
+		preference_name: option.key // 使用存储的 key 字段
+    },
+    success: (res) => {
+      if (res.statusCode === 200) {
+        console.log(res.data.message); // 打印成功信息
+        // 将新的偏好添加到本地
+        preferences.value.push({ name: option.name, key: option.key, icon: option.icon });
+        closeModal();
+      }
+	  console.log(res.data);
+    },
+    fail: (err) => {
+		console.log(res.data);
+		console.error('Error adding preference:', err);
+    }
+  });
 };
+
 </script>
 
 <style scoped>
@@ -158,19 +225,26 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-direction: column; /* 设置垂直排列 */
 }
+
 .modal-content {
   background-color: #fff;
   padding: 20px;
   border-radius: 8px;
   width: 80%;
   max-width: 400px;
+  max-height: 400px;
+  overflow-y: auto; /* 允许垂直滚动 */
+  margin-bottom: 20px; /* 添加底部间距 */
 }
+
 .modal-title {
   font-size: 20px;
   font-weight: bold;
   margin-bottom: 20px;
 }
+
 .modal-option {
   display: flex;
   align-items: center;
@@ -180,14 +254,23 @@ body {
   margin-bottom: 10px;
   cursor: pointer;
 }
+
 .option-icon {
   width: 40px;
   height: 40px;
   margin-right: 10px;
 }
+
 .option-name {
   font-size: 16px;
 }
+
+.button-content {
+  display: flex;
+  justify-content: center; /* 按钮居中 */
+  width: 100%; /* 确保按钮容器宽度充满 */
+}
+
 .close-button {
   background-color: #ff4d4f;
   color: #fff;
@@ -197,4 +280,5 @@ body {
   cursor: pointer;
   margin-top: 20px;
 }
+
 </style>

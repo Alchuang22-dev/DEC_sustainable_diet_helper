@@ -27,6 +27,11 @@
       >
         环保专栏
       </button>
+	  <button
+	    @click="createNews()"
+	  >
+	    写文章
+	  </button>
     </view>
 
     <!-- Loading Indicator -->
@@ -59,17 +64,22 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useNewsStore } from '@/stores/news_list';
-import { onPullDownRefresh } from '@dcloudio/uni-app';
+import { useI18n } from 'vue-i18n';
+import { onShow, onPullDownRefresh } from '@dcloudio/uni-app';
 import { storeToRefs } from 'pinia';
+import { useUserStore } from '@/stores/user'; // 引入用户存储
 
 const newsStore = useNewsStore();
+const userStore = useUserStore(); // 使用用户存储
 
 const activeIndex = ref(null);
+const { uid, isLoggedIn } = storeToRefs(userStore); // 从存储中解构
 
 // 从 Store 获取数据和方法
-// 使用 storeToRefs 保持响应性
 const { filteredNewsItems, selectedSection, isRefreshing } = storeToRefs(newsStore);
 const { setSection, refreshNews, fetchNews } = newsStore;
+
+const { t } = useI18n();
 
 // 页面跳转方法
 function navigateTo(link, name) {
@@ -100,6 +110,13 @@ function refreshPage() {
   refreshNews();
 }
 
+//跳转至新建图文页面
+function createNews(){
+	uni.navigateTo({
+		url: "/pagesNews/create_news/create_news",
+	})
+}
+
 // 异步函数处理下拉刷新
 const handlePullDownRefresh = async () => {
   try {
@@ -111,12 +128,45 @@ const handlePullDownRefresh = async () => {
   }
 };
 
+function checkLoginStatus() {
+  console.log("in check");
+  const query = userStore.uid;
+  console.log(query);
+  if (query && query !== '') {
+    uid.value = query;
+    isLoggedIn.value = true;
+  } else {
+    isLoggedIn.value = false;
+  }
+}
+
 // 使用 uni.onPullDownRefresh() 将处理函数绑定到下拉刷新事件
 onPullDownRefresh(handlePullDownRefresh);
 
-// 在组件挂载时获取数据
-onMounted(() => {
-  fetchNews();
+onShow(() => {
+	isLoggedIn.value = false; // 显式设置为未登录状态
+    uni.setNavigationBarTitle({
+      title: t('news_index')
+    })
+    uni.setTabBarItem({
+      index: 0,
+      text: t('index')
+    })
+    uni.setTabBarItem({
+      index: 1,
+      text: t('tools_index')
+    })
+    uni.setTabBarItem({
+      index: 2,
+      text: t('news_index')
+    })
+    uni.setTabBarItem({
+      index: 3,
+      text: t('my_index')
+    })
+  console.log("in onShow");
+  // 在页面显示时调用检查登录状态
+  checkLoginStatus();
 });
 </script>
 
@@ -143,23 +193,37 @@ body {
 }
 
 /* Header Section */
+/* Header Section */
 .header {
   display: flex;
   align-items: center;
   padding: 10px;
   background-color: #ffffff;
   border-bottom: 1px solid #e0e0e0;
-  justify-content: space-around;
+  justify-content: flex-start;
+  position: fixed; /* 固定头部 */
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 10; /* 确保在页面的最上层 */
+  overflow-x: scroll; /* 允许水平滚动 */
+  white-space: nowrap; /* 防止内容换行 */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 可选，增加阴影效果 */
 }
 
+/* 防止按钮换行，确保每个按钮都保持在一行 */
 .header button {
   border: none;
   background-color: transparent;
   font-size: 16px;
   cursor: pointer;
   transition: color 0.3s;
+  white-space: nowrap; /* 防止按钮文本换行 */
+  padding: 5px 15px;
+  flex-shrink: 0; /* 防止按钮被压缩 */
 }
 
+/* 选中的按钮样式 */
 .header button.active {
   color: #4caf50; /* 选中状态颜色 */
   font-weight: bold; /* 选中状态加粗 */
@@ -200,10 +264,13 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* 修改头部 */
+
 /* News Section */
 .news-section {
   padding: 20px;
-  position: relative;
+  padding-top: 70px; /* 根据header的高度调整，确保内容不被遮挡 */
+  padding-bottom: 80px;
 }
 
 .news-item {
@@ -214,8 +281,8 @@ body {
   margin-bottom: 20px;
   cursor: pointer;
   transition: transform 0.1s, box-shadow 0.1s;
-  position: relative;  /* 确保其层级设置有效 */
-  z-index: 1;          /* 确保点击事件可以被接收 */
+  position: relative;              /* 确保其层级设置有效 */
+  z-index: 1;                      /* 确保点击事件可以被接收 */
 }
 
 .news-item.active {

@@ -13,7 +13,7 @@ type User struct {
     CreatedAt   time.Time `json:"created_at"`                   // 用户创建时间
     UpdatedAt   time.Time `json:"updated_at"`                   // 用户更新时间
 
-    FamilyID    uint      `json:"family_id"`                    // 所属家庭 ID，唯一
+    FamilyID    *uint      `json:"family_id"`                    // 所属家庭 ID，唯一
     Family      *Family   `gorm:"foreignKey:FamilyID" json:"family"` // 与家庭的外键关系
     PendingFamilyID *uint     `json:"pending_family_id"`            // 正在等待批准的家庭 ID
     PendingFamily  *Family    `gorm:"foreignKey:PendingFamilyID" json:"pending_family"` // 等待批准的家庭
@@ -23,4 +23,6 @@ type User struct {
     FavoritedNews []News `gorm:"many2many:user_favorites_news;" json:"favorited_news"` // 用户收藏的新闻
     DislikedNews  []News `gorm:"many2many:user_dislikes_news;" json:"disliked_news"`   // 用户点踩的新闻
     ViewedNews    []News `gorm:"many2many:user_viewed_news;" json:"viewed_news"`       // 用户看过的新闻
+
+    FoodPreferences []FoodPreference `gorm:"foreignKey:UserID" json:"food_preferences"` // 用户的食物偏好
 }

@@ -2,10 +2,10 @@
 package controllers
 
 import (
+	// "fmt"
 	"net/http"
-    "strconv"
-    "time"
-    // "fmt"
+	"strconv"
+	"time"
 
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
@@ -22,6 +22,7 @@ func NewFamilyController(db *gorm.DB) *FamilyController {
 }
 
 // 创建家庭
+// TODO maybe不需要在函数内判断是否 exists
 func (fc *FamilyController) CreateFamily(c *gin.Context) {
     // 从 JWT 中解析用户 ID
     userID, exists := c.Get("user_id")
@@ -32,14 +33,15 @@ func (fc *FamilyController) CreateFamily(c *gin.Context) {
 
     // 检查用户是否已属于某个家庭
     var user models.User
-    if err := fc.DB.Preload("Family").First(&user, userID).Error; err != nil {
+    if err := fc.DB.First(&user, userID).Error; err != nil {
         c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
         return
     }
-    if user.FamilyID != 0 {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "User already belongs to a family"})
-        return
-    }
+    // TODO 改回来
+    // if user.FamilyID != nil {
+    //     c.JSON(http.StatusBadRequest, gin.H{"error": "User already belongs to a family"})
+    //     return
+    // }
 
     // 解析请求体
     var request struct {
@@ -50,18 +52,25 @@ func (fc *FamilyController) CreateFamily(c *gin.Context) {
         return
     }
 
-    // 创建家庭 Token（唯一标识）
-    familyToken := utils.GenerateFamilyToken()
+    // 生成唯一的家庭 Token
+    var familyToken string
+    for {
+        familyToken = utils.GenerateFamilyToken()
+        var existingFamily models.Family
+        if err := fc.DB.Where("token = ?", familyToken).First(&existingFamily).Error; err == gorm.ErrRecordNotFound {
+            break // Token is unique
+        }
+    }
 
     // 创建新家庭
     family := models.Family{
-        Name:  request.Name,
-        Token: familyToken,
-        Admins: []models.User{},
-        Members:    []models.User{},
+        Name:        request.Name,
+        Token:       familyToken,
+        Admins:      []models.User{},
+        Members:     []models.User{},
         WaitingList: []models.User{},
-        CreatedAt:  time.Now(),
-        UpdatedAt:  time.Now(),
+        CreatedAt:   time.Now(),
+        UpdatedAt:   time.Now(),
         MemberCount: 1,
     }
 
@@ -78,9 +87,14 @@ func (fc *FamilyController) CreateFamily(c *gin.Context) {
     }
 
     // 将家庭 ID 绑定到用户
-    user.FamilyID = family.ID
+    user.FamilyID = &family.ID
     if err := fc.DB.Save(&user).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to associate user with family"})
+        return
+    }
+    // 手动刷新 user 对象
+    if err := fc.DB.First(&user, userID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to refresh user data"})
         return
     }
 
@@ -88,14 +102,14 @@ func (fc *FamilyController) CreateFamily(c *gin.Context) {
     c.JSON(http.StatusCreated, gin.H{
         "message": "Family created successfully",
         "family": gin.H{
-            "id":    family.ID,
-            "name":  family.Name,
-            "token": family.Token,
+            "id":        family.ID,
+            "name":      family.Name,
+            "family_id": family.Token,
         },
     })
 }
 
-// 查看自己的家庭的信息
+// 查看自己的家庭的信息, 如果自己不在家庭或在 waiting list 也要相应显示
 func (fc *FamilyController) FamilyDetails(c *gin.Context) {
     // 从 JWT 中解析用户 ID
     userID, exists := c.Get("user_id")
@@ -106,45 +120,66 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
 
     // 查询用户信息并预加载家庭信息
     var user models.User
-    if err := fc.DB.Preload("Family.Admins").Preload("Family.Members").First(&user, userID).Error; err != nil {
+    if err := fc.DB.Preload("Family.Admins").Preload("Family.Members").Preload("PendingFamily").First(&user, userID).Error; err != nil {
         c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
         return
     }
 
-    // 检查用户是否属于家庭
-    if user.Family == nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "User does not belong to a family"})
+    if user.PendingFamilyID != nil { // 用户在某个家庭的 waiting list 中
+        c.JSON(http.StatusOK, gin.H{
+            "status":  "waiting",
+            "id":      user.PendingFamily.ID,
+            "name":    user.PendingFamily.Name,
+            "family_id":   user.PendingFamily.Token,
+        })
+        return
+    } else if user.Family != nil { // 用户已在某个家庭中
+        // 准备管理员和成员的信息
+        admins := make([]gin.H, len(user.Family.Admins))
+        for i, admin := range user.Family.Admins {
+            admins[i] = gin.H{
+                "id":         admin.ID,
+                "nickname":   admin.Nickname,
+                "avatar_url": admin.AvatarURL, // TODO 应该传递图片，暂时用avatar_url替代
+            }
+        }
+
+        members := make([]gin.H, len(user.Family.Members))
+        for i, member := range user.Family.Members {
+            members[i] = gin.H{
+                "id":         member.ID,
+                "nickname":   member.Nickname,
+                "avatar_url": member.AvatarURL,
+            }
+        }
+
+        waiting_members := make([]gin.H, len(user.Family.WaitingList))
+        for i, waiting_member := range user.Family.WaitingList {
+            waiting_members[i] = gin.H{
+                "id":         waiting_member.ID,
+                "nickname":   waiting_member.Nickname,
+                "avatar_url": waiting_member.AvatarURL,
+            }
+        }
+        
+        // 返回家庭信息
+        c.JSON(http.StatusOK, gin.H{
+            "status":  "family",
+            "id":      user.Family.ID,
+            "name":    user.Family.Name,
+            "family_id":   user.Family.Token,
+            "member_count": user.Family.MemberCount,
+            "admins":  admins,
+            "members": members,
+            "waiting_members": waiting_members,
+        })
+        return
+    } else {
+        c.JSON(http.StatusOK, gin.H{
+            "status":  "empty",
+        })
         return
     }
-
-    // 准备管理员和成员的信息
-    admins := make([]gin.H, len(user.Family.Admins))
-    for i, admin := range user.Family.Admins {
-        admins[i] = gin.H{
-            "id":         admin.ID,
-            "nickname":   admin.Nickname,
-            "avatar_url": admin.AvatarURL, // TODO 应该传递图片，暂时用avatar_url替代
-        }
-    }
-
-    members := make([]gin.H, len(user.Family.Members))
-    for i, member := range user.Family.Members {
-        members[i] = gin.H{
-            "id":         member.ID,
-            "nickname":   member.Nickname,
-            "avatar_url": member.AvatarURL,
-        }
-    }
-
-    // 返回家庭信息
-    c.JSON(http.StatusOK, gin.H{
-        "id":      user.Family.ID,
-        "name":    user.Family.Name,
-        "token":   user.Family.Token,
-        "member_count": user.Family.MemberCount,
-        "admins":  admins,
-        "members": members,
-    })
 }
 
 // 查看搜索家庭结果
@@ -156,7 +191,7 @@ func (fc *FamilyController) SearchFamily(c *gin.Context) {
     }
 
     // 获取 token 参数
-    token := c.Query("token")
+    token := c.Query("family_id")
     if token == "" {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Token is required"})
         return
@@ -177,7 +212,7 @@ func (fc *FamilyController) SearchFamily(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{
         "id":          family.ID,
         "name":        family.Name,
-        "token":       family.Token,
+        "family_id":       family.Token,
         "member_count": family.MemberCount,
     })
 }
@@ -213,7 +248,7 @@ func (fc *FamilyController) JoinFamily(c *gin.Context) {
     }
 
     // 检查是否已属于某个家庭
-    if user.FamilyID != 0 {
+    if user.FamilyID != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "You are already a member of a family"})
         return
     }
@@ -267,7 +302,7 @@ func (fc *FamilyController) AdmitJoinFamily(c *gin.Context) {
         return
     }
 
-    if adminUser.FamilyID == 0 {
+    if adminUser.FamilyID == nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
         return
     }
@@ -304,13 +339,13 @@ func (fc *FamilyController) AdmitJoinFamily(c *gin.Context) {
         return // TODO 错误处理
     }
 
-    if user.FamilyID != 0 {
+    if user.FamilyID != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "User has been in a family"})
         return // TODO 错误处理
     }
 
     // 更新用户的 FamilyID 和 PendingFamilyID 字段
-    user.FamilyID = family.ID
+    user.FamilyID = &family.ID
     user.PendingFamilyID = nil
     if err := fc.DB.Save(&user).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user's family information"})
@@ -376,11 +411,18 @@ func (fc *FamilyController) RejectJoinFamily(c *gin.Context) {
         return
     }
 
-    if adminUser.FamilyID == 0 {
+    if adminUser.FamilyID == nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
         return
     }
 
+    // 获取目标家庭
+    var family models.Family
+    if err := fc.DB.Preload("WaitingList").First(&family, adminUser.FamilyID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve family"})
+        return
+    }
+    
     // 检查是否为家庭管理员
     isAdmin := false
     for _, admin := range adminUser.Family.Admins {
@@ -391,13 +433,6 @@ func (fc *FamilyController) RejectJoinFamily(c *gin.Context) {
     }
     if !isAdmin {
         c.JSON(http.StatusForbidden, gin.H{"error": "You are not an admin of this family"})
-        return
-    }
-
-    // 获取目标家庭
-    var family models.Family
-    if err := fc.DB.Preload("WaitingList").First(&family, adminUser.FamilyID).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve family"})
         return
     }
 
@@ -514,7 +549,6 @@ func (fc *FamilyController) PendingFamilyDetails(c *gin.Context) {
     })
 }
 
-// TODO
 // 更改某个家庭成员为 member
 func (fc *FamilyController) SetMember(c *gin.Context) {
     adminUserID, exists := c.Get("user_id")
@@ -537,7 +571,7 @@ func (fc *FamilyController) SetMember(c *gin.Context) {
         return
     }
 
-    if adminUser.FamilyID == 0 {
+    if adminUser.FamilyID == nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
         return
     }
@@ -581,7 +615,7 @@ func (fc *FamilyController) SetMember(c *gin.Context) {
     }
 
     // 检查用户是否是家庭成员
-    if user.FamilyID != family.ID {
+    if user.FamilyID != &family.ID {
         c.JSON(http.StatusBadRequest, gin.H{"error": "The user is not in your family"})
         return
     }
@@ -639,7 +673,7 @@ func (fc *FamilyController) SetAdmin(c *gin.Context) {
         return
     }
 
-    if adminUser.FamilyID == 0 {
+    if adminUser.FamilyID == nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
         return
     }
@@ -683,7 +717,7 @@ func (fc *FamilyController) SetAdmin(c *gin.Context) {
     }
 
     // 检查用户是否是家庭成员
-    if user.FamilyID != family.ID {
+    if user.FamilyID != &family.ID {
         c.JSON(http.StatusBadRequest, gin.H{"error": "The user is not in your family"})
         return
     }
@@ -720,7 +754,8 @@ func (fc *FamilyController) SetAdmin(c *gin.Context) {
 }
 
 // 退出家庭
-func (fc* FamilyController) LeaveFamily(c *gin.Context) {
+// Admin 退出家庭后顺延
+func (fc *FamilyController) LeaveFamily(c *gin.Context) {
     userID, exists := c.Get("user_id")
     if !exists {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
@@ -729,77 +764,215 @@ func (fc* FamilyController) LeaveFamily(c *gin.Context) {
 
     var user models.User
     if err := fc.DB.First(&user, userID).Error; err != nil {
-        c.JSON(http.StatusNotFound, "User not found")
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
         return
     }
 
-    if user.FamilyID == 0 {
-        c.JSON(http.StatusBadRequest, "You are not part of any family")
+    if user.FamilyID == nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
         return
     }
 
     var family models.Family
-    if err := fc.DB.Preload("Admins").Preload("Members").First(&family, &user.FamilyID).Error; err != nil {
+    if err := fc.DB.Preload("Admins").Preload("Members").First(&family, *user.FamilyID).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve family"})
         return
     }
 
-    // 检查用户是不是唯一家庭成员。如果是，自动解散家庭
     if family.MemberCount > 1 {
-        isAdmin := false
-        isMember := false
-
-        for _, admin := range family.Admins {
-            if admin.ID == userID {
-                isAdmin = true
-                break
+        // 如果用户是管理员或成员，移除并更新计数
+        if err := fc.DB.Transaction(func(tx *gorm.DB) error {
+            if err := tx.Model(&family).Association("Admins").Delete(&user); err != nil {
+                return err
             }
-        }
-        for _, member := range family.Members {
-            if member.ID == userID {
-                isMember = true
-                break
+            if err := tx.Model(&family).Association("Members").Delete(&user); err != nil {
+                return err
             }
-        }
-
-        if isAdmin && isMember {
-            // TODO 处理错误
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "The user is currently both an admin and a member"})
-            return
-        }
-        if !isAdmin && !isMember {
-            // TODO 处理错误
-            c.JSON(http.StatusInternalServerError, gin.H{
-                "error": "The user is currently neighther an admin or a member"})
-            return
-        }
-        if isAdmin {
-            if err := fc.DB.Model(&family).Association("Admins").Delete(&user); err != nil {
-                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove user from admin list"})
-                return
+            family.MemberCount--
+            if err := tx.Save(&family).Error; err != nil {
+                return err
             }
-        }
-        if isAdmin {
-            if err := fc.DB.Model(&family).Association("Members").Delete(&user); err != nil {
-                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove user from admin list"})
-                return
-            }
-        }
-
-        user.FamilyID = 0
-        if err := fc.DB.Save(&user).Error; err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{
-                "error": "Failed to update user's family information"})
+            user.FamilyID = nil
+            return tx.Save(&user).Error
+        }); err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to leave family"})
             return
         }
     } else if family.MemberCount == 1 {
-
+        // 直接解散家庭
+        if err := fc.DB.Transaction(func(tx *gorm.DB) error {
+            if err := tx.Delete(&family).Error; err != nil {
+                return err
+            }
+            user.FamilyID = nil
+            return tx.Save(&user).Error
+        }); err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to disband family"})
+            return
+        }
     } else {
-        // c.JSON()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid family member count"})
+        return
     }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Successfully left the family"})
 }
 
 // 踢出家庭
+func (fc *FamilyController) DeleteFamilyMember(c *gin.Context) {
+    adminUserID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
+    var request struct {
+        UserID uint `json:"user_id" binding:"required"`
+    }
+    if err := c.ShouldBindJSON(&request); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+        return
+    }
+
+    var adminUser models.User
+    if err := fc.DB.First(&adminUser, adminUserID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Admin user not found"})
+        return
+    }
+
+    if adminUser.FamilyID == nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
+        return
+    }
+
+    var family models.Family
+    if err := fc.DB.Preload("Admins").Preload("Members").First(&family, *adminUser.FamilyID).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve family"})
+        return
+    }
+
+    isAdmin := false
+    for _, admin := range family.Admins {
+        if admin.ID == adminUserID {
+            isAdmin = true
+            break
+        }
+    }
+    if !isAdmin {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You are not an admin of this family"})
+        return
+    }
+
+    var user models.User
+    if err := fc.DB.First(&user, request.UserID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+
+    if user.FamilyID == nil || *user.FamilyID != family.ID {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "The user is not in your family"})
+        return
+    }
+
+    if user.ID == adminUserID {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You cannot remove yourself"})
+        return
+    }
+
+    // 移除用户并减少家庭成员计数
+    if err := fc.DB.Transaction(func(tx *gorm.DB) error {
+        if err := tx.Model(&family).Association("Admins").Delete(&user); err != nil {
+            return err
+        }
+        if err := tx.Model(&family).Association("Members").Delete(&user); err != nil {
+            return err
+        }
+        family.MemberCount--
+        if err := tx.Save(&family).Error; err != nil {
+            return err
+        }
+        user.FamilyID = nil
+        return tx.Save(&user).Error
+    }); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove user from family"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Successfully removed user from family"})
+}
 
 // 解散家庭
+func (fc *FamilyController) BreakFamily(c *gin.Context) {
+    // 从 JWT 中解析用户 ID
+    adminUserID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    // 查询当前用户信息并预加载家庭信息
+    var adminUser models.User
+    if err := fc.DB.Preload("Family.Admins").Preload("Family.Members").First(&adminUser, adminUserID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+        return
+    }
+
+    // 检查用户是否属于某个家庭
+    if adminUser.Family == nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
+        return
+    }
+
+    family := adminUser.Family
+
+    // 检查用户是否是家庭管理员
+    isAdmin := false
+    for _, admin := range family.Admins {
+        if admin.ID == adminUserID {
+            isAdmin = true
+            break
+        }
+    }
+
+    if !isAdmin {
+        c.JSON(http.StatusForbidden, gin.H{"error": "You are not authorized to dissolve this family"})
+        return
+    }
+
+    // 使用事务保证解散家庭的原子性
+    err := fc.DB.Transaction(func(tx *gorm.DB) error {
+        // 从所有用户中解除家庭关联
+        if err := tx.Model(&models.User{}).Where("family_id = ?", family.ID).Update("family_id", nil).Error; err != nil {
+            return err
+        }
+
+        // 删除家庭的所有关联：Admins、Members、WaitingList
+        if err := tx.Model(&family).Association("Admins").Clear(); err != nil {
+            return err
+        }
+        if err := tx.Model(&family).Association("Members").Clear(); err != nil {
+            return err
+        }
+        if err := tx.Model(&family).Association("WaitingList").Clear(); err != nil {
+            return err
+        }
+
+        // 删除家庭记录
+        if err := tx.Delete(&family).Error; err != nil {
+            return err
+        }
+
+        return nil
+    })
+
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to dissolve the family"})
+        return
+    }
+
+    // 返回成功响应
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Family dissolved successfully",
+        "family_id": family.ID,
+    })
+}

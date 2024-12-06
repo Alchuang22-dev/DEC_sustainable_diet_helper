@@ -38,6 +38,7 @@
 	"menu_food_preferences": "Food Preferences",
 	"menu_my_family": "My Family",
 	"menu_favorites": "My Favorites",
+	"menu_creations": "My Works",
 	"menu_history_data": "History Data",
 	"menu_app_settings": "App Settings",
 	"menu_user_settings": "User Settings",
@@ -155,11 +156,21 @@
 
 	//饮食推荐
 	"recommend_image_alt": "Recommended Image",
-	"dish_1": "Steamed Cabbage",
-	"dish_2": "Sweet Potato",
-	"dish_3": "Dapanji",
-	"dish_4": "Pasta",
+	"dish_1": "carrot",
+	"dish_2": "white radish",
+	"dish_3": "potato",
+	"dish_4": "tomato",
+	"dish_5": "beef",
+	"dish_6": "Chinese cabbage",
+	"dish_7": "lettuce",
+	"dish_8": "beans",
+	"dish_9": "tofu",
+	"dish_10": "pumpkin",
+	"dish_11": "squid",
+	"dish_12": "celery",
+	"default_dish": "No more dishes...",
 	"generate_recipe": "Generate Recipe",
+	"change_food": "Change food",
 	"recommended_recipe": "Recommended Recipe",
 	"recommended_recipe_info": "Based on your region, we recommend Dapanji!",
 	"recommendation_title": "Suitable for Your Area Today",
@@ -201,7 +212,6 @@
 	"add_success": "Add Successful",
 	"invalid_food_item": "Invalid Food Item",
 	"modify_success": "Modification Successful",
-	"method_default": "average",
 	"transport_land": "Land Transport",
 	"transport_sea": "Sea Transport",
 	"transport_air": "Air Transport",
@@ -232,6 +242,10 @@
 	"family_name_required": "Family name cannot be empty",
 	"family_id_placeholder": "Enter family ID",
 	"family_id_required": "Family ID cannot be empty",
+	"family_not_found": "Family not found",
+	"create_family_failed": "Failed to create family",
+	"not_admin": "Only the family admin can do this",
+	"join_family_failed": "Failed to join family",
 	"confirm": "Confirm",
 	"cancel": "Cancel",
 	"carbon_emission_unit": "Carbon Emission(Kg)",
@@ -257,11 +271,42 @@
     "change_binding_phone": "You are changing the phone number bound to your account.",
     "confirm_binding": "Confirm Binding",
     "input_verification_code": "Enter verification code",
-	//tab
-	"home": "home"
-},
-{
-	"navigationBarTitleText": {
-		"home": "home"
-	}
+
+	"index": "Home",
+	"news_index": "Post",
+	"my_index": "My",
+	"tools_index": "Tools",
+	
+	"viewNutritionGoals": "View daily nutrition goals",
+	"targetValue": "target",
+	"addOrUpdateTarget": "add/update target",
+	"pleaseFillTargetNameAndValue": "Please put in all the blanks",
+	
+	"foodpreference_greeting": "please add your food preference:",
+	"highProtein": "high protein",
+	"highEnergy": "high energy",
+	"lowCH": "low sugar",
+	"lowFat": "low fat",
+	"lowsodium": "low sodium",
+	"vegan": "vegan",
+	"vegetarian": "vegetarian",
+	"glulenFree": "glulen free",
+	"dairyFree": "dairy free",
+	"alcoholFree": "alcohol free",
+	
+	"enterNickname": "Enter Nickname",
+	"Nickname": "Nickname",
+	"needNickname": "please enter nickname",
+
+	//createNews
+	"putin_title": "Put in title...",
+	"putin_introduction": "Put in introduction...",
+	"add_description": "Add image description",
+	"add_words": "Add words module",
+	"add_image": "Add figure module",
+	"release_but": "Release",
+	"save_draft": "Save draft",
+	"issue_confirm": "Confirm",
+	"ano_issue": "Anonymous release",
+	"confirm_issue": "Release"
 }
