@@ -1,213 +1,191 @@
+<!-- myFamily.vue -->
 <template>
   <view class="family-management">
+    <!-- 已加入的家庭成员列表 -->
     <view class="family-list">
-      <view v-for="(member, index) in familyMembers" :key="index" class="family-member">
-        <view class="member-info" @click="toggleDetails(index)">
-          <image :src="member.avatar" alt="头像" class="avatar" />
+      <view v-for="(member, index) in allFamilyMembers" :key="member.id" class="family-member">
+        <view class="member-info">
+          <image :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`" alt="头像" class="avatar" />
           <view class="info">
-            <text class="name">{{ member.name }}</text>
-            <text class="role">{{ member.role }}</text>
+            <text class="name">{{ member.nickname }}</text>
           </view>
         </view>
         <view class="actions">
-          <button @click.stop="editMember(index)" class="edit-btn">编辑</button>
-          <button @click.stop="removeMember(index)" class="remove-btn">删除</button>
-        </view>
-        <view v-if="member.showDetails" class="details">
-          <view class='wrapper'>   
-            <view class="editor-wrapper">
-              <editor id="editor" class="ql-container" placeholder="开始输入..." show-img-size show-img-toolbar
-                show-img-resize @statuschange="onStatusChange" :read-only="readOnly" @ready="onEditorReady">
-              </editor>
-            </view>
-          </view>
+          <button v-if="member.role !== 'admin'" @click.stop="setAsAdmin(member.id)" class="edit-btn">{{ $t('set_as_admin') }}</button>
+          <button @click.stop="removeMember(member.id)" class="remove-btn">{{ $t('remove_member') }}</button>
         </view>
       </view>
-    </view>
-    <view class="add-member">
-      <button @click="addMember" class="add-btn">添加家庭成员</button>
     </view>
 
-    <!-- 新增的 uni-drawer 用于编辑家庭成员信息 -->
-    <uni-drawer v-if="drawerVisible" :show="drawerVisible" mode="right" @close="closeDrawer">
-      <view class="drawer-content">
-        <view class="input-wrapper">
-          <input v-model="editedName" placeholder="请输入新的姓名" class="uni-input" />
+    <!-- 分割线 -->
+    <view class="divider"></view>
+
+    <!-- 等待加入的成员列表 -->
+    <view class="family-list" v-if="family.waiting_members && family.waiting_members.length > 0">
+      <view v-for="(member, index) in family.waiting_members" :key="member.id" class="family-member">
+        <view class="member-info">
+          <image :src="member.avatarUrl" alt="头像" class="avatar" />
+          <view class="info">
+            <text class="name">{{ member.nickname }}</text>
+          </view>
         </view>
-        <view class="input-wrapper">
-          <input v-model="editedRole" placeholder="请输入新的家庭位置" class="uni-input" />
+        <view class="actions">
+          <button @click.stop="admitMember(member.id)" class="add-btn">{{ $t('admit') }}</button>
+          <button @click.stop="rejectMember(member.id)" class="remove-btn">{{ $t('reject') }}</button>
         </view>
-        <button @click="confirmEdit" class="confirm-btn">确认修改</button>
       </view>
-    </uni-drawer>
+    </view>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import UniDrawer from "@/uni_modules/uni-drawer/components/uni-drawer/uni-drawer.vue";
+import { ref, onMounted, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useFamilyStore } from '@/stores/family.js';
 
-const familyMembers = ref([
-  { name: '张三', role: '父亲', avatar: 'path/to/avatar1.png', showDetails: false },
-  { name: '李四', role: '母亲', avatar: 'path/to/avatar2.png', showDetails: false },
-]);
+const { t } = useI18n();
 
-const drawerVisible = ref(false);
-const editedIndex = ref(null);
-const editedName = ref('');
-const editedRole = ref('');
+const familyStore = useFamilyStore();
+const family = computed(() => familyStore.family);
 
-const addMember = () => {
-  const newMember = { name: '新成员', role: '未知', avatar: 'path/to/default_avatar.png', showDetails: false };
-  familyMembers.value.push(newMember);
-};
+// 获取当前用户ID（假设存储在localStorage中）
+const currentUserId = uni.getStorageSync('userId'); // 根据你的项目实际情况决定
+const isCurrentUserAdmin = computed(() => {
+  return familyStore.isAdmin(currentUserId);
+});
 
-const removeMember = (index) => {
-  familyMembers.value.splice(index, 1);
-};
+// 合并后的家庭成员列表（包括管理员和普通成员）
+const allFamilyMembers = computed(() => {
+  return family.value.allMembers || [];
+});
 
-const editMember = (index) => {
-  editedIndex.value = index;
-  editedName.value = familyMembers.value[index].name;
-  editedRole.value = familyMembers.value[index].role;
-  drawerVisible.value = true;
-};
-
-const toggleDetails = (index) => {
-  familyMembers.value[index].showDetails = !familyMembers.value[index].showDetails;
-};
-
-const closeDrawer = () => {
-  drawerVisible.value = false;
-};
-
-const confirmEdit = () => {
-  if (editedIndex.value !== null) {
-    familyMembers.value[editedIndex.value].name = editedName.value;
-    familyMembers.value[editedIndex.value].role = editedRole.value;
+onMounted(async () => {
+  try {
+    await familyStore.getFamilyDetails();
+  } catch (error) {
+    uni.showToast({ title: t('fetch_family_details_failed'), icon: 'none' });
   }
-  closeDrawer();
+});
+
+// 设为管理员
+const setAsAdmin = async (userId) => {
+  try {
+    await familyStore.setAdmin(userId);
+    uni.showToast({ title: t('set_admin_success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: t('set_admin_failed'), icon: 'error' });
+  }
+};
+
+// 删除成员
+const removeMember = async (userId) => {
+  try {
+    await familyStore.removeFamilyMember(userId);
+    uni.showToast({ title: t('remove_member_success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: t('remove_member_failed'), icon: 'error' });
+  }
+};
+
+// 同意加入请求
+const admitMember = async (userId) => {
+  try {
+    await familyStore.admitJoinRequest(userId);
+    uni.showToast({ title: t('admit_success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: t('admit_failed'), icon: 'error' });
+  }
+};
+
+// 拒绝加入请求
+const rejectMember = async (userId) => {
+  try {
+    await familyStore.rejectJoinRequest(userId);
+    uni.showToast({ title: t('reject_success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: t('reject_failed'), icon: 'error' });
+  }
 };
 </script>
 
 <style scoped>
 .family-management {
-  padding: 20px;
+  padding: 20rpx;
   background-color: #f5f5f5;
 }
+
 .family-list {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 15rpx;
 }
 
 .family-member {
   display: flex;
-  flex-direction: column; /* 改为列方向，以便各部分垂直排列 */
+  flex-direction: column;
   align-items: flex-start;
   background-color: #ffffff;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 15rpx;
+  border-radius: 8rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
   position: relative;
-  box-sizing: border-box; /* 计算边框和内边距 */
-  width: 100%; /* 确保家庭成员容器不会超出父级宽度 */
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .member-info {
   display: flex;
   align-items: center;
-  cursor: pointer;
-  width: 100%; /* 确保占据整个宽度 */
-  margin-bottom: 10px; /* 增加底部间距，让详情部分与信息分隔开 */
-  box-sizing: border-box; /* 防止边距导致溢出 */
-}
-
-.details {
-  width: 100%; /* 占据整行宽度 */
-  margin-top: 10px;
-  padding: 10px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  box-sizing: border-box; /* 防止内容溢出父级容器 */
+  width: 100%;
+  margin-bottom: 10rpx;
+  box-sizing: border-box;
 }
 
 .avatar {
-  width: 50px;
-  height: 50px;
+  width: 50rpx;
+  height: 50rpx;
   border-radius: 50%;
-  margin-right: 15px;
+  margin-right: 15rpx;
 }
+
 .info {
   flex: 1;
 }
+
 .name {
-  font-size: 18px;
+  font-size: 18rpx;
   font-weight: bold;
 }
-.role {
-  font-size: 14px;
-  color: #888;
-}
+
 .actions {
   display: flex;
-  gap: 10px;
-}
-.icon-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-}
-.edit-btn {
-  color: #007aff;
-}
-.remove-btn {
-  color: #ff3b30;
-}
-.details {
-  margin-top: 10px;
-  padding: 10px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-}
-.detail-edit-btn {
-  margin-top: 10px;
-  background-color: #007aff;
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.add-member {
-  margin-top: 20px;
-  text-align: center;
-}
-.add-btn {
-  background-color: #34c759;
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
+  gap: 10rpx;
 }
 
-.drawer-content {
-  padding: 20px;
+.edit-btn {
+  color: #007aff;
+  background-color: #e0f0ff;
+  padding: 10rpx 20rpx;
+  border-radius: 5rpx;
 }
-.input-wrapper {
-  margin-bottom: 15px;
+
+.remove-btn {
+  color: #ff3b30;
+  background-color: #ffe0e0;
+  padding: 10rpx 20rpx;
+  border-radius: 5rpx;
 }
-.confirm-btn {
-  background-color: #007aff;
-  color: #fff;
-  border: none;
-  padding: 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  width: 100%;
+
+.add-btn {
+  color: #34c759;
+  background-color: #e0ffe0;
+  padding: 10rpx 20rpx;
+  border-radius: 5rpx;
+}
+
+.divider {
+  height: 2rpx;
+  background-color: #ddd;
+  margin: 20rpx 0;
 }
 </style>

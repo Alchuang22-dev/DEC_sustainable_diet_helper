@@ -1,3 +1,4 @@
+// family.js
 import { defineStore } from 'pinia';
 import { reactive, watch } from 'vue';
 
@@ -34,8 +35,9 @@ export const useFamilyStore = defineStore('family', () => {
                 name: '',
                 familyId: '',
                 memberCount: 0,
-                admins: [],
-                members: [],
+                allMembers: [],        // 合并后的成员列表
+                waiting_members: [],   // 等待加入的成员
+                dishProposals: [],     // 菜品提议（假设有）
                 status: FamilyStatus.NOT_JOINED,
             };
         } catch (error) {
@@ -45,8 +47,9 @@ export const useFamilyStore = defineStore('family', () => {
                 name: '',
                 familyId: '',
                 memberCount: 0,
-                admins: [],
-                members: [],
+                allMembers: [],
+                waiting_members: [],
+                dishProposals: [],
                 status: FamilyStatus.NOT_JOINED,
             };
         }
@@ -64,7 +67,7 @@ export const useFamilyStore = defineStore('family', () => {
     };
 
     const watchFamily = () => {
-        const watchKeys = ['id', 'name', 'familyId', 'memberCount', 'admins', 'members', 'status'];
+        const watchKeys = ['id', 'name', 'familyId', 'memberCount', 'allMembers', 'waiting_members', 'status'];
         watchKeys.forEach(key => {
             watch(() => family[key], () => {
                 saveToStorage();
@@ -93,26 +96,17 @@ export const useFamilyStore = defineStore('family', () => {
             }));
             console.log('createFamily:', response.data);
 
-            // 在每个赋值后都加上日志
-            console.log('Setting id:', response.data.family.id);
             family.id = response.data.family.id;
-
-            console.log('Setting name:', response.data.family.name);
             family.name = response.data.family.name;
-
-            console.log('Setting familyId:', response.data.family.family_id);
             family.familyId = response.data.family.family_id;
-
-            console.log('Setting status');
             family.status = FamilyStatus.JOINED;
 
-            console.log('Before getFamilyDetails'); // 添加这行
-            const details = await getFamilyDetails();
-            console.log('After getFamilyDetails', details); // 添加这行
+            await getFamilyDetails();
 
             saveToStorage();
             return response.data;
         } catch (error) {
+            console.error('创建家庭失败:', error);
             throw error;
         }
     };
@@ -126,44 +120,57 @@ export const useFamilyStore = defineStore('family', () => {
             }));
 
             console.log('getFamilyDetails:', response);
-            // 假设后端返回数据格式为 response.data 内包含家庭信息和status
             const data = response.data;
 
             family.status = data.status;
 
             if (data.status === FamilyStatus.JOINED) {
-                // 已加入家庭
                 family.id = data.id;
                 family.name = data.name;
                 family.familyId = data.family_id;
                 family.memberCount = data.member_count;
-                family.admins = data.admins.map(admin => ({
+
+                // 合并管理员和普通成员
+                const adminsWithRole = data.admins.map(admin => ({
                     id: admin.id,
                     nickname: admin.nickname,
-                    avatarUrl: admin.avatar_url
+                    avatarUrl: admin.avatar_url,
+                    role: 'admin'
                 }));
-                family.members = data.members.map(member => ({
+                const membersWithRole = data.members.map(member => ({
                     id: member.id,
                     nickname: member.nickname,
-                    avatarUrl: member.avatar_url
+                    avatarUrl: member.avatar_url,
+                    role: 'member'
                 }));
+                family.allMembers = [...adminsWithRole, ...membersWithRole];
+
+                // 处理等待加入的成员
+                if (data.waiting_members && Array.isArray(data.waiting_members)) {
+                    family.waiting_members = data.waiting_members.map(member => ({
+                        id: member.id,
+                        nickname: member.nickname,
+                        avatarUrl: member.avatar_url
+                    }));
+                } else {
+                    family.waiting_members = [];
+                }
+
                 console.log('family:', family);
             } else if (data.status === FamilyStatus.PENDING_APPROVAL) {
-                // 待审核状态
                 family.id = data.id;
                 family.name = data.name;
                 family.familyId = data.family_id;
                 family.memberCount = 0;
-                family.admins = [];
-                family.members = [];
+                family.allMembers = [];
+                family.waiting_members = [];
             } else {
-                // 未加入状态，清空数据
                 family.id = '';
                 family.name = '';
                 family.familyId = '';
                 family.memberCount = 0;
-                family.admins = [];
-                family.members = [];
+                family.allMembers = [];
+                family.waiting_members = [];
             }
 
             saveToStorage();
@@ -178,13 +185,13 @@ export const useFamilyStore = defineStore('family', () => {
     const searchFamily = async (familyId) => {
         try {
             console.log('searchFamily:', familyId);
-            // 将familyId作为query参数拼接到URL
             const response = await request(createRequestConfig({
                 url: `${BASE_URL}/families/search?family_id=${familyId}`,
                 method: 'GET'
             }));
-            return response;
+            return response.data;
         } catch (error) {
+            console.error('searchFamily error:', error);
             throw error;
         }
     };
@@ -196,9 +203,10 @@ export const useFamilyStore = defineStore('family', () => {
                 url: `${BASE_URL}/families/${familyId}/join`,
                 method: 'POST'
             }));
-            await getFamilyDetails(); // 重新获取状态
-            return response;
+            await getFamilyDetails();
+            return response.data;
         } catch (error) {
+            console.error('joinFamily error:', error);
             throw error;
         }
     };
@@ -208,11 +216,12 @@ export const useFamilyStore = defineStore('family', () => {
         try {
             const response = await request(createRequestConfig({
                 url: `${BASE_URL}/families/cancel_join`,
-                method: 'POST'
+                method: 'DELETE'
             }));
-            await getFamilyDetails(); // 重新获取状态
-            return response;
+            await getFamilyDetails();
+            return response.data;
         } catch (error) {
+            console.error('cancelJoinRequest error:', error);
             throw error;
         }
     };
@@ -226,8 +235,9 @@ export const useFamilyStore = defineStore('family', () => {
                 data: { user_id: userId }
             }));
             await getFamilyDetails();
-            return response;
+            return response.data;
         } catch (error) {
+            console.error('admitJoinRequest error:', error);
             throw error;
         }
     };
@@ -241,15 +251,78 @@ export const useFamilyStore = defineStore('family', () => {
                 data: { user_id: userId }
             }));
             await getFamilyDetails();
-            return response;
+            return response.data;
         } catch (error) {
+            console.error('rejectJoinRequest error:', error);
+            throw error;
+        }
+    };
+
+    // 离开家庭
+    const leaveFamily = async () => {
+        try {
+            const response = await request(createRequestConfig({
+                url: `${BASE_URL}/families/leave_family`,
+                method: 'DELETE'
+            }));
+            reset();
+            return response.data;
+        } catch (error) {
+            console.error('leaveFamily error:', error);
+            throw error;
+        }
+    };
+
+    // 解散家庭（仅管理员）
+    const breakFamily = async () => {
+        try {
+            const response = await request(createRequestConfig({
+                url: `${BASE_URL}/families/break`,
+                method: 'DELETE'
+            }));
+            reset();
+            return response.data;
+        } catch (error) {
+            console.error('breakFamily error:', error);
+            throw error;
+        }
+    };
+
+    // 设为管理员（仅管理员）
+    const setAdmin = async (userId) => {
+        try {
+            const response = await request(createRequestConfig({
+                url: `${BASE_URL}/families/set_admin`,
+                method: 'PUT',
+                data: { user_id: userId }
+            }));
+            await getFamilyDetails();
+            return response.data;
+        } catch (error) {
+            console.error('setAdmin error:', error);
+            throw error;
+        }
+    };
+
+    // 删除家庭成员（仅管理员）
+    const removeFamilyMember = async (userId) => {
+        try {
+            const response = await request(createRequestConfig({
+                url: `${BASE_URL}/families/delete_family_member`,
+                method: 'DELETE',
+                data: { user_id: userId }
+            }));
+            await getFamilyDetails();
+            return response.data;
+        } catch (error) {
+            console.error('removeFamilyMember error:', error);
             throw error;
         }
     };
 
     // 判断用户是否是管理员
     const isAdmin = (userId) => {
-        return family.admins.some(admin => admin.id === userId);
+        return family.allMembers.some(member => member.id === userId && member.role === 'admin');
     };
 
     // 清除本地存储数据
@@ -267,8 +340,9 @@ export const useFamilyStore = defineStore('family', () => {
         family.name = '';
         family.familyId = '';
         family.memberCount = 0;
-        family.admins = [];
-        family.members = [];
+        family.allMembers = [];
+        family.waiting_members = [];
+        family.dishProposals = [];
         family.status = FamilyStatus.NOT_JOINED;
         clearStorage();
     };
@@ -288,7 +362,6 @@ export const useFamilyStore = defineStore('family', () => {
     return {
         family,
         FamilyStatus,
-        useFamilyStore,
         getStatusText,
         createFamily,
         getFamilyDetails,
@@ -297,6 +370,10 @@ export const useFamilyStore = defineStore('family', () => {
         cancelJoinRequest,
         admitJoinRequest,
         rejectJoinRequest,
+        setAdmin,
+        removeFamilyMember,
+        leaveFamily,
+        breakFamily,
         reset,
         clearStorage,
         isAdmin
