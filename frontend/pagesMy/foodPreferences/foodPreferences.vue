@@ -30,7 +30,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 const { t, locale } = useI18n();
@@ -47,18 +47,36 @@ const preferenceOptions = ref([
   { name: t('lowsodium'), key: 'lowsodium', icon: 'https://via.placeholder.com/50' },
   { name: t('vegan'), key: 'vegan', icon: 'https://via.placeholder.com/50' },
   { name: t('vegetarian'), key: 'vegetarian', icon: 'https://via.placeholder.com/50' },
-  { name: t('glutenFree'), key: 'glutenFree', icon: 'https://via.placeholder.com/50' },
+  { name: t('glulenFree'), key: 'glulenFree', icon: 'https://via.placeholder.com/50' },
   { name: t('alcoholFree'), key: 'alcoholFree', icon: 'https://via.placeholder.com/50' },
   { name: t('dairyFree'), key: 'dairyFree', icon: 'https://via.placeholder.com/50' },
 ]);
 
 const showModal = ref(false);
 
+const user_id = ref('');
+
+// onMounted 生命周期钩子
+onMounted(() => {
+  // 从 localStorage 中获取 token 信息作为 user_id
+  const token = uni.getStorageSync('token');
+  if (token) {
+    user_id.value = token; // 如果存在，则将 token 存储为 user_id
+  } else {
+    console.warn('No tokens found in localStorage.');
+  }
+});
+
 const removePreference = (index) => {
   const preferenceToRemove = preferences.value[index];
+  console.log(preferenceToRemove.key);
   uni.request({
-    url: 'http://122.51.231.155:8080/preferences',
+    url: 'http://122.51.231.155:8090/preferences',
     method: 'DELETE',
+	header: {
+	      "Authorization": `Bearer ${user_id.value}`, // 替换为实际的 Token 变量
+	      "Content-Type": "application/json", // 设置请求类型
+	    },
     data: {
 		preference_name: preferenceToRemove.key // 使用存储的 key 字段
     },
@@ -84,11 +102,16 @@ const closeModal = () => {
 };
 
 const selectPreference = (option) => {
+	console.log(option.key);
   uni.request({
-    url: 'http://122.51.231.155:8080/preferences',
+    url: 'http://122.51.231.155:8090/preferences',
     method: 'POST',
+	header: {
+	      "Authorization": `Bearer ${user_id.value}`, // 替换为实际的 Token 变量
+	      "Content-Type": "application/json", // 设置请求类型
+	    },
     data: {
-      preference_name: option.key // 使用存储的 key 字段
+		preference_name: option.key // 使用存储的 key 字段
     },
     success: (res) => {
       if (res.statusCode === 200) {
@@ -97,12 +120,15 @@ const selectPreference = (option) => {
         preferences.value.push({ name: option.name, key: option.key, icon: option.icon });
         closeModal();
       }
+	  console.log(res.data);
     },
     fail: (err) => {
-      console.error('Error adding preference:', err);
+		console.log(res.data);
+		console.error('Error adding preference:', err);
     }
   });
 };
+
 </script>
 
 <style scoped>

@@ -71,14 +71,15 @@ function navigateTo(link) {
 // Simulate fetching data from backend
 onMounted(() => {
   // Example of an API call to fetch user data
-  setTimeout(() => {
-    userData.value = {
-      username: 'user_test',
+  const query = uni.getStorageSync('userInfo');  // 获取存储的用户信息
+  if (query && query.nickName) {
+	  userData.value = {
+      username: query.nickName,
       accountId: '00001',
       phoneNumber: '(+86)12345678900',
       email: '2901@mails.com'
     };
-  }, 500); // Simulate network delay
+  }
 });
 </script>
 

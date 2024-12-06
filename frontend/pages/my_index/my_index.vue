@@ -53,6 +53,10 @@
         <image src="@/pages/static/favorites.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_favorites')}}</text>
       </view>
+	  <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('my_home')">
+	    <image src="@/pages/static/mywork.svg" class="icon_svg"></image>
+	    <text class="menu-text">{{$t('menu_creations')}}</text>
+	  </view>
       <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('historyData')">
         <image src="@/pages/static/historicaldata.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_history_data')}}</text>
