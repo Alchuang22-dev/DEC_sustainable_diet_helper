@@ -128,10 +128,16 @@
   const token = uni.getStorageSync('token');
   console.log('这个页面', token);
 
+
 	// Pinia 状态管理
 	const familyStore = useFamilyStore();
 	const family = computed(() => familyStore.family);
 	const FamilyStatus = familyStore.FamilyStatus;
+
+  // familyStore.reset();
+
+  console.log('家庭', family);
+  console.log('家庭状态', family.value.status);
 
 	// 定时器引用
 	let statusCheckTimer = null;
@@ -208,26 +214,42 @@
 		newDish.preference = 0;
 	};
 
-	// 创建家庭
-	const createFamily = async () => {
-		if (newFamilyName.value.trim() === '') {
-			uni.showToast({
-				title: t('family_name_required'),
-				icon: 'none'
-			});
-			return;
-		}
-		try {
-			await familyStore.createFamily(newFamilyName.value);
-			newFamilyName.value = '';
-			showCreateFamilyModal.value = false;
-		} catch (error) {
-			uni.showToast({
-				title: t('create_family_failed'),
-				icon: 'error'
-			});
-		}
-	};
+  const createFamily = async () => {
+    if (newFamilyName.value.trim() === '') {
+      uni.showToast({
+        title: t('family_name_required'),
+        icon: 'none'
+      });
+      return;
+    }
+
+    console.log('开始创建家庭...');  // 添加日志
+    try {
+      // 调用前的状态
+      console.log('调用前的family状态:', JSON.stringify(familyStore.family));
+
+      const result = await familyStore.createFamily(newFamilyName.value);
+      console.log('createFamily返回结果:', result);  // 添加日志
+
+      newFamilyName.value = '';
+      showCreateFamilyModal.value = false;
+
+      // 确认更新后的状态
+      console.log('创建家庭成功，更新后的family状态:', JSON.stringify(familyStore.family));
+
+      // 显示成功提示
+      uni.showToast({
+        title: t('create_family_success'),
+        icon: 'success'
+      });
+    } catch (error) {
+      console.error('创建家庭失败，错误详情:', error);  // 添加详细错误日志
+      uni.showToast({
+        title: t('create_family_failed'),
+        icon: 'error'
+      });
+    }
+  };
 
   // 加入家庭
   const joinFamily = async () => {

@@ -14,23 +14,35 @@
 
     <!-- 可滑动的食物列表 -->
     <scroll-view scroll-y="true" class="food-list scroll-view">
-      <view v-for="(food, index) in displayFoodList" :key="food.id" class="card-container">
-			<uni-card
-			  :title="food.displayName || $t('default_food_name')"
-			  :thumbnail="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
-			  :sub-title="`${$t('weight')}: ${food.weight || '1.2kg'} ${$t('price')}: ${food.price || '5元'}`"
-			  shadow=1
-			  @click="animateCard(index)"
-			  :class="{ clicked: food.isAnimating }"
-			  :extra="`${t(`transport_${food.transportMethod}`)} ${t(`source_${food.foodSource}`)}`"
-			  :style="{ animationDelay: `${index * 0.1}s` }"
-			>
-				  <div class="button-container">
-					<button class="delete-button" @click.stop="handleDelete(index)"></button>
-					<button class="edit-button" @click.stop="handleEdit(index)"></button>
-				  </div>
-			</uni-card>   
-      </view>
+      <uni-collapse>
+        <uni-collapse-item v-for="(food, index) in displayFoodList"
+          :key="food.id"
+          :title="food.displayName || $t('default_food_name')"
+          :thumb="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
+        >
+          <view class="food-details">
+            <image
+              :src="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
+              class="food-image"
+              mode="aspectFill"
+            />
+            <view class="food-info">
+              <text class="info-item">{{ $t('weight') }}: {{ food.weight || '1.2kg' }}</text>
+              <text class="info-item">{{ $t('price') }}: {{ food.price || '5元' }}</text>
+              <text class="info-item">{{ $t(`transport_${food.transportMethod}`) }}</text>
+              <text class="info-item">{{ $t(`source_${food.foodSource}`) }}</text>
+<!--              <view class="action-buttons">-->
+                <button class="edit-btn" @click.stop="handleEdit(index)">
+                  <uni-icons type="compose" size="18"></uni-icons>
+                </button>
+                <button class="delete-btn" @click.stop="handleDelete(index)">
+                  <uni-icons type="trash" size="18"></uni-icons>
+                </button>
+<!--              </view>-->
+            </view>
+          </view>
+        </uni-collapse-item>
+      </uni-collapse>
     </scroll-view>
 
     <!-- 按钮区 -->
@@ -485,12 +497,71 @@ onMounted(() => {
 /* 已添加的食物列表 */
 .food-list {
   max-height: 600rpx;
-  margin: 20rpx 0rpx;
-  padding: 20rpx 0rpx;
+  margin-right: 40rpx;
   background-color: #ffffff;
   border-radius: 20rpx;
   box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+}
+
+.food-details {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  gap: 20rpx;
+  background-color: #f8f8f8;
+  border-radius: 10rpx;
+}
+
+.food-image {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 10rpx;
+  flex-shrink: 0;
+}
+
+.food-info {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10rpx;
+}
+
+.info-item {
+  font-size: 24rpx;
+  color: #666;
+  background-color: #fff;
+  padding: 8rpx 16rpx;
+  border-radius: 6rpx;
+  text-align: center;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  margin-left: auto;
+}
+
+.edit-btn, .delete-btn {
+
+  width: 260rpx;
+  height: 60rpx;
+  border: none;
+  padding: 8rpx 16rpx;
+  border-radius: 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-btn {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.delete-btn {
+  background-color: #ff4444;
+  color: white;
 }
 
 .list-title {
