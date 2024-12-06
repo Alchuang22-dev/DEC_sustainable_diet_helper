@@ -301,6 +301,7 @@
 	//createNews
 	"putin_title": "Put in title...",
 	"putin_introduction": "Put in introduction...",
+	"putin_text_placeholder": "Put your text here...",
 	"add_description": "Add image description",
 	"add_words": "Add words module",
 	"add_image": "Add figure module",

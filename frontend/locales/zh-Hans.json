@@ -302,6 +302,7 @@
 	//createNews
 	"putin_title": "请输入文章标题",
 	"putin_introduction": "请输入文章简介",
+	"putin_text_placeholder": "请输入文字",
 	"add_description": "为图片添加描述",
 	"add_words": "添加文字组件",
 	"add_image": "添加图片组件",
@@ -309,8 +310,7 @@
 	"save_draft": "保存草稿",
 	"issue_confirm": "发布确认",
 	"ano_issue": "匿名发布",
-	"confirm_issue": "确认发布",
-	"needNickname": "昵称不能为空"
+	"confirm_issue": "确认发布"
 
 
 }
