@@ -12,6 +12,8 @@ export const FamilyStatus = {
 };
 
 const STORAGE_KEY = 'family_store_data';
+const token = uni.getStorageSync('token');
+console.log('token:', token);
 
 export const useFamilyStore = defineStore('family', () => {
     // const userStore = useUserStore();
@@ -69,7 +71,7 @@ export const useFamilyStore = defineStore('family', () => {
         return {
             ...config,
             header: {
-                'Authorization': `Bearer ${111}`
+                'Authorization': `Bearer ${token}`
             }
         };
     };
@@ -84,6 +86,8 @@ export const useFamilyStore = defineStore('family', () => {
                     name: familyName
                 }
             }));
+
+            console.log('createFamily:', response.family);
 
             family.id = response.family.id;
             family.name = response.family.name;
