@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"time"
-    "io"
 
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
@@ -59,19 +58,10 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
         return
     }
 
-    body, err := io.ReadAll(resp.Body)
-    if err != nil {
-        log.Println("读取响应内容失败:", err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read response body"})
-        return
-    }
-    // 打印 Body 内容
-    log.Println("微信 API 响应内容:", string(body))
-
     defer resp.Body.Close()
 
     var wxResponse struct {
-        OpenID     string `json:"open_id"`
+        OpenID     string `json:"openid"`
         SessionKey string `json:"session_key"`
         ErrCode    int    `json:"errcode"`
         ErrMsg     string `json:"errmsg"`

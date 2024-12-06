@@ -8,7 +8,7 @@ type Family struct {
     ID        uint      `gorm:"primaryKey" json:"id"`                // 家庭唯一标识
     Name      string    `gorm:"size:100;not null" json:"name"`       // 家庭名称
     Token     string    `gorm:"size:64;unique;not null" json:"token"` // 家庭唯一 Token，用于用户加入
-    MemberCount int       `json:"like_count"`                        // 成员数
+    MemberCount uint       `json:"like_count"`                        // 成员数
 
     Admins    []User    `gorm:"many2many:family_admins;" json:"admins"` // 管理员列表
     Members   []User    `gorm:"many2many:family_members;" json:"members"` // 普通成员列表
