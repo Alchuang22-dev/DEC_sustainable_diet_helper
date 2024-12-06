@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"fmt"
-
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
 	"github.com/gin-gonic/gin"
@@ -30,7 +28,6 @@ func (fc *FamilyController) CreateFamily(c *gin.Context) {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
         return
     }
-    fmt.Println(userID)
 
     // 检查用户是否已属于某个家庭
     var user models.User

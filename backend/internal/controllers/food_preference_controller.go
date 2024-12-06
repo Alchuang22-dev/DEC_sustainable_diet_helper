@@ -38,8 +38,8 @@ func validatePreference(preferenceName string) bool {
 
 // AddFoodPreference 添加食物偏好
 func (fpc *FoodPreferenceController) AddFoodPreference(c *gin.Context) {
-    rawData, _ := c.GetRawData()
-    log.Printf("原始请求数据: %s\n", string(rawData))
+    // rawData, _ := c.GetRawData()
+    // log.Printf("原始请求数据: %s\n", string(rawData))
     userID, exists := c.Get("user_id")
     if !exists {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
