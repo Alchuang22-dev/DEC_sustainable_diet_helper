@@ -33,8 +33,15 @@ func RegisterFamilyRoutes(router *gin.Engine, db *gorm.DB) {
             // 取消加入家庭
             authGroup.POST("/cancel_join", familyController.CancelJoinFamily)
             // 查看当前试图加入的家庭信息
-            authGroup.POST("/pending_family_details", familyController.PendingFamilyDetails)
-            
+            authGroup.GET("/pending_family_details", familyController.PendingFamilyDetails)
+            // 更改某个家庭成员为 member
+            authGroup.POST("/set_member", familyController.SetMember)
+            // 更改某个家庭成员为 admin
+            authGroup.POST("/set_admin", familyController.SetAdmin)
+            // 退出家庭
+            authGroup.POST("/leave_family", familyController.LeaveFamily)
+            // 踢出家庭
+            authGroup.POST("/delete_family_member", familyController.DeleteFamilyMember)
         }
     }
 }
