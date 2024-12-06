@@ -3,13 +3,15 @@ package controllers
 
 import (
     "encoding/json"
-    "io/ioutil"
     "net/http"
     "path/filepath"
+    "os"
 
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
+
+    "log"
 )
 
 type FoodPreferenceController struct {
@@ -20,17 +22,20 @@ type FoodPreferenceController struct {
 func validatePreference(preferenceName string) bool {
     // 读取配置文件
     filePath := filepath.Join("data", "food_preference", "foodPreferences.json")
-    data, err := ioutil.ReadFile(filePath)
+    data, err := os.ReadFile(filePath)
     if err != nil {
+        log.Printf("读取配置文件失败: %v\n", err)
         return false
     }
 
     var preferences map[string]interface{}
     if err := json.Unmarshal(data, &preferences); err != nil {
+        log.Printf("解析配置文件失败: %v\n", err)
         return false
     }
 
     _, exists := preferences[preferenceName]
+    log.Printf("偏好 %s 存在: %v\n", preferenceName, exists)
     return exists
 }
 
@@ -47,12 +52,15 @@ func (fpc *FoodPreferenceController) AddFoodPreference(c *gin.Context) {
     }
 
     if err := c.ShouldBindJSON(&request); err != nil {
+        // log详细的错误信息
+        log.Printf("错误信息: %v\n", err)
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
         return
     }
 
-    // 验证偏好是否存在
+    // 验证偏好是否存在 
     if !validatePreference(request.PreferenceName) {
+        log.Printf("偏好不存在: %s\n", request.PreferenceName)
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid preference name"})
         return
     }
@@ -78,7 +86,7 @@ func (fpc *FoodPreferenceController) AddFoodPreference(c *gin.Context) {
 
     c.JSON(http.StatusOK, gin.H{
         "message": "Food preference added successfully",
-        "preference": preference,
+        "preference": preference.Name,
     })
 }
 
@@ -113,6 +121,7 @@ func (fpc *FoodPreferenceController) DeleteFoodPreference(c *gin.Context) {
 
     c.JSON(http.StatusOK, gin.H{
         "message": "Food preference deleted successfully",
+		"preference": request.PreferenceName,
     })
 }
 // 添加新的方法到 FoodPreferenceController
