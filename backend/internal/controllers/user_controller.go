@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+    "io"
 
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
@@ -27,16 +28,11 @@ func NewUserController(db *gorm.DB) *UserController {
 func (uc *UserController) WeChatAuth(c *gin.Context) {
     log.Println("WeChatAuth 被调用")
 
-    // 定义请求体结构
-    var authRequest struct {
-        Code     string `json:"code" binding:"required"` // 微信登录凭证
-        Nickname string `json:"nickname"`               // 可选用户昵称
-    }
-
-    // 绑定请求体
-    if err := c.ShouldBind(&authRequest); err != nil {
-        log.Println("绑定JSON失败:", err)
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+    code := c.PostForm("code")
+    nickname := c.PostForm("nickname")
+    
+    if code == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Code is required"})
         return
     }
 
@@ -53,7 +49,7 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
     // 构建请求 URL
     wxAPI := fmt.Sprintf(
         "%s?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
-        wechatAPIURL, os.Getenv("APP_ID"), os.Getenv("APP_SECRET"), authRequest.Code,
+        wechatAPIURL, os.Getenv("APP_ID"), os.Getenv("APP_SECRET"), code,
     )
 
     resp, err := http.Get(wxAPI)
@@ -62,6 +58,16 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to call WeChat API"})
         return
     }
+
+    body, err := io.ReadAll(resp.Body)
+    if err != nil {
+        log.Println("读取响应内容失败:", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read response body"})
+        return
+    }
+    // 打印 Body 内容
+    log.Println("微信 API 响应内容:", string(body))
+
     defer resp.Body.Close()
 
     var wxResponse struct {
@@ -99,7 +105,7 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
         user = models.User{
             OpenID:     wxResponse.OpenID,
             SessionKey: wxResponse.SessionKey,
-            Nickname:   authRequest.Nickname,
+            Nickname:   nickname,
             FamilyID:   nil,
             CreatedAt:  time.Now(),
             UpdatedAt:  time.Now(),
@@ -112,6 +118,13 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
         // 如果未提供昵称，生成随机昵称
         if user.Nickname == "" {
             user.Nickname = utils.GenerateRandomNickname()
+        }
+
+        // 创建用户
+        if err := uc.DB.Create(&user).Error; err != nil {
+            log.Println("创建用户失败:", err)
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+            return
         }
 
         // 处理头像
@@ -134,14 +147,21 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
         } else {
             // 使用默认头像
             relativePath = "avatars/default.jpg"
+            defaultAvatarPath := fmt.Sprintf("%s/%s", BaseUploadPath, relativePath)
+            newAvatarPath := fmt.Sprintf("%s/avatars/%d_default.jpg", BaseUploadPath, user.ID)
+            if err := utils.CopyFile(defaultAvatarPath, newAvatarPath); err != nil {
+                log.Printf("复制默认头像失败: %v\n", err)
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default avatar"})
+                return
+            }
+            relativePath = fmt.Sprintf("avatars/%d_default.jpg", user.ID)
         }
 
+        // 更新用户头像路径
         user.AvatarURL = relativePath
-
-        // 创建用户
-        if err := uc.DB.Create(&user).Error; err != nil {
-            log.Println("创建用户失败:", err)
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+        if err := uc.DB.Save(&user).Error; err != nil {
+            log.Println("更新用户头像失败:", err)
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user avatar"})
             return
         }
     } else {

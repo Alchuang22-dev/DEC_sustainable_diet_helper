@@ -24,17 +24,17 @@
       <span class="forgot-password">{{ $t('forgotPassword') }}</span>
     </view>
     <view class="wechat-login">
-      <button class="wechat-button" @click="testLogin">
+      <button class="wechat-button" @tap="testLogin">
         <img src="/static/logo.png" alt="WeChat" class="wechat-icon" />
         <span>{{ $t('loginWithWeChat') }}</span>
       </button>
     </view>
-	<view class="wechat-login">
-	  <button class="wechat-button" @click="autoLogin">
-	    <img src="/static/logo.png" alt="WeChat" class="wechat-icon" />
-	    <span>测试登录</span>
-	  </button>
-	</view>
+    <view class="wechat-login">
+      <button class="wechat-button" @click="autoLogin">
+        <img src="/static/logo.png" alt="WeChat" class="wechat-icon" />
+        <span>测试登录</span>
+      </button>
+    </view>
   </view>
 </template>
 
@@ -54,6 +54,9 @@ const phoneNumber = ref('');
 const password = ref('');
 const repeatPassword = ref('');
 const showRepeatPassword = ref(false);
+const avatarUrl = ref(''); // 用户头像
+const nickName = ref('');  // 用户昵称
+
 
 const switchLanguage = (lang) => {
   locale.value = lang;
@@ -72,205 +75,88 @@ const autoLogin = () => {
   });
 };
 
+// 更新后的 testLogin 函数
 const testLogin = () => {
-  uni.showLoading({
-    title: t('loggingIn') || '正在登录...',
-    mask: true
-  });
+ uni.navigateTo({
+ 	url: "/pagesMy/wechatLogin/wechatLogin",
+ })
+};
 
-  // 获取可用的OAuth服务提供商
-  uni.getProvider({
-    service: 'oauth',
-    success: function(res) {
-      // 检查是否支持微信登录
-      if (res.provider && res.provider.includes('weixin')) {
-        // 调用微信登录接口
-        uni.login({
-          provider: 'weixin',
-          success: function(loginRes) {
-            if (loginRes.code) {
-              const code = loginRes.code;
-              console.log('微信登录码:', code);
-
-              // 获取用户信息
-              uni.getUserProfile({
-                desc: t('authorizeLogin') || '用于完善会员资料', // 必须填写描述
-                success: function(infoRes) {
-                  const userInfo = infoRes.userInfo;
-                  console.log('用户信息:', userInfo);
-
-                  // 准备发送到后端的数据
-                  const data = {
-                    code: code,
-                    userInfo: {
-                      nickName: userInfo.nickName,
-                      avatarUrl: userInfo.avatarUrl,
-                      gender: userInfo.gender,
-                      province: userInfo.province,
-                      city: userInfo.city,
-                      country: userInfo.country
-                    }
-                  };
-
-                  // 调用 Vuex 的 Login action
-                  store.dispatch('Login', {
-                    type: 'weixin',
-                    url: 'https://122.51.231.155:8080/wechat-login', // 后端登录接口
-                    data
-                  }).then(res => {
-                    uni.hideLoading();
-                    if (res === 'ok') {
-                      uni.showToast({
-                        title: t('loginSuccess') || '登录成功',
-                        icon: 'success',
-                        duration: 2000
-                      });
-                      login();
-                    } else {
-                      uni.showToast({
-                        icon: 'none',
-                        title: res || (t('loginFailed') || '登录失败')
-                      });
-                      console.error('后端登录失败:', res);
-                    }
-                  }).catch(err => {
-                    uni.hideLoading();
-                    uni.showToast({
-                      icon: 'none',
-                      title: err || (t('loginFailed') || '登录失败')
-                    });
-                    console.error('登录过程中发生错误:', err);
-                  });
-                },
-                fail: function(err) {
-                  uni.hideLoading();
-                  uni.showToast({
-                    icon: 'none',
-                    title: t('getUserProfileFailed') || '获取用户信息失败'
-                  });
-                  console.error('获取用户信息失败:', err);
-                }
-              });
-            } else {
-              uni.hideLoading();
-              uni.showToast({
-                title: t('loginFailed') || '登录失败',
-                icon: 'none',
-                duration: 2000
-              });
-              console.error('微信登录失败:', loginRes.errMsg);
-            }
-          },
-          fail: function(err) {
-            uni.hideLoading();
-            uni.showToast({
-              icon: 'none',
-              title: t('loginFailed') || '登录失败',
-              duration: 2000
-            });
-            console.error('微信登录接口调用失败:', err);
-          }
-        });
-      } else {
-        uni.hideLoading();
+// 选择头像并输入昵称
+const selectAvatarAndInputNickName = () => {
+  if (uni.getSystemInfoSync().platform !== 'h5') {
+    // 小程序平台使用 chooseAvatar
+    uni.chooseAvatar({
+      success: (avatarRes) => {
+        avatarUrl.value = avatarRes.avatarUrl;
+        promptForNickName();
+      },
+      fail: (err) => {
         uni.showToast({
+          title: '头像选择失败',
           icon: 'none',
-          title: t('weixinNotSupported') || '当前设备不支持微信登录',
-          duration: 2000
         });
-        console.warn('当前设备不支持微信登录:', res.provider);
       }
-    },
-    fail: function(err) {
-      uni.hideLoading();
-      uni.showToast({
-        icon: 'none',
-        title: t('getProviderFailed') || '获取服务提供商失败',
-        duration: 2000
-      });
-      console.error('获取OAuth服务提供商失败:', err);
+    });
+  } else {
+    // H5 使用文件选择
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          avatarUrl.value = event.target.result; // 设置头像为选择的图片路径
+          promptForNickName(); // 弹出输入昵称的提示框
+        };
+        reader.readAsDataURL(file); // 将文件转为Base64
+      }
+    };
+    input.click();
+  }
+};
+
+const promptForNickName = () => {
+  uni.showModal({
+    title: '输入昵称',
+    content: '请输入您的昵称',
+    showCancel: true,
+    confirmText: '确认',
+    cancelText: '取消',
+    success: (inputRes) => {
+      if (inputRes.confirm) {
+        nickName.value = inputRes.content;
+        saveUserInfo();
+      } else {
+        uni.showToast({
+          title: '您可以稍后再输入昵称',
+          icon: 'none',
+        });
+      }
     }
   });
 };
 
-const performWeixinLogin = () => {
-  uni.login({
-    provider: 'weixin',
-    success: function(loginRes) {
-      if (loginRes.authResult && loginRes.authResult.code) {
-        const authResult = loginRes.authResult;
-        
-        // 获取用户信息
-        uni.getUserInfo({
-          provider: 'weixin',
-          success: function(infoRes) {
-            const userInfo = infoRes.userInfo;
-            const data = {
-              ...authResult,
-              userInfo
-            };
-
-            // 调用 Vuex 的 Login action
-            store.dispatch('Login', {
-              type: 'weixin',
-              url: 'https://122.51.231.155:8080/wechat-login', // 后端登录接口
-              data
-            }).then(res => {
-              if (res === 'ok') {
-                uni.hideLoading();
-                uni.showToast({
-                  title: t('loginSuccess'),
-                  icon: 'success',
-                  duration: 2000
-                });
-                login();
-              } else {
-                uni.hideLoading();
-                uni.showToast({
-                  icon: 'none',
-                  title: res || t('loginFailed')
-                });
-                console.error('后端登录失败:', res);
-              }
-            }).catch(err => {
-              uni.hideLoading();
-              uni.showToast({
-                icon: 'none',
-                title: err || t('loginFailed')
-              });
-              console.error('登录过程中发生错误:', err);
-            });
-          },
-          fail: function(err) {
-            uni.hideLoading();
-            uni.showToast({
-              icon: 'none',
-              title: t('getUserInfoFailed') || '获取用户信息失败',
-              duration: 2000
-            });
-            console.error('获取用户信息失败:', err);
-          }
-        });
-      } else {
-        uni.hideLoading();
-        uni.showToast({
-          title: t('loginFailed'),
-          icon: 'none',
-          duration: 2000
-        });
-        console.error('微信登录失败:', loginRes.errMsg);
-      }
-    },
-    fail: function(err) {
-      uni.hideLoading();
-      uni.showToast({
-        icon: 'none',
-        title: t('loginFailed'),
-        duration: 2000
-      });
-      console.error('微信登录接口调用失败:', err);
-    }
+// 保存用户信息并跳转
+const saveUserInfo = () => {
+  // 保存头像和昵称到本地存储
+  uni.setStorageSync('userInfo', {
+    nickName: nickName.value,
+    avatarUrl: avatarUrl.value
   });
+  uni.setStorageSync('uid', nickName.value);
+
+  // 显示登录成功提示
+  uni.showToast({
+    title: '登录成功',
+    icon: 'success',
+    duration: 2000
+  });
+
+  // 跳转到首页
+  login();
 };
 
 const check = () => {

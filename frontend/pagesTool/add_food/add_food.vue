@@ -5,26 +5,33 @@
     <view class="form-container">
       <view class="form-group">
         <text class="label">{{ $t('name') }}</text>
-        <input
-          class="input"
-          type="text"
-          v-model="foodNameInput"
-          @focus="showFoodList = true"
-          @blur="onInputBlur"
-          :placeholder="$t('please_enter_food_name')"
-        />
-        <!-- 食物名的模糊匹配下拉列表 -->
-        <view v-if="showFoodList && filteredFoods.length > 0" class="food-list">
-          <view
-            v-for="item in filteredFoods"
-            :key="item.id"
-            class="food-item"
-            @mousedown.prevent
-            @click="selectFood(item)"
-          >
-            {{ item.name }}
-          </view>
-        </view>
+<!--        <input-->
+<!--          class="input"-->
+<!--          type="text"-->
+<!--          v-model="foodNameInput"-->
+<!--          @focus="showFoodList = true"-->
+<!--          @blur="onInputBlur"-->
+<!--          :placeholder="$t('please_enter_food_name')"-->
+<!--        />-->
+<!--        &lt;!&ndash; 食物名的模糊匹配下拉列表 &ndash;&gt;-->
+<!--        <view v-if="showFoodList && filteredFoods.length > 0" class="food-list">-->
+<!--          <view-->
+<!--            v-for="item in filteredFoods"-->
+<!--            :key="item.id"-->
+<!--            class="food-item"-->
+<!--            @mousedown.prevent-->
+<!--            @click="selectFood(item)"-->
+<!--          >-->
+<!--            {{ displayName(item) }}-->
+<!--          </view>-->
+<!--        </view>-->
+            <uni-combox
+      :placeholder="$t('please_enter_food_name')"
+      v-model="foodNameInput"
+      :candidates="filteredFoods.map(item => displayName(item))"
+      @input="onComboxInput"
+            ></uni-combox>
+
       </view>
       <view class="form-group">
         <text class="label">{{ $t('total_weight') }}</text>
@@ -70,7 +77,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n'; // Import useI18n
 import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const foodStore = useFoodListStore();
 
 // 获取 availableFoods
@@ -82,8 +89,8 @@ const food = reactive({
   id: null, // 添加 id 字段
   weight: '',
   price: '',
-  transportMethod: t('transport_land'),
-  foodSource: t('source_local'),
+  transportMethod: 'land', // 使用英文标识
+  foodSource: 'local', // 使用英文标识
   imagePath: '',
 });
 
@@ -94,20 +101,39 @@ const showFoodList = ref(false);
 // 模糊匹配过滤食物列表
 const filteredFoods = computed(() => {
   if (foodNameInput.value === '') {
-    console.log('availableFoods', availableFoods);
-    return availableFoods;
+    const currentLang = locale.value;
+    if (currentLang === 'zh-Hans') {
+      return availableFoods.filter((f) => f.name_zh !== '');
+    } else {
+      return availableFoods.filter((f) => f.name_en !== '');
+    }
   } else {
-    console.log('foodNameInput.value:', foodNameInput.value);
-    console.log('availableFoods:', availableFoods);
-    return availableFoods.filter((f) => f.name.includes(foodNameInput.value));
+    const currentLang = locale.value;
+    return availableFoods.filter((f) => {
+      if (currentLang === 'zh-Hans') {
+        return f.name_zh.includes(foodNameInput.value);
+      } else {
+        return f.name_en.toLowerCase().includes(foodNameInput.value.toLowerCase());
+      }
+    });
   }
 });
 
+// 根据当前语言显示名称
+const displayName = (item) => {
+  return locale.value === 'zh-Hans' ? item.name_zh : item.name_en;
+};
+
+const onComboxInput = (value) => {
+  console.log('onComboxInput', value);
+  foodNameInput.value = value;
+};
+
 // 当用户选择食物时
 const selectFood = (foodItem) => {
-  food.name = foodItem.name;
+  food.name = foodItem.name_en; // 始终使用英文名称存储
   food.id = foodItem.id;
-  foodNameInput.value = foodItem.name;
+  foodNameInput.value = displayName(foodItem); // 显示当前语言的名称
   showFoodList.value = false;
 };
 
@@ -131,9 +157,8 @@ watch(foodNameInput, (newValue) => {
 const weightError = ref(false);
 const priceError = ref(false);
 
-// 运输方式和食品来源下拉选项数据
+// 运输方式和食品来源下拉选项数据（使用翻译）
 const transportMethods = [t('transport_land'), t('transport_sea'), t('transport_air')];
-console.log('transportMethods:', transportMethods);
 const foodSources = [t('source_local'), t('source_imported')];
 
 // 当前选择的索引
@@ -143,15 +168,17 @@ const sourceIndex = ref(0);
 // 运输方式选择改变
 const onTransportChange = (e) => {
   transportIndex.value = e.detail.value;
-  console.log('transportIndex:', transportIndex.value);
-  food.transportMethod = transportMethods[transportIndex.value];
-  console.log('food.transportMethod:', food.transportMethod);
+  const selected = e.detail.value;
+  // 使用英文标识存储
+  food.transportMethod = selected === 0 ? 'land' : selected === 1 ? 'sea' : 'air';
 };
 
 // 食品来源选择改变
 const onSourceChange = (e) => {
   sourceIndex.value = e.detail.value;
-  food.foodSource = foodSources[sourceIndex.value];
+  const selected = e.detail.value;
+  // 使用英文标识存储
+  food.foodSource = selected === 0 ? 'local' : 'imported';
 };
 
 // 上传图片
@@ -184,6 +211,22 @@ const uploadImage = () => {
 
 // 提交表单
 const submitFoodDetails = () => {
+
+  const matchedFood = availableFoods.find((f) => displayName(f) === foodNameInput.value);
+
+if (matchedFood) {
+  // 如果找到匹配的食物项，使用 selectFood 方法
+  selectFood(matchedFood);
+} else {
+  // 如果没有找到，提醒用户
+  uni.showToast({
+    title: t('no_matching_food'),
+    icon: 'none',
+    duration: 2000,
+  });
+  return; // 终止提交
+}
+
   // 重置错误状态
   weightError.value = false;
   priceError.value = false;
@@ -196,8 +239,6 @@ const submitFoodDetails = () => {
     foodSource,
     imagePath
   } = food;
-
-  console.log('food:', food);
 
   // 输入验证
   let valid = true;
@@ -215,6 +256,7 @@ const submitFoodDetails = () => {
   }
 
   if (!name || !weight || !price || !transportMethod || !foodSource) {
+    console.log('所有字段', name, weight, price, transportMethod, foodSource);
     uni.showToast({
       title: t('please_fill_all_fields'),
       icon: 'none',
@@ -227,7 +269,7 @@ const submitFoodDetails = () => {
   }
 
   const newFood = {
-    name,
+    name, // 始终为英文名称
     id: food.id, // 添加 id
     weight: parseInt(weight),
     price: parseInt(price),
@@ -264,6 +306,11 @@ onMounted(() => {
   if (availableFoods.length === 0) {
     fetchAvailableFoods();
   }
+});
+
+// 监听语言变化，重新获取食物列表（如果需要）
+watch(locale, () => {
+  // 可选：根据需要重新获取或处理食物列表
 });
 </script>
 
