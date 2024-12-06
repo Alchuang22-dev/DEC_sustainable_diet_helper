@@ -1,6 +1,6 @@
+// family.js
 import { defineStore } from 'pinia';
 import { reactive, watch } from 'vue';
-// import { useUserStore } from '@/stores/user';
 
 const BASE_URL = 'http://122.51.231.155:8080';
 
@@ -8,17 +8,25 @@ const BASE_URL = 'http://122.51.231.155:8080';
 export const FamilyStatus = {
     NOT_JOINED: 'empty',           // 未加入
     PENDING_APPROVAL: 'waiting',   // 申请加入待审核
-    JOINED: 'family'              // 已加入
+    JOINED: 'family'               // 已加入
 };
 
 const STORAGE_KEY = 'family_store_data';
 const token = uni.getStorageSync('token');
 console.log('token:', token);
 
-export const useFamilyStore = defineStore('family', () => {
-    // const userStore = useUserStore();
+// 封装request为Promise
+const request = (config) => {
+    return new Promise((resolve, reject) => {
+        uni.request({
+            ...config,
+            success: (res) => resolve(res),
+            fail: (err) => reject(err)
+        });
+    });
+};
 
-    // 从本地存储中获取初始数据
+export const useFamilyStore = defineStore('family', () => {
     const getInitialState = () => {
         try {
             const storedData = uni.getStorageSync(STORAGE_KEY);
@@ -27,8 +35,9 @@ export const useFamilyStore = defineStore('family', () => {
                 name: '',
                 familyId: '',
                 memberCount: 0,
-                admins: [],
-                members: [],
+                allMembers: [],        // 合并后的成员列表
+                waiting_members: [],   // 等待加入的成员
+                dishProposals: [],     // 菜品提议（假设有）
                 status: FamilyStatus.NOT_JOINED,
             };
         } catch (error) {
@@ -38,8 +47,9 @@ export const useFamilyStore = defineStore('family', () => {
                 name: '',
                 familyId: '',
                 memberCount: 0,
-                admins: [],
-                members: [],
+                allMembers: [],
+                waiting_members: [],
+                dishProposals: [],
                 status: FamilyStatus.NOT_JOINED,
             };
         }
@@ -47,18 +57,17 @@ export const useFamilyStore = defineStore('family', () => {
 
     const family = reactive(getInitialState());
 
-    // 保存数据到本地存储
     const saveToStorage = () => {
         try {
             uni.setStorageSync(STORAGE_KEY, JSON.stringify(family));
+            console.log('Saved family data:', family);
         } catch (error) {
             console.error('Failed to save family data:', error);
         }
     };
 
-    // 监听 family 对象的变化
     const watchFamily = () => {
-        const watchKeys = ['id', 'name', 'familyId', 'memberCount', 'admins', 'members', 'status'];
+        const watchKeys = ['id', 'name', 'familyId', 'memberCount', 'allMembers', 'waiting_members', 'status'];
         watchKeys.forEach(key => {
             watch(() => family[key], () => {
                 saveToStorage();
@@ -66,7 +75,6 @@ export const useFamilyStore = defineStore('family', () => {
         });
     };
 
-    // 创建请求配置的辅助函数
     const createRequestConfig = (config) => {
         return {
             ...config,
@@ -79,25 +87,26 @@ export const useFamilyStore = defineStore('family', () => {
     // 创建家庭
     const createFamily = async (familyName) => {
         try {
-            const response = await uni.request(createRequestConfig({
+            const response = await request(createRequestConfig({
                 url: `${BASE_URL}/families/create`,
                 method: 'POST',
                 data: {
                     name: familyName
                 }
             }));
+            console.log('createFamily:', response.data);
 
-            console.log('createFamily:', response.family);
-
-            family.id = response.family.id;
-            family.name = response.family.name;
-            family.familyId = response.family.family_id;
+            family.id = response.data.family.id;
+            family.name = response.data.family.name;
+            family.familyId = response.data.family.family_id;
             family.status = FamilyStatus.JOINED;
 
             await getFamilyDetails();
+
             saveToStorage();
-            return response;
+            return response.data;
         } catch (error) {
+            console.error('创建家庭失败:', error);
             throw error;
         }
     };
@@ -105,51 +114,69 @@ export const useFamilyStore = defineStore('family', () => {
     // 获取家庭详情
     const getFamilyDetails = async () => {
         try {
-            const response = await uni.request(createRequestConfig({
+            const response = await request(createRequestConfig({
                 url: `${BASE_URL}/families/details`,
                 method: 'GET'
             }));
 
-            // 根据返回的status更新状态
-            family.status = response.status;
+            console.log('getFamilyDetails:', response);
+            const data = response.data;
 
-            if (response.status === FamilyStatus.JOINED) {
-                // 已加入家庭
-                family.id = response.id;
-                family.name = response.name;
-                family.familyId = response.family_id;
-                family.memberCount = response.member_count;
-                family.admins = response.admins.map(admin => ({
+            family.status = data.status;
+
+            if (data.status === FamilyStatus.JOINED) {
+                family.id = data.id;
+                family.name = data.name;
+                family.familyId = data.family_id;
+                family.memberCount = data.member_count;
+
+                // 合并管理员和普通成员
+                const adminsWithRole = data.admins.map(admin => ({
                     id: admin.id,
                     nickname: admin.nickname,
-                    avatarUrl: admin.avatar_url
+                    avatarUrl: admin.avatar_url,
+                    role: 'admin'
                 }));
-                family.members = response.members.map(member => ({
+                const membersWithRole = data.members.map(member => ({
                     id: member.id,
                     nickname: member.nickname,
-                    avatarUrl: member.avatar_url
+                    avatarUrl: member.avatar_url,
+                    role: 'member'
                 }));
-            } else if (response.status === FamilyStatus.PENDING_APPROVAL) {
-                // 待审核状态
-                family.id = response.id;
-                family.name = response.name;
-                family.familyId = response.family_id;
+                family.allMembers = [...adminsWithRole, ...membersWithRole];
+
+                // 处理等待加入的成员
+                if (data.waiting_members && Array.isArray(data.waiting_members)) {
+                    family.waiting_members = data.waiting_members.map(member => ({
+                        id: member.id,
+                        nickname: member.nickname,
+                        avatarUrl: member.avatar_url
+                    }));
+                } else {
+                    family.waiting_members = [];
+                }
+
+                console.log('family:', family);
+            } else if (data.status === FamilyStatus.PENDING_APPROVAL) {
+                family.id = data.id;
+                family.name = data.name;
+                family.familyId = data.family_id;
                 family.memberCount = 0;
-                family.admins = [];
-                family.members = [];
+                family.allMembers = [];
+                family.waiting_members = [];
             } else {
-                // 未加入状态，清空数据
                 family.id = '';
                 family.name = '';
                 family.familyId = '';
                 family.memberCount = 0;
-                family.admins = [];
-                family.members = [];
+                family.allMembers = [];
+                family.waiting_members = [];
             }
 
             saveToStorage();
             return response;
         } catch (error) {
+            console.log('getFamilyDetails error:', error);
             throw error;
         }
     };
@@ -158,13 +185,13 @@ export const useFamilyStore = defineStore('family', () => {
     const searchFamily = async (familyId) => {
         try {
             console.log('searchFamily:', familyId);
-            const response = await uni.request(createRequestConfig({
-                url: `${BASE_URL}/families/search`,
-                method: 'GET',
-                params: { family_id: familyId }
+            const response = await request(createRequestConfig({
+                url: `${BASE_URL}/families/search?family_id=${familyId}`,
+                method: 'GET'
             }));
-            return response;
+            return response.data;
         } catch (error) {
+            console.error('searchFamily error:', error);
             throw error;
         }
     };
@@ -172,13 +199,14 @@ export const useFamilyStore = defineStore('family', () => {
     // 申请加入家庭
     const joinFamily = async (familyId) => {
         try {
-            const response = await uni.request(createRequestConfig({
-                url: `/families/${familyId}/join`,
+            const response = await request(createRequestConfig({
+                url: `${BASE_URL}/families/${familyId}/join`,
                 method: 'POST'
             }));
-            await getFamilyDetails(); // 重新获取状态
-            return response;
+            await getFamilyDetails();
+            return response.data;
         } catch (error) {
+            console.error('joinFamily error:', error);
             throw error;
         }
     };
@@ -186,13 +214,14 @@ export const useFamilyStore = defineStore('family', () => {
     // 取消加入申请
     const cancelJoinRequest = async () => {
         try {
-            const response = await uni.request(createRequestConfig({
+            const response = await request(createRequestConfig({
                 url: `${BASE_URL}/families/cancel_join`,
-                method: 'POST'
+                method: 'DELETE'
             }));
-            await getFamilyDetails(); // 重新获取状态
-            return response;
+            await getFamilyDetails();
+            return response.data;
         } catch (error) {
+            console.error('cancelJoinRequest error:', error);
             throw error;
         }
     };
@@ -200,14 +229,15 @@ export const useFamilyStore = defineStore('family', () => {
     // 管理员：同意加入申请
     const admitJoinRequest = async (userId) => {
         try {
-            const response = await uni.request(createRequestConfig({
+            const response = await request(createRequestConfig({
                 url: `${BASE_URL}/families/admit`,
                 method: 'POST',
                 data: { user_id: userId }
             }));
             await getFamilyDetails();
-            return response;
+            return response.data;
         } catch (error) {
+            console.error('admitJoinRequest error:', error);
             throw error;
         }
     };
@@ -215,23 +245,85 @@ export const useFamilyStore = defineStore('family', () => {
     // 管理员：拒绝加入申请
     const rejectJoinRequest = async (userId) => {
         try {
-            const response = await uni.request(createRequestConfig({
+            const response = await request(createRequestConfig({
                 url: `${BASE_URL}/families/reject`,
                 method: 'POST',
                 data: { user_id: userId }
             }));
             await getFamilyDetails();
-            return response;
+            return response.data;
         } catch (error) {
+            console.error('rejectJoinRequest error:', error);
+            throw error;
+        }
+    };
+
+    // 离开家庭
+    const leaveFamily = async () => {
+        try {
+            const response = await request(createRequestConfig({
+                url: `${BASE_URL}/families/leave_family`,
+                method: 'DELETE'
+            }));
+            reset();
+            return response.data;
+        } catch (error) {
+            console.error('leaveFamily error:', error);
+            throw error;
+        }
+    };
+
+    // 解散家庭（仅管理员）
+    const breakFamily = async () => {
+        try {
+            const response = await request(createRequestConfig({
+                url: `${BASE_URL}/families/break`,
+                method: 'DELETE'
+            }));
+            reset();
+            return response.data;
+        } catch (error) {
+            console.error('breakFamily error:', error);
+            throw error;
+        }
+    };
+
+    // 设为管理员（仅管理员）
+    const setAdmin = async (userId) => {
+        try {
+            const response = await request(createRequestConfig({
+                url: `${BASE_URL}/families/set_admin`,
+                method: 'PUT',
+                data: { user_id: userId }
+            }));
+            await getFamilyDetails();
+            return response.data;
+        } catch (error) {
+            console.error('setAdmin error:', error);
+            throw error;
+        }
+    };
+
+    // 删除家庭成员（仅管理员）
+    const removeFamilyMember = async (userId) => {
+        try {
+            const response = await request(createRequestConfig({
+                url: `${BASE_URL}/families/delete_family_member`,
+                method: 'DELETE',
+                data: { user_id: userId }
+            }));
+            await getFamilyDetails();
+            return response.data;
+        } catch (error) {
+            console.error('removeFamilyMember error:', error);
             throw error;
         }
     };
 
     // 判断用户是否是管理员
     const isAdmin = (userId) => {
-        return family.admins.some(admin => admin.id === userId);
+        return family.allMembers.some(member => member.id === userId && member.role === 'admin');
     };
-
 
     // 清除本地存储数据
     const clearStorage = () => {
@@ -248,8 +340,9 @@ export const useFamilyStore = defineStore('family', () => {
         family.name = '';
         family.familyId = '';
         family.memberCount = 0;
-        family.admins = [];
-        family.members = [];
+        family.allMembers = [];
+        family.waiting_members = [];
+        family.dishProposals = [];
         family.status = FamilyStatus.NOT_JOINED;
         clearStorage();
     };
@@ -264,7 +357,6 @@ export const useFamilyStore = defineStore('family', () => {
         return statusTexts[family.status] || '未知状态';
     };
 
-    // 启动时加载数据
     watchFamily();
 
     return {
@@ -278,6 +370,10 @@ export const useFamilyStore = defineStore('family', () => {
         cancelJoinRequest,
         admitJoinRequest,
         rejectJoinRequest,
+        setAdmin,
+        removeFamilyMember,
+        leaveFamily,
+        breakFamily,
         reset,
         clearStorage,
         isAdmin
