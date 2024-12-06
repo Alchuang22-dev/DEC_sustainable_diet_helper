@@ -66,13 +66,6 @@ func main() {
         MaxAge:           12 * time.Hour,  // 最大缓存时长
     }))
 
-    // 配置静态文件服务
-    BaseUploadPath := os.Getenv("BASE_UPLOAD_PATH")
-    if BaseUploadPath == "" {
-        BaseUploadPath = "./upload" // 默认路径
-    }
-    router.Static("/static", BaseUploadPath)
-
     // 配置CORS
     router.Use(cors.New(cors.Config{
         AllowOrigins:     []string{"*"}, // 允许的前端域名
