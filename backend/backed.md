@@ -108,7 +108,7 @@
 
 ### Base URL
 ```
-https://api.example.com
+https://122.51.231.155
 ```
 
 ### 认证方式

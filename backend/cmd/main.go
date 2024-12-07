@@ -66,6 +66,15 @@ func main() {
         MaxAge:           12 * time.Hour,  // 最大缓存时长
     }))
 
+    // 配置CORS
+    router.Use(cors.New(cors.Config{
+        AllowOrigins:     []string{"*"}, // 允许的前端域名
+        AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},                            // 允许的HTTP方法
+        AllowHeaders:     []string{"*"},      // 允许的HTTP头部
+        AllowCredentials: false,  // 允许跨域请求发送Cookie等凭证 当 AllowCredentials 设置为 true 时，你也需要确保 AllowOrigins 不是 "*". 如果你的前端需要发送 cookies 或其他凭证（如授权头），必须显式列出允许的域名。
+        MaxAge:           12 * time.Hour,  // 最大缓存时长
+    }))
+
     // 注册用户路由
     routes.RegisterUserRoutes(router, db)
 
