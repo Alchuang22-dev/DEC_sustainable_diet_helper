@@ -2,6 +2,7 @@ package models
 
 import (
     "time"
+    "gorm.io/gorm"
 )
 
 type User struct {
@@ -12,6 +13,8 @@ type User struct {
     AvatarURL   string    `gorm:"size:255" json:"avatar_url"`    // 用户头像 URL
     CreatedAt   time.Time `json:"created_at"`                   // 用户创建时间
     UpdatedAt   time.Time `json:"updated_at"`                   // 用户更新时间
+
+    RefreshTokens  []RefreshToken
 
     FamilyID    *uint      `json:"family_id"`                    // 所属家庭 ID，唯一
     Family      *Family   `gorm:"foreignKey:FamilyID" json:"family"` // 与家庭的外键关系
@@ -25,4 +28,12 @@ type User struct {
     ViewedNews    []News `gorm:"many2many:user_viewed_news;" json:"viewed_news"`       // 用户看过的新闻
 
     FoodPreferences []FoodPreference `gorm:"foreignKey:UserID" json:"food_preferences"` // 用户的食物偏好
+}
+
+type RefreshToken struct {
+    gorm.Model
+    Token     string    `gorm:"type:varchar(255);uniqueIndex;not null"` // 改为 VARCHAR 并设置长度
+    UserID    uint   `gorm:"not null;index"`
+    ExpiresAt time.Time
+    Revoked   bool `gorm:"default:false"`
 }
