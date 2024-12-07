@@ -734,4 +734,5 @@ const sortedDishProposals = computed(() => {
     transform: translateY(0);
   }
 }
+
 </style>
