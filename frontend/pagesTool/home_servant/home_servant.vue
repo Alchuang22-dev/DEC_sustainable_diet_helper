@@ -117,10 +117,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useFamilyStore, FamilyStatus } from '@/stores/family.js';
-// import UniList from "@/uni_modules/uni-list/components/uni-list/uni-list.vue"; // 如果需要使用 UniList，取消注释
+import { useFamilyStore, FamilyStatus } from '../../stores/family.js';
+import { useUserStore } from "../../stores/user.js";
 
 // 国际化
 const { t } = useI18n();
@@ -129,11 +129,23 @@ const { t } = useI18n();
 const familyStore = useFamilyStore();
 const family = computed(() => familyStore.family);
 const FamilyStatusEnum = FamilyStatus;
+const userStore = useUserStore();
 
-// 获取当前用户ID（假设存储在localStorage中）
-const currentUserId = uni.getStorageSync('userId'); // 根据你的项目实际情况决定
+// familyStore.reset();
+
+// 确保用户已登录，否则跳转到登录页面
+if (!userStore.user.isLoggedIn) {
+  uni.navigateTo({
+    url: '/pagesMy/login/login',
+  });
+}
+
+// 获取当前用户ID
+const currentUserId = computed(() => userStore.user.uid);
+
+// 判断当前用户是否为管理员
 const isCurrentUserAdmin = computed(() => {
-  return familyStore.isAdmin(currentUserId);
+  return familyStore.isAdmin(currentUserId.value);
 });
 
 // 合并后的家庭成员列表（包括管理员和普通成员）
@@ -196,7 +208,7 @@ const handleCancelJoin = async () => {
 };
 
 // 提交菜品提议
-const submitDishProposal = () => {
+const submitDishProposal = async () => {
   if (newDish.value.name.trim() === '') {
     uni.showToast({
       title: t('dish_name_required'),
@@ -204,14 +216,24 @@ const submitDishProposal = () => {
     });
     return;
   }
-  familyStore.addDishProposal({
-    id: Date.now(),
-    name: newDish.value.name,
-    preference: newDish.value.preference,
-    proposer: 'You',
-  });
-  newDish.value.name = '';
-  newDish.value.preference = 0;
+  try {
+    await familyStore.addDishProposal({
+      name: newDish.value.name,
+      preference: newDish.value.preference,
+      proposer: userStore.user.nickName || 'You',
+    });
+    newDish.value.name = '';
+    newDish.value.preference = 0;
+    uni.showToast({
+      title: t('submit_success'),
+      icon: 'success'
+    });
+  } catch (error) {
+    uni.showToast({
+      title: t('submit_failed'),
+      icon: 'error'
+    });
+  }
 };
 
 // 创建家庭
@@ -302,11 +324,16 @@ onMounted(async () => {
   }
 });
 
-// onUnmounted(() => {
-//   if (statusCheckTimer) {
-//     clearInterval(statusCheckTimer);
-//   }
-// });
+// 监听用户登录状态变化
+watch(() => userStore.user.isLoggedIn, (newVal) => {
+  if (!newVal) {
+    // 用户登出后，执行相应操作，如重置家庭状态
+    familyStore.resetFamily();
+    uni.navigateTo({
+      url: '/pagesMy/login/login',
+    });
+  }
+});
 
 // 跳转到 myFamily 页面
 const goToMyFamily = () => {
@@ -348,6 +375,44 @@ const sortedDishProposals = computed(() => {
   if (!family.value.dishProposals) return [];
   return [...family.value.dishProposals].sort((a, b) => b.preference - a.preference);
 });
+
+// 计算属性：家庭成员五大营养成分达标情况图表数据（示例）
+const carbonRingOpts = {
+  // 图表配置
+};
+const carbonChartData = {
+  // 图表数据
+};
+const nutrientChartOpts = {
+  // 图表配置
+};
+const nutrientChartData = {
+  // 图表数据
+};
+
+// // 监听用户 Token 过期并自动刷新（可选）
+// watch(() => userStore.user.tokenExpiry, (newExpiry) => {
+//   if (newExpiry) {
+//     const currentTime = Date.now();
+//     const timeToExpiry = newExpiry - currentTime;
+//     const timeBeforeRefresh = timeToExpiry - (20 * 1000); // 20秒前刷新
+//
+//     if (timeBeforeRefresh > 0) {
+//       setTimeout(async () => {
+//         try {
+//           await userStore.refreshToken();
+//         } catch (error) {
+//           console.error('Token 刷新失败:', error);
+//         }
+//       }, timeBeforeRefresh);
+//     } else {
+//       // 如果时间已经不足20秒，立即刷新
+//       userStore.refreshToken().catch(err => {
+//         console.error('Token 刷新失败:', err);
+//       });
+//     }
+//   }
+// });
 </script>
 
 <style scoped>
