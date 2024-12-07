@@ -1,11 +1,19 @@
 package utils
 
 import (
-	"encoding/hex"
+    "math/rand"
+    "time"
 )
 
-// 生成一个唯一的家庭 Token
+// GenerateFamilyToken generates a unique 8-character token
 func GenerateFamilyToken() string {
-    tokenBytes := make([]byte, 32)
-    return hex.EncodeToString(tokenBytes)
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    const length = 8
+
+    rand.Seed(time.Now().UnixNano()) // Ensure randomness
+    token := make([]byte, length)
+    for i := range token {
+        token[i] = charset[rand.Intn(len(charset))]
+    }
+    return string(token)
 }
