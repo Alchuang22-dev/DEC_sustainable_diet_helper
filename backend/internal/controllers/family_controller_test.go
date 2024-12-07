@@ -36,8 +36,8 @@ func setupFamilyTestDB() *gorm.DB {
 	return db
 }
 
-// setupRouter 初始化 Gin 路由和控制器
-func setupRouter(db *gorm.DB) *gin.Engine {
+// setupFamilyRouter 初始化 Gin 路由和控制器
+func setupFamilyRouter(db *gorm.DB) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.Default()
 	fc := NewFamilyController(db)
@@ -70,7 +70,7 @@ func setupRouter(db *gorm.DB) *gin.Engine {
 // generateTestJWT 生成一个简单的 JWT（用于测试）
 func generateTestJWT(userID uint) string {
 	// 假设 utils.GenerateJWT(userID) 正常工作
-	token, err := utils.GenerateJWT(userID)
+	token, err := utils.GenerateAccessToken(userID)
 	if err != nil {
 		panic("failed to generate test JWT")
 	}
@@ -85,7 +85,7 @@ func withAuth(req *http.Request, userID uint) {
 // ================ 测试 CreateFamily ================
 func TestCreateFamily_Unauthorized(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 无 token 请求
 	req, _ := http.NewRequest("POST", "/families/create", nil)
@@ -93,12 +93,12 @@ func TestCreateFamily_Unauthorized(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "Missing Authorization header")
+	assert.Contains(t, w.Body.String(), "Authorization header missing")
 }
 
 func TestCreateFamily_UserNotFound(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 用户 ID 999 不存在
 	userID := uint(999)
@@ -118,7 +118,7 @@ func TestCreateFamily_UserNotFound(t *testing.T) {
 
 func TestCreateFamily_InvalidRequestBody(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建测试用户
 	user := models.User{
@@ -140,7 +140,7 @@ func TestCreateFamily_InvalidRequestBody(t *testing.T) {
 
 func TestCreateFamily_Success(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建测试用户
 	user := models.User{
@@ -186,7 +186,7 @@ func TestCreateFamily_Success(t *testing.T) {
 // ================ 测试 FamilyDetails ================
 func TestFamilyDetails_Unauthorized(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 无 token 请求
 	req, _ := http.NewRequest("GET", "/families/details", nil)
@@ -199,7 +199,7 @@ func TestFamilyDetails_Unauthorized(t *testing.T) {
 
 func TestFamilyDetails_UserNotFound(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	userID := uint(999) // 不存在的用户 ID
 
@@ -216,7 +216,7 @@ func TestFamilyDetails_UserNotFound(t *testing.T) {
 
 func TestFamilyDetails_NoFamily(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建测试用户，无家庭
 	user := models.User{
@@ -237,7 +237,7 @@ func TestFamilyDetails_NoFamily(t *testing.T) {
 
 func TestFamilyDetails_PendingFamily(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建家庭
 	family := models.Family{
@@ -275,7 +275,7 @@ func TestFamilyDetails_PendingFamily(t *testing.T) {
 
 func TestFamilyDetails_Success(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建家庭
 	family := models.Family{
@@ -345,7 +345,7 @@ func TestFamilyDetails_Success(t *testing.T) {
 // ================ 测试 SearchFamily ================
 func TestSearchFamily_Unauthorized(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 无 token 请求
 	req, _ := http.NewRequest("GET", "/families/search?family_id=testtoken", nil)
@@ -358,7 +358,7 @@ func TestSearchFamily_Unauthorized(t *testing.T) {
 
 func TestSearchFamily_MissingToken(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 构建请求，无 family_id
 	req, _ := http.NewRequest("GET", "/families/search", nil)
@@ -373,7 +373,7 @@ func TestSearchFamily_MissingToken(t *testing.T) {
 
 func TestSearchFamily_FamilyNotFound(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建测试用户
 	user := models.User{
@@ -394,7 +394,7 @@ func TestSearchFamily_FamilyNotFound(t *testing.T) {
 
 func TestSearchFamily_Success(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建家庭
 	family := models.Family{
@@ -431,7 +431,7 @@ func TestSearchFamily_Success(t *testing.T) {
 // ================ 测试 JoinFamily ================
 func TestJoinFamily_Unauthorized(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 无 token 请求
 	req, _ := http.NewRequest("POST", "/families/1/join", nil)
@@ -444,7 +444,7 @@ func TestJoinFamily_Unauthorized(t *testing.T) {
 
 func TestJoinFamily_InvalidFamilyID(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建测试用户
 	user := models.User{
@@ -465,7 +465,7 @@ func TestJoinFamily_InvalidFamilyID(t *testing.T) {
 
 func TestJoinFamily_FamilyNotFound(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建测试用户
 	user := models.User{
@@ -486,7 +486,7 @@ func TestJoinFamily_FamilyNotFound(t *testing.T) {
 
 func TestJoinFamily_UserAlreadyInFamily(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建家庭
 	family := models.Family{
@@ -516,7 +516,7 @@ func TestJoinFamily_UserAlreadyInFamily(t *testing.T) {
 
 func TestJoinFamily_UserAlreadyRequested(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建家庭1
 	family1 := models.Family{
@@ -557,7 +557,7 @@ func TestJoinFamily_UserAlreadyRequested(t *testing.T) {
 
 func TestJoinFamily_Success(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建家庭
 	family := models.Family{
@@ -599,7 +599,7 @@ func TestJoinFamily_Success(t *testing.T) {
 // ================ 测试 AdmitJoinFamily ================
 func TestAdmitJoinFamily_Unauthorized(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 无 token 请求
 	req, _ := http.NewRequest("POST", "/families/admit", nil)
@@ -612,7 +612,7 @@ func TestAdmitJoinFamily_Unauthorized(t *testing.T) {
 
 func TestAdmitJoinFamily_InvalidRequestBody(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建管理员用户
 	admin := models.User{
@@ -643,7 +643,7 @@ func TestAdmitJoinFamily_InvalidRequestBody(t *testing.T) {
 
 func TestAdmitJoinFamily_AdminUserNotFound(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	userID := uint(999) // 不存在的管理员用户
 
@@ -662,7 +662,7 @@ func TestAdmitJoinFamily_AdminUserNotFound(t *testing.T) {
 
 func TestAdmitJoinFamily_UserNotInWaitingList(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建管理员用户
 	admin := models.User{
@@ -707,7 +707,7 @@ func TestAdmitJoinFamily_UserNotInWaitingList(t *testing.T) {
 
 func TestAdmitJoinFamily_Success(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建管理员用户
 	admin := models.User{
@@ -769,7 +769,7 @@ func TestAdmitJoinFamily_Success(t *testing.T) {
 // TestRejectJoinFamily_Unauthorized 测试未授权访问
 func TestRejectJoinFamily_Unauthorized(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 构建请求，不设置 Authorization header
 	req, _ := http.NewRequest("POST", "/families/reject", nil)
@@ -784,7 +784,7 @@ func TestRejectJoinFamily_Unauthorized(t *testing.T) {
 // TestRejectJoinFamily_InvalidRequestBody 测试无效的请求体
 func TestRejectJoinFamily_InvalidRequestBody(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建管理员用户
 	admin := models.User{
@@ -835,7 +835,7 @@ func TestRejectJoinFamily_InvalidRequestBody(t *testing.T) {
 // TestRejectJoinFamily_AdminUserNotFound 测试管理员用户不存在
 func TestRejectJoinFamily_AdminUserNotFound(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 使用不存在的管理员用户 ID
 	nonExistentAdminID := uint(999)
@@ -881,7 +881,7 @@ func TestRejectJoinFamily_AdminUserNotFound(t *testing.T) {
 // TestRejectJoinFamily_AdminNotPartOfAnyFamily 测试管理员不属于任何家庭
 func TestRejectJoinFamily_AdminNotPartOfAnyFamily(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建新管理员用户，不属于任何家庭
 	newAdmin := models.User{
@@ -934,7 +934,7 @@ func TestRejectJoinFamily_AdminNotPartOfAnyFamily(t *testing.T) {
 // TestRejectJoinFamily_AdminNotFamilyAdmin 测试管理员用户不是家庭管理员
 func TestRejectJoinFamily_AdminNotFamilyAdmin(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建管理员用户
 	admin := models.User{
@@ -1006,7 +1006,7 @@ func TestRejectJoinFamily_AdminNotFamilyAdmin(t *testing.T) {
 // TestRejectJoinFamily_FamilyNotFound 测试家庭不存在
 func TestRejectJoinFamily_FamilyNotFound(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建管理员用户
 	admin := models.User{
@@ -1074,7 +1074,7 @@ func TestRejectJoinFamily_FamilyNotFound(t *testing.T) {
 // TestRejectJoinFamily_UserNotFound 测试被拒绝用户不存在
 func TestRejectJoinFamily_UserNotFound(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建管理员用户
 	admin := models.User{
@@ -1123,7 +1123,7 @@ func TestRejectJoinFamily_UserNotFound(t *testing.T) {
 // TestRejectJoinFamily_UserNotInWaitingList 测试用户不在等待列表中
 func TestRejectJoinFamily_UserNotInWaitingList(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建管理员用户
 	admin := models.User{
@@ -1183,11 +1183,12 @@ func TestRejectJoinFamily_UserNotInWaitingList(t *testing.T) {
 // TestRejectJoinFamily_Success 测试成功拒绝用户加入家庭
 func TestRejectJoinFamily_Success(t *testing.T) {
 	db := setupFamilyTestDB()
-	router := setupRouter(db)
+	router := setupFamilyRouter(db)
 
 	// 创建管理员用户
 	admin := models.User{
 		Nickname: "AdminUser",
+		OpenID: "1",
 	}
 	if err := db.Create(&admin).Error; err != nil {
 		t.Fatalf("failed to create admin user: %v", err)
@@ -1218,6 +1219,7 @@ func TestRejectJoinFamily_Success(t *testing.T) {
 	waitingUser := models.User{
 		Nickname:        "WaitingUser",
 		PendingFamilyID: &family.ID,
+		OpenID: "2",
 	}
 	if err := db.Create(&waitingUser).Error; err != nil {
 		t.Fatalf("failed to create waiting user: %v", err)
