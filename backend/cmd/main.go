@@ -41,6 +41,8 @@ func main() {
         &models.Food{},
         &models.Recipe{},
         &models.Family{},
+        &models.FoodPreference{},
+        
     )
     if err != nil {
         log.Fatal("自动迁移失败:", err)
@@ -89,6 +91,9 @@ func main() {
 
     // 注册食材偏好路由
     routes.RegisterFoodPreferenceRoutes(router, db)
+
+    // 注册食材推荐路由
+    routes.RegisterIngredientControllerRoutes(router, db)
 
     // 启动服务器
     err = router.Run(":8080")
