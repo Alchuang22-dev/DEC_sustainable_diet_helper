@@ -108,6 +108,23 @@ func TestSetNutritionGoals(t *testing.T) {
 				"error": "无效的请求数据",
 			},
 		},
+		{
+			name: "更新已存在的营养目标",
+			requestBody: []controllers.NutritionGoalRequest{
+				{
+					Date:          time.Now(),
+					Calories:      2500,
+					Protein:       75,
+					Fat:           85,
+					Carbohydrates: 300,
+					Sodium:        2200,
+				},
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody: map[string]interface{}{
+				"message": "目标设置成功",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -117,6 +134,7 @@ func TestSetNutritionGoals(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			
 			w := httptest.NewRecorder()
+			
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.expectedStatus, w.Code)
@@ -213,6 +231,19 @@ func TestSetCarbonGoals(t *testing.T) {
 				"error": "无效的请求数据",
 			},
 		},
+		{
+			name: "更新已存在的碳排放目标",
+			requestBody: []controllers.CarbonGoalRequest{
+				{
+					Date:     time.Now(),
+					Emission: 12.5,
+				},
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody: map[string]interface{}{
+				"message": "目标设置成功",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -303,4 +334,109 @@ func TestGetCarbonIntakes(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, response)
+}
+
+// 添加新的测试函数，专门测试更新功能
+func TestUpdateNutritionGoal(t *testing.T) {
+	db := setupNutritionCarbonTestDB(t)
+	router, nc := setupNutritionCarbonTestRouter(db)
+	user := createNutritionCarbonTestUser(db)
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// 先创建一个初始目标
+	initialGoal := models.NutritionGoal{
+		UserID:        user.ID,
+		Date:          today,
+		Calories:      2000,
+		Protein:       60,
+		Fat:           70,
+		Carbohydrates: 250,
+		Sodium:        2000,
+	}
+	db.Create(&initialGoal)
+
+	router.POST("/nutrition/goals", func(c *gin.Context) {
+		c.Set("user_id", user.ID)
+		nc.SetNutritionGoals(c)
+	})
+
+	// 准备更新请求
+	updateRequest := []controllers.NutritionGoalRequest{
+		{
+			Date:          today,
+			Calories:      2500,
+			Protein:       75,
+			Fat:           85,
+			Carbohydrates: 300,
+			Sodium:        2200,
+		},
+	}
+
+	// 发送更新请求
+	jsonBody, _ := json.Marshal(updateRequest)
+	req, _ := http.NewRequest(http.MethodPost, "/nutrition/goals", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// 验证更新响应
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// 验证数据库中的值已更新
+	var updatedGoal models.NutritionGoal
+	result := db.Where("user_id = ? AND date = ?", user.ID, today).First(&updatedGoal)
+	assert.NoError(t, result.Error)
+	assert.Equal(t, float64(2500), updatedGoal.Calories)
+	assert.Equal(t, float64(75), updatedGoal.Protein)
+	assert.Equal(t, float64(85), updatedGoal.Fat)
+	assert.Equal(t, float64(300), updatedGoal.Carbohydrates)
+	assert.Equal(t, float64(2200), updatedGoal.Sodium)
+}
+
+func TestUpdateCarbonGoal(t *testing.T) {
+	db := setupNutritionCarbonTestDB(t)
+	router, nc := setupNutritionCarbonTestRouter(db)
+	user := createNutritionCarbonTestUser(db)
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// 先创建一个初始目标
+	initialGoal := models.CarbonGoal{
+		UserID:   user.ID,
+		Date:     today,
+		Emission: 10.5,
+	}
+	db.Create(&initialGoal)
+
+	router.POST("/carbon/goals", func(c *gin.Context) {
+		c.Set("user_id", user.ID)
+		nc.SetCarbonGoals(c)
+	})
+
+	// 准备更新请求
+	updateRequest := []controllers.CarbonGoalRequest{
+		{
+			Date:     today,
+			Emission: 12.5,
+		},
+	}
+
+	// 发送更新请求
+	jsonBody, _ := json.Marshal(updateRequest)
+	req, _ := http.NewRequest(http.MethodPost, "/carbon/goals", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// 验证更新响应
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// 验证数据库中的值已更新
+	var updatedGoal models.CarbonGoal
+	result := db.Where("user_id = ? AND date = ?", user.ID, today).First(&updatedGoal)
+	assert.NoError(t, result.Error)
+	assert.Equal(t, float64(12.5), updatedGoal.Emission)
 } 
