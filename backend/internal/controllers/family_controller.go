@@ -966,7 +966,7 @@ func (fc *FamilyController) AddDesiredDish(c *gin.Context) {
 
     type AddDesiredDishRequest struct {
         DishID        uint `json:"dish_id" binding:"required"`
-        LevelOfDesire uint `json:"level_of_desire" binding:"required,oneof=1 2 3"`
+        LevelOfDesire uint `json:"level_of_desire" binding:"required,oneof=0 1 2"`
     }
 
     var request AddDesiredDishRequest
