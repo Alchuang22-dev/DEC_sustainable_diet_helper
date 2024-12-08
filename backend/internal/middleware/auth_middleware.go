@@ -1,7 +1,7 @@
 package middleware
 
 import (
-    "strings"
+    "fmt"
     "net/http"
     "strconv"
 
@@ -12,42 +12,39 @@ import (
 // AuthMiddleware 用于验证 JWT 的中间件
 func AuthMiddleware() gin.HandlerFunc {
     return func(c *gin.Context) {
-        // 获取 Authorization Header
         authHeader := c.GetHeader("Authorization")
         if authHeader == "" {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing Authorization header"})
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header missing"})
             c.Abort()
             return
         }
 
-        // 验证 Bearer 格式
-        if !strings.HasPrefix(authHeader, "Bearer ") {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Authorization format"})
-            c.Abort()
-            return
-        }
-
-        // 提取 Token
-        tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-
-        // 验证 Token
-        claims, err := utils.ValidateJWT(tokenString)
+        // 假设 Bearer <token>
+        var tokenString string
+        _, err := fmt.Sscanf(authHeader, "Bearer %s", &tokenString)
         if err != nil {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
             c.Abort()
             return
         }
 
-        // 从 Token 中解析 user_id
-        userID, err := strconv.ParseUint(claims.Subject, 10, 64) // 假设 Subject 存储的是 user_id
+        claims, err := utils.ValidateToken(tokenString)
         if err != nil {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token: invalid user_id"})
+            c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
             c.Abort()
             return
         }
 
-        // 将用户 ID 存入上下文，供后续使用
+        userID, err := strconv.Atoi(claims.Subject)
+        if err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token subject"})
+            c.Abort()
+            return
+        }
+
+        // 设置用户 ID 到上下文
         c.Set("user_id", uint(userID))
+
         c.Next()
     }
 }

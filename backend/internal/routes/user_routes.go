@@ -16,13 +16,16 @@ func RegisterUserRoutes(router *gin.Engine, db *gorm.DB) {
     {
         // 公共路由
         userGroup.POST("/auth", userController.WeChatAuth) // 注册
+        userGroup.POST("/refresh", userController.RefreshTokenHandler) // 刷新令牌
+        userGroup.POST("/logout", userController.LogoutHandler) // 登出
 
         // 需要认证的路由
         authGroup := userGroup.Group("")
         authGroup.Use(middleware.AuthMiddleware())
         {
-            authGroup.PUT("/:id/set_nickname", userController.SetNickname) // 更新用户名
-            authGroup.PUT("/:id/set_avatar", userController.SetAvatar) // 更新头像
+            authGroup.PUT("/set_nickname", userController.SetNickname) // 更新用户名
+            authGroup.POST("/set_avatar", userController.SetAvatar) // 更新头像
+            authGroup.GET("/basic_details", userController.UserBasicDetails) // 获取基本信息
         }
 
         // TODO

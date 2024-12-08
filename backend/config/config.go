@@ -33,11 +33,15 @@ func GetConfig() Config {
     }
 }
 
+// TODO 改为环境变量
 var JWTSecretKey = []byte("your_secret_key") // JWT 签名密钥
 
 // JWT 配置
 var JWTConfig = struct {
-    Expiration time.Duration
+    AccessTokenExpiration  time.Duration
+    RefreshTokenExpiration time.Duration
 }{
-    Expiration: 24 * time.Hour, // 默认过期时间
+    AccessTokenExpiration:  1 * time.Minute, // Access Token 过期时间 TODO 改回 15 min
+    // RefreshTokenExpiration: 7 * 24 * time.Hour, // Refresh Token 过期时间
+    RefreshTokenExpiration: 2 * time.Minute, // Refresh Token 过期时间
 }

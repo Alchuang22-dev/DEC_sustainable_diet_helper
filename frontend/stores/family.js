@@ -1,6 +1,7 @@
 // family.js
 import { defineStore } from 'pinia';
-import { reactive, watch } from 'vue';
+import { reactive, watch, computed } from 'vue';
+import { useUserStore } from "./user.js";
 
 const BASE_URL = 'http://122.51.231.155:8080';
 
@@ -12,15 +13,50 @@ export const FamilyStatus = {
 };
 
 const STORAGE_KEY = 'family_store_data';
-const token = uni.getStorageSync('token');
-console.log('token:', token);
 
-// 封装request为Promise
+// 获取 userStore 实例
+const userStore = useUserStore();
+
+// 封装request为Promise，并处理401状态码
 const request = (config) => {
     return new Promise((resolve, reject) => {
         uni.request({
             ...config,
-            success: (res) => resolve(res),
+            success: async (res) => {
+                if (res.statusCode === 401) {
+                    // 遇到未授权，尝试刷新token
+                    console.log('401 Unauthorized, trying to refresh token...');
+                    try {
+                        await userStore.refreshToken();
+                        // 使用新的 token 重试请求
+                        uni.request({
+                            ...config,
+                            header: {
+                                ...config.header,
+                                'Authorization': `Bearer ${userStore.user.token}`
+                            },
+                            success: (res2) => {
+                                if (res2.statusCode === 401) {
+                                    reject(new Error('Unauthorized'));
+                                } else {
+                                    resolve(res2);
+                                }
+                            },
+                            fail: (err2) => reject(err2)
+                        });
+                    } catch (error) {
+                        console.error('Token 刷新失败:', error);
+                        // 刷新失败，跳转登录或采取其他措施
+                        // 这里可以选择跳转到登录页面
+                        uni.navigateTo({
+                            url: '/pagesMy/login/login',
+                        });
+                        reject(new Error('Unauthorized'));
+                    }
+                } else {
+                    resolve(res);
+                }
+            },
             fail: (err) => reject(err)
         });
     });
@@ -35,9 +71,9 @@ export const useFamilyStore = defineStore('family', () => {
                 name: '',
                 familyId: '',
                 memberCount: 0,
-                allMembers: [],        // 合并后的成员列表
-                waiting_members: [],   // 等待加入的成员
-                dishProposals: [],     // 菜品提议（假设有）
+                allMembers: [],
+                waiting_members: [],
+                dishProposals: [],
                 status: FamilyStatus.NOT_JOINED,
             };
         } catch (error) {
@@ -79,7 +115,8 @@ export const useFamilyStore = defineStore('family', () => {
         return {
             ...config,
             header: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${userStore.user.token || ''}`,
+                ...(config.header || {})
             }
         };
     };
