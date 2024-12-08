@@ -47,7 +47,6 @@ const request = (config) => {
                     } catch (error) {
                         console.error('Token 刷新失败:', error);
                         // 刷新失败，跳转登录或采取其他措施
-                        // 这里可以选择跳转到登录页面
                         uni.navigateTo({
                             url: '/pagesMy/login/login',
                         });
@@ -103,7 +102,7 @@ export const useFamilyStore = defineStore('family', () => {
     };
 
     const watchFamily = () => {
-        const watchKeys = ['id', 'name', 'familyId', 'memberCount', 'allMembers', 'waiting_members', 'status'];
+        const watchKeys = ['id', 'name', 'familyId', 'memberCount', 'allMembers', 'waiting_members', 'status', 'dishProposals'];
         watchKeys.forEach(key => {
             watch(() => family[key], () => {
                 saveToStorage();
@@ -140,7 +139,6 @@ export const useFamilyStore = defineStore('family', () => {
 
             await getFamilyDetails();
 
-            saveToStorage();
             return response.data;
         } catch (error) {
             console.error('创建家庭失败:', error);
@@ -193,7 +191,6 @@ export const useFamilyStore = defineStore('family', () => {
                     family.waiting_members = [];
                 }
 
-                console.log('family:', family);
             } else if (data.status === FamilyStatus.PENDING_APPROVAL) {
                 family.id = data.id;
                 family.name = data.name;
@@ -208,9 +205,9 @@ export const useFamilyStore = defineStore('family', () => {
                 family.memberCount = 0;
                 family.allMembers = [];
                 family.waiting_members = [];
+                family.dishProposals = [];
             }
 
-            saveToStorage();
             return response;
         } catch (error) {
             console.log('getFamilyDetails error:', error);
@@ -218,10 +215,70 @@ export const useFamilyStore = defineStore('family', () => {
         }
     };
 
+    // 获取想吃的菜品列表
+    const getDesiredDishes = async () => {
+        try {
+            const response = await request(createRequestConfig({
+                url: `${BASE_URL}/families/desired_dishes`,
+                method: 'GET'
+            }));
+            family.dishProposals = response.data; // 直接存储后端返回的数组
+            console.log('getDesiredDishes:', family.dishProposals);
+            return response.data;
+        } catch (error) {
+            console.error('getDesiredDishes error:', error);
+            throw error;
+        }
+    };
+
+    // 添加想吃的菜品
+    const addDishProposal = async ({ dishId, preference }) => {
+        try {
+            const response = await request(createRequestConfig({
+                url: `${BASE_URL}/families/add_desired_dish`,
+                method: 'POST',
+                data: {
+                    dish_id: dishId,
+                    level_of_desire: preference
+                }
+            }));
+
+            if (response.statusCode === 200) {
+                // 添加成功后更新列表
+                await getDesiredDishes();
+                return response.data;
+            } else if (response.statusCode === 400 && response.data.error === "You have already desired this dish") {
+                throw new Error('DISH_ALREADY_EXISTS');
+            } else {
+                throw new Error(response.data.error || 'Unknown error');
+            }
+        } catch (error) {
+            console.error('addDishProposal error:', error);
+            throw error;
+        }
+    };
+
+    // 删除想吃的菜品
+    const deleteDesiredDish = async (dishId) => {
+        try {
+            const response = await request(createRequestConfig({
+                url: `${BASE_URL}/families/desired_dishes`,
+                method: 'DELETE',
+                data: {
+                    dish_id: dishId
+                }
+            }));
+            await getDesiredDishes();
+            return response.data;
+        } catch (error) {
+            console.error('deleteDesiredDish error:', error);
+            throw error;
+        }
+    };
+
     // 搜索家庭
     const searchFamily = async (familyId) => {
         try {
-            console.log('searchFamily:', familyId);
             const response = await request(createRequestConfig({
                 url: `${BASE_URL}/families/search?family_id=${familyId}`,
                 method: 'GET'
@@ -300,7 +357,10 @@ export const useFamilyStore = defineStore('family', () => {
         try {
             const response = await request(createRequestConfig({
                 url: `${BASE_URL}/families/leave_family`,
-                method: 'DELETE'
+                method: 'DELETE',
+                data: {
+                    user_id: userStore.user.uid
+                }
             }));
             reset();
             return response.data;
@@ -310,7 +370,7 @@ export const useFamilyStore = defineStore('family', () => {
         }
     };
 
-    // 解散家庭（仅管理员）
+    // 解散家庭
     const breakFamily = async () => {
         try {
             const response = await request(createRequestConfig({
@@ -325,7 +385,7 @@ export const useFamilyStore = defineStore('family', () => {
         }
     };
 
-    // 设为管理员（仅管理员）
+    // 设为管理员
     const setAdmin = async (userId) => {
         try {
             const response = await request(createRequestConfig({
@@ -341,7 +401,7 @@ export const useFamilyStore = defineStore('family', () => {
         }
     };
 
-    // 删除家庭成员（仅管理员）
+    // 删除家庭成员
     const removeFamilyMember = async (userId) => {
         try {
             const response = await request(createRequestConfig({
@@ -413,6 +473,9 @@ export const useFamilyStore = defineStore('family', () => {
         breakFamily,
         reset,
         clearStorage,
-        isAdmin
+        isAdmin,
+        addDishProposal,
+        getDesiredDishes,
+        deleteDesiredDish
     };
 });
