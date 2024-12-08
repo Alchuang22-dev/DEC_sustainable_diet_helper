@@ -4,27 +4,33 @@
     <!-- 表单容器 -->
     <view class="form-container">
       <view class="form-group">
-        <text class="label">{{ $t('name') }}</text>
-        <input
-          class="input"
-          type="text"
-          v-model="foodNameInput"
-          @focus="showFoodList = true"
-          @blur="onInputBlur"
-          :placeholder="$t('please_enter_food_name')"
-        />
-        <!-- 食物名的模糊匹配下拉列表 -->
-        <view v-if="showFoodList && filteredFoods.length > 0" class="food-list">
-          <view
-            v-for="item in filteredFoods"
-            :key="item.id"
-            class="food-item"
-            @mousedown.prevent
-            @click="selectFood(item)"
-          >
-            {{ displayName(item) }}
-          </view>
-        </view>
+<!--        <text class="label">{{ $t('name') }}</text>-->
+<!--        <input-->
+<!--          class="input"-->
+<!--          type="text"-->
+<!--          v-model="foodNameInput"-->
+<!--          @focus="showFoodList = true"-->
+<!--          @blur="onInputBlur"-->
+<!--          :placeholder="$t('please_enter_food_name')"-->
+<!--        />-->
+<!--        &lt;!&ndash; 食物名的模糊匹配下拉列表 &ndash;&gt;-->
+<!--        <view v-if="showFoodList && filteredFoods.length > 0" class="food-list">-->
+<!--          <view-->
+<!--            v-for="item in filteredFoods"-->
+<!--            :key="item.id"-->
+<!--            class="food-item"-->
+<!--            @mousedown.prevent-->
+<!--            @click="selectFood(item)"-->
+<!--          >-->
+<!--            {{ displayName(item) }}-->
+<!--          </view>-->
+<!--        </view>-->
+        <uni-combox
+            :placeholder="$t('please_enter_food_name')"
+            v-model="foodNameInput"
+            :candidates="filteredFoods.map(item => displayName(item))"
+            @input="onComboxInput"
+        ></uni-combox>
       </view>
       <view class="form-group">
         <text class="label">{{ $t('total_weight') }}</text>
@@ -117,6 +123,11 @@ const displayName = (item) => {
   return locale.value === 'zh-Hans' ? item.name_zh : item.name_en;
 };
 
+const onComboxInput = (value) => {
+  console.log('onComboxInput', value);
+  foodNameInput.value = value;
+};
+
 // 当用户选择食物时
 const selectFood = (foodItem) => {
   food.name = foodItem.name_en; // 始终使用英文名称存储
@@ -206,6 +217,22 @@ const uploadImage = () => {
 
 // 提交表单
 const submitFoodDetails = () => {
+
+  const matchedFood = availableFoods.find((f) => displayName(f) === foodNameInput.value);
+
+  if (matchedFood) {
+    // 如果找到匹配的食物项，使用 selectFood 方法
+    selectFood(matchedFood);
+  } else {
+    // 如果没有找到，提醒用户
+    uni.showToast({
+      title: t('no_matching_food'),
+      icon: 'none',
+      duration: 2000,
+    });
+    return; // 终止提交
+  }
+
   // 重置错误状态
   weightError.value = false;
   priceError.value = false;

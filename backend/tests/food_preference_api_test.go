@@ -17,7 +17,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func setupTestDB(t *testing.T) *gorm.DB {
+func setupFoodPreferenceTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("Failed to connect to test database: %v", err)
@@ -32,7 +32,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func setupTestRouter(db *gorm.DB) (*gin.Engine, *controllers.FoodPreferenceController) {
+func setupFoodPreferenceTestRouter(db *gorm.DB) (*gin.Engine, *controllers.FoodPreferenceController) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	fpc := &controllers.FoodPreferenceController{DB: db}
@@ -57,7 +57,7 @@ func setupTestRouter(db *gorm.DB) (*gin.Engine, *controllers.FoodPreferenceContr
 	return router, fpc
 }
 
-func createTestUser(db *gorm.DB) *models.User {
+func createFoodPreferenceTestUser(db *gorm.DB) *models.User {
 	user := &models.User{
 		ID:       1,
 		Nickname: "TestUser",
@@ -68,9 +68,9 @@ func createTestUser(db *gorm.DB) *models.User {
 }
 
 func TestAddFoodPreference(t *testing.T) {
-	db := setupTestDB(t)
-	router, fpc := setupTestRouter(db)
-	user := createTestUser(db)
+	db := setupFoodPreferenceTestDB(t)
+	router, fpc := setupFoodPreferenceTestRouter(db)
+	user := createFoodPreferenceTestUser(db)
 
 	// Setup the test endpoint
 	router.POST("/preferences", func(c *gin.Context) {
@@ -157,9 +157,9 @@ func TestAddFoodPreference(t *testing.T) {
 }
 
 func TestDeleteFoodPreference(t *testing.T) {
-	db := setupTestDB(t)
-	router, fpc := setupTestRouter(db)
-	user := createTestUser(db)
+	db := setupFoodPreferenceTestDB(t)
+	router, fpc := setupFoodPreferenceTestRouter(db)
+	user := createFoodPreferenceTestUser(db)
 
 	// Create a test preference
 	preference := models.FoodPreference{
@@ -245,9 +245,9 @@ func TestDeleteFoodPreference(t *testing.T) {
 
 func TestGetUserPreferences(t *testing.T) {
     // 设置测试数据库
-    db := setupTestDB(t)
-	router, fpc := setupTestRouter(db)
-	user := createTestUser(db)
+    db := setupFoodPreferenceTestDB(t)
+	router, fpc := setupFoodPreferenceTestRouter(db)
+	user := createFoodPreferenceTestUser(db)
 
     // 创建一些测试偏好数据
     preferences := []models.FoodPreference{
@@ -297,19 +297,4 @@ func TestGetUserPreferences(t *testing.T) {
         name := pref["name"].(string)
         assert.Contains(t, []string{"highProtein", "lowSugar"}, name)
     }
-}
-
-func TestMain(m *testing.M) {
-	// Setup
-	err := os.MkdirAll(filepath.Join("data", "food_preference"), 0755)
-	if err != nil {
-		panic(err)
-	}
-
-	// Run tests
-	code := m.Run()
-
-	// Cleanup
-	os.RemoveAll(filepath.Join("data", "food_preference"))
-	os.Exit(code)
 }

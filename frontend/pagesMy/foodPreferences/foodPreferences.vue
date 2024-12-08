@@ -56,7 +56,6 @@ const showModal = ref(false);
 
 const user_id = ref('');
 
-// onMounted 生命周期钩子
 onMounted(() => {
   // 从 localStorage 中获取 token 信息作为 user_id
   const token = uni.getStorageSync('token');
@@ -65,6 +64,38 @@ onMounted(() => {
   } else {
     console.warn('No tokens found in localStorage.');
   }
+
+  // 请求偏好数据
+  uni.request({
+    url: 'http://122.51.231.155:8090/preferences',
+    method: 'GET',
+    header: {
+      "Authorization": `Bearer ${user_id.value}`, // 替换为实际的 Token 变量
+      "Content-Type": "application/json", // 设置请求类型
+    },
+    data: {},
+    success: (res) => {
+      if (res.statusCode === 200) {
+        // 处理返回的数据
+		console.log('success to get preference');
+        const data = res.data;  // 假设返回的数据格式是 { data: [...] }
+        
+        // 将后端数据转移到 preferences 数组中
+        data.forEach(item => {
+          preferences.value.push({
+            name: t(item.name), // 通过翻译返回名称
+            key: item.name,     // 设置 key 为后端的 name 字段
+            icon: 'https://via.placeholder.com/50' // 默认 icon 地址
+          });
+        });
+      } else {
+        console.error('Failed to load preferences:', res.data);
+      }
+    },
+    fail: (err) => {
+      console.error('Error fetching preferences:', err);
+    }
+  });
 });
 
 const removePreference = (index) => {
