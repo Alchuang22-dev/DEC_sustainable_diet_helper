@@ -1,4 +1,3 @@
-<!-- home_servant.vue -->
 <template>
   <view class="container">
     <!-- 全屏背景图片 -->
@@ -29,20 +28,39 @@
     </view>
 
     <!-- 如果已加入家庭并且是管理员且有waiting_members，则显示提示框 -->
-    <view v-if="isCurrentUserAdmin && family.waiting_members && family.waiting_members.length > 0" class="admin-notice">
-      <text>{{ $t('new_join_requests') }}</text>
-      <button @click="goToMyFamily">{{ $t('handle_requests') }}</button>
-    </view>
+    <uni-card v-if="isCurrentUserAdmin && family.waiting_members && family.waiting_members.length > 0"
+              class="admin-notice"
+              :is-shadow="false"
+              :border="false">
+      <view class="notice-content">
+        <view class="notice-left">
+          <uni-icons type="info-filled" size="20" color="#3A86FF"></uni-icons>
+          <text class="notice-text">{{ $t('new_join_requests') }}</text>
+        </view>
+        <text class="notice-btn" @click="goToMyFamily">
+          {{ $t('handle_requests') }}
+        </text>
+      </view>
+    </uni-card>
 
     <!-- 用户已加入家庭时的家庭管理部分 -->
     <view v-if="family.status === FamilyStatus.JOINED" class="family-management">
       <!-- 提出想吃的菜品 -->
       <view class="dish-proposal">
         <text class="section-title">{{ t('propose_dish') }}</text>
-        <input v-model="newDish.name" :placeholder="t('dish_name_placeholder')" class="input"></input>
+
+        <!-- 使用uni-combox替换原有的input输入框 -->
+        <uni-combox
+            :placeholder="t('dish_name_placeholder')"
+            v-model="foodNameInput"
+            :candidates="filteredFoods.map(item => displayName(item))"
+            @input="onComboxInput"
+        ></uni-combox>
+
+        <!-- 偏好选择器保持不变 -->
         <picker mode="selector" :range="dishPreferenceLevels" :value="newDish.preference"
                 @change="onDishPreferenceChange" class="picker">
-          <view>{{ $t('dish_preference') }}: {{ dishPreferenceLevels[newDish.preference] }}</view>
+          <view>{{ t('dish_preference') }}: {{ dishPreferenceLevels[newDish.preference] }}</view>
         </picker>
         <button class="submit-button" @click="submitDishProposal">{{ t('submit_proposal') }}</button>
       </view>
@@ -50,13 +68,40 @@
       <!-- 家庭成员的提议 -->
       <view class="dish-list">
         <text class="section-title">{{ $t('family_dish_proposals') }}</text>
-        <scroll-view class="dish-scroll" scroll-y>
-          <view v-for="dish in sortedDishProposals" :key="dish.id" class="dish-item">
-            <uni-list>
-              <uni-list-item :title="dish.name" :note="dishPreferenceLevels[dish.preference]"
-                             :rightText="dish.proposer" />
-            </uni-list>
-          </view>
+        <scroll-view scroll-y class="proposals-scroll">
+          <uni-collapse v-model="activeCollapse" :accordion="true">
+            <uni-collapse-item
+                v-for="dish in sortedDishProposals"
+                :key="dish.id"
+                :name="dish.id.toString()"
+            >
+              <!-- 自定义折叠面板标题 -->
+              <template #title>
+                <view class="collapse-title">
+                  <text class="dish-name">{{ dish.name }}</text>
+                  <view class="dish-info">
+                    <uni-tag
+                        :text="dishPreferenceLevels[dish.preference]"
+                        :type="getPreferenceTagType(dish.preference)"
+                        size="small"
+                    />
+                    <text class="proposer-text">{{ dish.proposer }}</text>
+                  </view>
+                </view>
+              </template>
+              <!-- 折叠面板内容 -->
+              <view class="dish-actions">
+                <uni-icons
+                    v-if="canDeleteDish(dish)"
+                    type="trash"
+                    size="24"
+                    color="#FF4D4F"
+                    @click.stop="confirmDeleteDish(dish.id)"
+                    class="delete-icon"
+                ></uni-icons>
+              </view>
+            </uni-collapse-item>
+          </uni-collapse>
         </scroll-view>
       </view>
 
@@ -79,7 +124,7 @@
       <view class="family-info">
         <text class="section-title">{{ $t('family_members') }}</text>
         <view class="family-members">
-          <view v-for="member in allFamilyMembers" :key="member.id" class="member">
+          <view v-for="member in sortedFamilyMembers" :key="member.id" class="member">
             <image :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`" class="member-avatar"></image>
             <text class="member-name">{{ `${member.nickname} (${member.role === 'admin' ? $t('admin') : $t('member')})` }}</text>
           </view>
@@ -87,10 +132,20 @@
         <button class="manage-members-button" @click="manageMembers">{{ t('manage_members') }}</button>
       </view>
 
-      <!-- 底部添加退出和解散家庭按钮 -->
-      <view class="bottom-actions">
-        <button @click="handleLeaveFamily" class="leave-btn">{{ $t('leave_family') }}</button>
-        <button v-if="isCurrentUserAdmin" @click="handleBreakFamily" class="break-btn">{{ $t('break_family') }}</button>
+      <!-- 底部操作按钮部分 -->
+      <view class="bottom-container">
+        <uni-section class="action-section" type="line">
+          <view class="bottom-actions">
+            <text class="action-btn leave-btn" @click="handleLeaveFamily">
+              <uni-icons type="close" size="16" color="#fff"></uni-icons>
+              {{ $t('leave_family') }}
+            </text>
+            <text v-if="isCurrentUserAdmin" class="action-btn break-btn" @click="handleBreakFamily">
+              <uni-icons type="trash" size="16" color="#fff"></uni-icons>
+              {{ $t('break_family') }}
+            </text>
+          </view>
+        </uni-section>
       </view>
     </view>
 
@@ -113,6 +168,15 @@
         <button class="modal-button cancel" @click="showJoinFamilyModal = false">{{ $t('cancel') }}</button>
       </view>
     </view>
+
+    <!-- 删除确认模态框 -->
+    <view v-if="showDeleteConfirm" class="modal">
+      <view class="modal-content">
+        <text class="modal-title">{{ $t('confirm_delete') }}</text>
+        <button class="modal-button" @click="deleteDish(selectedDishId)">{{ $t('confirm') }}</button>
+        <button class="modal-button cancel" @click="showDeleteConfirm = false">{{ $t('cancel') }}</button>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -121,41 +185,40 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFamilyStore, FamilyStatus } from '../../stores/family.js';
 import { useUserStore } from "../../stores/user.js";
+import { onShow } from '@dcloudio/uni-app';
+import { useFoodListStore } from '../../stores/food_list'; // 引入食物列表store
 
-// 国际化
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
-// Pinia 状态管理
 const familyStore = useFamilyStore();
 const family = computed(() => familyStore.family);
 const FamilyStatusEnum = FamilyStatus;
 const userStore = useUserStore();
 
-// familyStore.reset();
-
 // 确保用户已登录，否则跳转到登录页面
 if (!userStore.user.isLoggedIn) {
-  uni.navigateTo({
-    url: '/pagesMy/login/login',
-  });
+  uni.navigateTo({ url: '/pagesMy/login/login' });
 }
 
-// 获取当前用户ID
 const currentUserId = computed(() => userStore.user.uid);
-
-// 判断当前用户是否为管理员
 const isCurrentUserAdmin = computed(() => {
   return familyStore.isAdmin(currentUserId.value);
 });
 
-// 合并后的家庭成员列表（包括管理员和普通成员）
-const allFamilyMembers = computed(() => {
-  return family.value.allMembers || [];
+const allFamilyMembers = computed(() => family.value.allMembers || []);
+const sortedFamilyMembers = computed(() => {
+  const members = [...allFamilyMembers.value];
+  const currentUserIndex = members.findIndex(member => member.id === currentUserId.value);
+  if (currentUserIndex > -1) {
+    const [currentUser] = members.splice(currentUserIndex, 1);
+    members.unshift(currentUser);
+  }
+  return members;
 });
 
-// 新菜品提议
 const newDish = ref({
   name: '',
+  id: null,
   preference: 0,
 });
 
@@ -166,9 +229,27 @@ const dishPreferenceLevels = computed(() => [
   t('preference_high'),
 ]);
 
+// 根据偏好级别返回对应的标签类型
+const getPreferenceTagType = (preference) => {
+  switch (preference) {
+    case 0:
+      return 'info';    // 低偏好
+    case 1:
+      return 'warning'; // 中偏好
+    case 2:
+      return 'success'; // 高偏好
+    default:
+      return 'default';
+  }
+};
+
+// 控制uni-collapse的活动项
+const activeCollapse = ref([]);
+
 // 模态框显示状态
 const showCreateFamilyModal = ref(false);
 const showJoinFamilyModal = ref(false);
+const showDeleteConfirm = ref(false);
 
 // 创建家庭相关
 const newFamilyName = ref('');
@@ -176,39 +257,73 @@ const newFamilyName = ref('');
 // 加入家庭相关
 const joinFamilyId = ref('');
 
-// 定时器引用
-let statusCheckTimer = null;
+// 引入食物列表Store和相关方法
+const foodStore = useFoodListStore();
+const { availableFoods, fetchAvailableFoods, getFoodName } = foodStore;
 
-// 定时检查状态
-const startStatusCheck = () => {
-  if (statusCheckTimer) {
-    clearInterval(statusCheckTimer);
-  }
-  statusCheckTimer = setInterval(async () => {
-    if (family.value.status === FamilyStatusEnum.PENDING_APPROVAL) {
-      await familyStore.getFamilyDetails();
-    }
-  }, 30000); // 30秒
+// 用于uni-combox的输入框和下拉列表逻辑
+const foodNameInput = ref('');
+const showFoodList = ref(false);
+
+// 用于删除确认
+const selectedDishId = ref(null);
+
+// 根据当前语言显示食物名称
+const displayName = (item) => {
+  return locale.value === 'zh-Hans' ? item.name_zh : item.name_en;
 };
 
-// 取消加入申请
-const handleCancelJoin = async () => {
-  try {
-    await familyStore.cancelJoinRequest();
-    uni.showToast({
-      title: t('cancel_success'),
-      icon: 'success'
-    });
-  } catch (error) {
-    uni.showToast({
-      title: t('cancel_failed'),
-      icon: 'error'
+// 根据输入进行过滤
+const filteredFoods = computed(() => {
+  if (foodNameInput.value === '') {
+    const currentLang = locale.value;
+    if (currentLang === 'zh-Hans') {
+      return availableFoods.filter((f) => f.name_zh !== '');
+    } else {
+      return availableFoods.filter((f) => f.name_en !== '');
+    }
+  } else {
+    const currentLang = locale.value;
+    return availableFoods.filter((f) => {
+      if (currentLang === 'zh-Hans') {
+        return f.name_zh.includes(foodNameInput.value);
+      } else {
+        return f.name_en.toLowerCase().includes(foodNameInput.value.toLowerCase());
+      }
     });
   }
+});
+
+// 当用户在combox输入时
+const onComboxInput = (value) => {
+  foodNameInput.value = value;
+};
+
+// 当用户选择下拉项时
+const selectFood = (foodItem) => {
+  newDish.value.name = foodItem.name_en; // 内部存英文名
+  newDish.value.id = foodItem.id;
+  foodNameInput.value = displayName(foodItem); // 显示当前语言名称
+  showFoodList.value = false;
 };
 
 // 提交菜品提议
 const submitDishProposal = async () => {
+  // 尝试匹配用户已输入的食物名称
+  const matchedFood = availableFoods.find((f) => displayName(f) === foodNameInput.value);
+
+  if (matchedFood) {
+    // 选择食物
+    selectFood(matchedFood);
+  } else {
+    uni.showToast({
+      title: t('no_matching_food'),
+      icon: 'none',
+      duration: 2000,
+    });
+    return;
+  }
+
   if (newDish.value.name.trim() === '') {
     uni.showToast({
       title: t('dish_name_required'),
@@ -216,71 +331,73 @@ const submitDishProposal = async () => {
     });
     return;
   }
+
   try {
+    console.log('newDish:', newDish.value);
     await familyStore.addDishProposal({
-      name: newDish.value.name,
-      preference: newDish.value.preference,
-      proposer: userStore.user.nickName || 'You',
+      dishId: Number(newDish.value.id),     // dish_id传递为数字
+      preference: newDish.value.preference  // level_of_desire
     });
+
     newDish.value.name = '';
+    newDish.value.id = null;
     newDish.value.preference = 0;
+    foodNameInput.value = '';
+
     uni.showToast({
       title: t('submit_success'),
       icon: 'success'
     });
   } catch (error) {
-    uni.showToast({
-      title: t('submit_failed'),
-      icon: 'error'
-    });
+    if (error.message === 'DISH_ALREADY_EXISTS') {
+      uni.showToast({
+        title: t('dish_already_exists'), // 确保在您的翻译文件中添加此键
+        icon: 'none'
+      });
+    } else {
+      uni.showToast({
+        title: t('submit_failed'),
+        icon: 'error'
+      });
+    }
   }
+};
+
+// 偏好变化
+const onDishPreferenceChange = (e) => {
+  newDish.value.preference = parseInt(e.detail.value, 10);
 };
 
 // 创建家庭
 const createFamily = async () => {
   if (newFamilyName.value.trim() === '') {
-    uni.showToast({
-      title: t('family_name_required'),
-      icon: 'none'
-    });
+    uni.showToast({ title: t('family_name_required'), icon: 'none' });
     return;
   }
 
   try {
-    const result = await familyStore.createFamily(newFamilyName.value);
+    await familyStore.createFamily(newFamilyName.value);
     newFamilyName.value = '';
     showCreateFamilyModal.value = false;
-
-    uni.showToast({
-      title: t('create_family_success'),
-      icon: 'success'
-    });
+    uni.showToast({ title: t('create_family_success'), icon: 'success' });
+    // 获取菜品提议列表
+    await familyStore.getDesiredDishes();
   } catch (error) {
-    uni.showToast({
-      title: t('create_family_failed'),
-      icon: 'error'
-    });
+    uni.showToast({ title: t('create_family_failed'), icon: 'error' });
   }
 };
 
 // 加入家庭
 const joinFamily = async () => {
   if (joinFamilyId.value.trim() === '') {
-    uni.showToast({
-      title: t('family_id_required'),
-      icon: 'none'
-    });
+    uni.showToast({ title: t('family_id_required'), icon: 'none' });
     return;
   }
 
   try {
     const searchResult = await familyStore.searchFamily(joinFamilyId.value);
-
     if (!searchResult || !searchResult.id) {
-      uni.showToast({
-        title: t('family_not_found'),
-        icon: 'error'
-      });
+      uni.showToast({ title: t('family_not_found'), icon: 'error' });
       return;
     }
 
@@ -288,52 +405,23 @@ const joinFamily = async () => {
     joinFamilyId.value = '';
     showJoinFamilyModal.value = false;
     startStatusCheck();
-
-    uni.showToast({
-      title: t('join_request_sent'),
-      icon: 'success'
-    });
-
+    uni.showToast({ title: t('join_request_sent'), icon: 'success' });
+    // 获取菜品提议列表
+    await familyStore.getDesiredDishes();
   } catch (error) {
-    uni.showToast({
-      title: t('join_family_failed'),
-      icon: 'error'
-    });
+    uni.showToast({ title: t('join_family_failed'), icon: 'error' });
   }
 };
 
-// 生命周期钩子
-onMounted(async () => {
+// 取消加入申请
+const handleCancelJoin = async () => {
   try {
-    await familyStore.getFamilyDetails();
-
-    if (family.value.status === FamilyStatusEnum.PENDING_APPROVAL) {
-      startStatusCheck();
-    }
-
-    if (family.value.status === FamilyStatusEnum.JOINED) {
-      // 检查是否有待审核成员并且当前用户是管理员
-      if (isCurrentUserAdmin.value && family.value.waiting_members.length > 0) {
-        // 这里可以触发显示消息框的逻辑
-        // 例如设置一个状态来显示消息框
-      }
-    }
-
+    await familyStore.cancelJoinRequest();
+    uni.showToast({ title: t('cancel_success'), icon: 'success' });
   } catch (error) {
-    uni.showToast({ title: t('fetch_family_failed'), icon: 'none' });
+    uni.showToast({ title: t('cancel_failed'), icon: 'error' });
   }
-});
-
-// 监听用户登录状态变化
-watch(() => userStore.user.isLoggedIn, (newVal) => {
-  if (!newVal) {
-    // 用户登出后，执行相应操作，如重置家庭状态
-    familyStore.resetFamily();
-    uni.navigateTo({
-      url: '/pagesMy/login/login',
-    });
-  }
-});
+};
 
 // 跳转到 myFamily 页面
 const goToMyFamily = () => {
@@ -365,54 +453,73 @@ const manageMembers = () => {
   uni.navigateTo({ url: '/pagesMy/myFamily/myFamily' });
 };
 
-// 处理偏好选择变化
-const onDishPreferenceChange = (e) => {
-  newDish.value.preference = parseInt(e.detail.value, 10);
-};
-
-// 计算属性：排序后的菜品提议
+// 使用foodStore的getFoodName，根据dish_id返回正确的名称
 const sortedDishProposals = computed(() => {
   if (!family.value.dishProposals) return [];
-  return [...family.value.dishProposals].sort((a, b) => b.preference - a.preference);
+  return family.value.dishProposals.map(item => ({
+    id: item.dish_id,
+    name: getFoodName(item.dish_id) || 'Unknown Dish',
+    preference: item.level_of_desire,
+    proposer: item.proposer_user ? item.proposer_user.nickname : 'Unknown'
+  })).sort((a, b) => b.preference - a.preference);
 });
 
-// 计算属性：家庭成员五大营养成分达标情况图表数据（示例）
-const carbonRingOpts = {
-  // 图表配置
-};
-const carbonChartData = {
-  // 图表数据
-};
-const nutrientChartOpts = {
-  // 图表配置
-};
-const nutrientChartData = {
-  // 图表数据
+// 确认删除菜品
+const confirmDeleteDish = (dishId) => {
+  selectedDishId.value = dishId;
+  showDeleteConfirm.value = true;
 };
 
-// // 监听用户 Token 过期并自动刷新（可选）
-// watch(() => userStore.user.tokenExpiry, (newExpiry) => {
-//   if (newExpiry) {
-//     const currentTime = Date.now();
-//     const timeToExpiry = newExpiry - currentTime;
-//     const timeBeforeRefresh = timeToExpiry - (20 * 1000); // 20秒前刷新
-//
-//     if (timeBeforeRefresh > 0) {
-//       setTimeout(async () => {
-//         try {
-//           await userStore.refreshToken();
-//         } catch (error) {
-//           console.error('Token 刷新失败:', error);
-//         }
-//       }, timeBeforeRefresh);
-//     } else {
-//       // 如果时间已经不足20秒，立即刷新
-//       userStore.refreshToken().catch(err => {
-//         console.error('Token 刷新失败:', err);
-//       });
-//     }
-//   }
-// });
+// 删除菜品
+const deleteDish = async (dishId) => {
+  try {
+    await familyStore.deleteDesiredDish(dishId);
+    uni.showToast({ title: t('delete_success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: t('delete_failed'), icon: 'error' });
+  } finally {
+    showDeleteConfirm.value = false;
+    selectedDishId.value = null;
+  }
+};
+
+// 判断是否可以删除菜品（提议者或管理员）
+const canDeleteDish = (dish) => {
+  return dish.proposer === userStore.user.nickName || isCurrentUserAdmin.value;
+};
+
+// 页面显示时
+onShow(async () => {
+  try {
+    await familyStore.getFamilyDetails();
+    if (family.value.status === FamilyStatusEnum.JOINED) {
+      // 获取想吃的菜品列表
+      await familyStore.getDesiredDishes();
+    }
+    if (family.value.status === FamilyStatusEnum.PENDING_APPROVAL) {
+      startStatusCheck();
+    }
+  } catch (error) {
+    uni.showToast({ title: t('fetch_family_failed'), icon: 'none' });
+  }
+});
+
+// 页面mounted时获取可用食物列表
+onMounted(async () => {
+  if (availableFoods.length === 0) {
+    await fetchAvailableFoods();
+  }
+});
+
+// 监听语言变化，重新计算食物名称显示（可选）
+watch(locale, () => {
+  // 任何需要响应语言变化的逻辑可以在这里添加
+});
+
+// startStatusCheck 如果有需要请补上您的逻辑
+const startStatusCheck = () => {
+  // 具体实现根据项目需求
+};
 </script>
 
 <style scoped>
@@ -524,27 +631,49 @@ const nutrientChartData = {
   font-size: 28rpx;
 }
 
-/* 管理员提示框 */
+/* 管理员提示框样式 */
 .admin-notice {
-  background-color: #fff3cd;
-  padding: 10rpx;
-  margin: 10rpx;
-  border-radius: 8rpx;
+  margin: 20rpx;
+  background: linear-gradient(to right, #EEF2FF, #E0E7FF);
+  border-radius: 16rpx;
+}
+
+.admin-notice :deep(.uni-card__content) {
+  padding: 0 !important;
+}
+
+.notice-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 24rpx;
 }
 
-.admin-notice text {
-  color: #856404;
+.notice-left {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
 }
 
-.admin-notice button {
-  background-color: #ffeeba;
-  border: none;
-  padding: 8rpx 16rpx;
-  border-radius: 5rpx;
-  cursor: pointer;
+.notice-text {
+  color: #3A86FF;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.notice-btn {
+  color: #3A86FF;
+  font-size: 28rpx;
+  font-weight: 600;
+  background-color: rgba(58, 134, 255, 0.1);
+  padding: 8rpx 24rpx;
+  border-radius: 30rpx;
+  transition: all 0.3s ease;
+}
+
+.notice-btn:active {
+  opacity: 0.8;
+  transform: scale(0.98);
 }
 
 /* 家庭管理部分 */
@@ -570,6 +699,63 @@ const nutrientChartData = {
 }
 
 /* 提出想吃的菜品 */
+.proposals-scroll {
+  max-height: 600rpx;
+  margin: 20rpx 0;
+}
+
+/* 折叠面板标题样式 */
+.collapse-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8rpx 0;
+}
+
+.dish-name {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+  margin-right: 16rpx;
+}
+
+.dish-info {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex-shrink: 0;
+}
+
+.proposer-text {
+  font-size: 24rpx;
+  color: #666;
+}
+
+/* 折叠面板内容样式 */
+.dish-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16rpx 0;
+}
+
+/* uni-collapse 样式优化 */
+.dish-list :deep(.uni-collapse) {
+  background-color: transparent;
+}
+
+.dish-list :deep(.uni-collapse-item__title) {
+  padding: 16rpx;
+}
+
+.dish-list :deep(.uni-collapse-item__title-box) {
+  width: 100%;
+}
+
+.dish-list :deep(.uni-collapse-item__wrap) {
+  background-color: rgba(255, 255, 255, 0.6);
+}
+
 .dish-proposal {
   background-color: var(--card-background);
   padding: 20rpx;
@@ -624,16 +810,26 @@ const nutrientChartData = {
   margin-bottom: 20rpx;
 }
 
-/* Scroll-View 滚动区域 */
-.dish-scroll {
-  max-height: 300rpx;
-  overflow-y: auto;
+/* uni-collapse 样式覆盖 */
+.dish-list .uni-collapse__item {
+  border-bottom: 1rpx solid #eee;
 }
 
-/* 菜品项 */
-.dish-item {
-  padding: 10rpx;
-  border-bottom: 1rpx solid #eee;
+.dish-list .uni-collapse__title {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: bold;
+}
+
+.dish-details {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 10rpx 0;
+}
+
+.delete-icon {
+  margin-right: 10rpx;
 }
 
 /* 共享数据 */
@@ -697,27 +893,49 @@ const nutrientChartData = {
   margin-top: 10rpx;
 }
 
-/* 底部操作按钮 */
+/* 底部操作按钮样式 */
+.bottom-container {
+  padding: 20rpx 30rpx 40rpx;
+  margin-top: auto;
+}
+
+.action-section :deep(.uni-section-header) {
+  display: none;
+}
+
 .bottom-actions {
-  margin-top: 20rpx;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 30rpx;
+  padding: 20rpx 0;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 20rpx 40rpx;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.action-btn:active {
+  opacity: 0.8;
+  transform: scale(0.98);
 }
 
 .leave-btn {
-  background-color: #ff9800;
+  background: linear-gradient(to right, #FF9800, #F57C00);
   color: #fff;
-  padding: 15rpx 30rpx;
-  border-radius: 10rpx;
-  font-size: 28rpx;
+  box-shadow: 0 4rpx 12rpx rgba(255, 152, 0, 0.3);
 }
 
 .break-btn {
-  background-color: #f44336;
+  background: linear-gradient(to right, #FF4B4B, #E53935);
   color: #fff;
-  padding: 15rpx 30rpx;
-  border-radius: 10rpx;
-  font-size: 28rpx;
+  box-shadow: 0 4rpx 12rpx rgba(229, 57, 53, 0.3);
 }
 
 /* 模态框 */
@@ -736,31 +954,35 @@ const nutrientChartData = {
 
 .modal-content {
   background-color: #fff;
-  padding: 20rpx;
-  border-radius: 10rpx;
-  width: 80%;
+  padding: 40rpx;
+  border-radius: 16rpx;
+  width: 60%;  /* 减小宽度从80%到60% */
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
 }
 
 .modal-title {
-  font-size: var(--font-size-subtitle);
-  color: var(--primary-color);
-  margin-bottom: 15rpx;
+  font-size: 36rpx;  /* 增大字体从24rpx到36rpx */
+  color: #333;
+  margin-bottom: 40rpx;
   text-align: center;
+  font-weight: 500;
 }
 
 .modal-button {
   background-color: var(--primary-color);
   color: #fff;
-  padding: 15rpx;
-  border-radius: 10rpx;
-  font-size: var(--font-size-subtitle);
+  padding: 20rpx;  /* 增加内边距使按钮更大 */
+  border-radius: 12rpx;
+  font-size: 24rpx;  /* 增大按钮字体从24rpx到32rpx */
   width: 100%;
   text-align: center;
-  margin-top: 10rpx;
+  margin-top: 20rpx;
+  font-weight: 500;
 }
 
 .modal-button.cancel {
-  background-color: #ccc;
+  background-color: #f5f5f5;
+  color: #666;
 }
 
 /* 动画效果 */
