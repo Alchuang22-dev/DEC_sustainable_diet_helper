@@ -127,14 +127,12 @@ func TestFoodNamesAPI(t *testing.T) {
                 // 验证第一个食物的数据完整性
                 firstFood := response[0]
                 assert.NotZero(t, firstFood.ID)
-                assert.NotEmpty(t, firstFood.ZhName)
-                assert.NotEmpty(t, firstFood.EnName)
+                assert.NotEmpty(t, firstFood.Name)
                 
                 // 验证所有条目都有完整的数据
                 for _, food := range response {
                     assert.NotZero(t, food.ID)
-                    assert.NotEmpty(t, food.ZhName)
-                    assert.NotEmpty(t, food.EnName)
+                    assert.NotEmpty(t, food.Name)
                 }
             },
         },

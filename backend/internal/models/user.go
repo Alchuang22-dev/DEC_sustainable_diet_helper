@@ -28,6 +28,11 @@ type User struct {
     ViewedNews    []News `gorm:"many2many:user_viewed_news;" json:"viewed_news"`       // 用户看过的新闻
 
     FoodPreferences []FoodPreference `gorm:"foreignKey:UserID" json:"food_preferences"` // 用户的食物偏好
+
+    NutritionGoals   []NutritionGoal   `gorm:"foreignKey:UserID" json:"nutrition_goals"` 
+    NutritionIntakes []NutritionIntake `gorm:"foreignKey:UserID" json:"nutrition_intakes"`
+    CarbonGoals      []CarbonGoal      `gorm:"foreignKey:UserID" json:"carbon_goals"`
+    CarbonIntakes    []CarbonIntake    `gorm:"foreignKey:UserID" json:"carbon_intakes"`
 }
 
 type RefreshToken struct {
