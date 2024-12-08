@@ -1,264 +1,187 @@
 <template>
-	<view class="container">
-		<view class="avatarUrl">
-			<button type="balanced" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
-				<image :src="avatarUrl || '/static/images/index/background_img.jpg'" class="refreshIcon"></image>
-				<!-- 使用占位符 -->
-			</button>
-		</view>
-		<view class="nickname">
-			<text>{{ $t('Nickname') }}</text>
-			<input type="nickname" class="weui-input" :value="nickName" @blur="bindBlur"
-				:placeholder="$t('enterNickname')" @input="bindInput" />
-		</view>
+  <view class="container">
+    <view class="avatarUrl">
+      <button type="balanced" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+        <image :src="avatarUrl || '/static/images/index/background_img.jpg'" class="refreshIcon"></image>
+        <!-- 使用占位符 -->
+      </button>
+    </view>
+    <view class="nickname">
+      <text>{{ $t('Nickname') }}</text>
+      <input type="nickname" class="weui-input" :value="nickName" @blur="bindBlur"
+             :placeholder="$t('enterNickname')" @input="bindInput" />
+    </view>
 
 
-		<view class="btn">
-			<view class="btn-sub" @click="onSubmit">{{ $t('save') }}</view>
-		</view>
-	</view>
+    <view class="btn">
+      <view class="btn-sub" @click="onSubmit">{{ $t('save') }}</view>
+    </view>
+  </view>
 </template>
 
 <script setup>
-	import {
-		ref,
-		onMounted
-	} from 'vue';
-	import {
-		useI18n
-	} from 'vue-i18n';
-	import {
-		useUserStore
-	} from '@/stores/user'; // 引入用户存储
-	import {
-		storeToRefs
-	} from 'pinia';
+import {
+  ref,
+  computed
+} from 'vue';
+import {
+  useI18n
+} from 'vue-i18n';
+import {
+  useUserStore
+} from '../../stores/user'; // 引入用户存储
 
-	// 国际化
-	const {
-		t
-	} = useI18n();
+// 国际化
+const {
+  t
+} = useI18n();
 
-	// Pinia用户存储
-	const userStore = useUserStore();
-	const {
-		uid,
-		isLoggedIn
-	} = storeToRefs(userStore);
+// Pinia用户存储
+const userStore = useUserStore();
+const user = computed(() => userStore.user);
 
-	// 响应式数据
-	const avatarUrl = ref(''); // 初始值为空，头像选择后更新
-	const nickName = ref('');
+// 响应式数据
+const avatarUrl = ref('/static/images/index/background_img.jpg');
+const nickName = ref('');
 
-	// 页面加载时从本地存储读取头像和昵称
-	onMounted(() => {
-		const storedAvatarUrl = uni.getStorageSync('avatarUrl');
-		const storedNickName = uni.getStorageSync('userInfo')?.nickName;
-		if (storedAvatarUrl) {
-			avatarUrl.value = storedAvatarUrl;
-		}
-		if (storedNickName) {
-			nickName.value = storedNickName;
-		}
-	});
+// 绑定昵称输入框失去焦点时的事件
+function bindBlur(e) {
+  nickName.value = e.detail.value; // 获取微信昵称
+}
 
-	// 绑定昵称输入框失去焦点时的事件
-	function bindBlur(e) {
-		nickName.value = e.detail.value; // 获取微信昵称
-	}
+// 绑定昵称输入框输入时的事件
+function bindInput(e) {
+  console.log("绑定昵称");
+  console.log(e.detail.value);
+  nickName.value = e.detail.value; // 实时更新昵称
+}
 
-	// 绑定昵称输入框输入时的事件
-	function bindInput(e) {
-		console.log("绑定昵称");
-		console.log(e.detail.value);
-		nickName.value = e.detail.value; // 实时更新昵称
-	}
+// 选择头像
+function onChooseAvatar(e) {
+  let {
+    avatarUrl: newAvatarUrl
+  } = e.detail;
 
-	// 选择头像
-	function onChooseAvatar(e) {
-		let {
-			avatarUrl: newAvatarUrl
-		} = e.detail;
+  if (!newAvatarUrl) {
+    uni.showToast({
+      title: '请选择头像',
+      icon: 'none',
+      duration: 2000,
+    });
+    return;
+  }
+  avatarUrl.value = newAvatarUrl;
 
-		if (!newAvatarUrl) {
-			uni.showToast({
-				title: '请选择头像',
-				icon: 'none',
-				duration: 2000,
-			});
-			return;
-		}
+  uni.showToast({
+    title: '头像已更新',
+    icon: 'success',
+    duration: 2000,
+  });
+}
 
-		// 更新头像 URL
-		avatarUrl.value = newAvatarUrl;
+async function onSubmit() {
+  if (nickName.value === '') {
+    uni.showToast({
+      icon: 'none',
+      title: t('needNickname'),
+    });
+    return false;
+  }
 
-		// 保存头像路径到本地存储
-		uni.setStorageSync('avatarUrl', newAvatarUrl);
+  try {
+    // 显示加载提示
+    uni.showLoading({
+      title: '登录中',
+    });
 
-		uni.showToast({
-			title: '头像已更新',
-			icon: 'success',
-			duration: 2000,
-		});
-	}
+    // 调用 user.js 中的 login 函数
+    await userStore.login(nickName.value, avatarUrl.value);
 
-	async function onSubmit() {
-		if (nickName.value === '') {
-			uni.showToast({
-				icon: 'none',
-				title: t('needNickname'),
-			});
-			return false;
-		}
+    // 显示成功提示
+    uni.showToast({
+      title: '登录成功',
+      icon: 'success',
+      duration: 2000,
+    });
 
-		try {
-			// 调用 uni.login 获取微信登录凭证
-			const loginRes = await new Promise((resolve, reject) => {
-				uni.login({
-					success: resolve,
-					fail: reject,
-				});
-			});
+    // 跳转到首页
+    login();
+  } catch (error) {
+    // 显示错误提示
+    uni.showToast({
+      title: error.message || '登录失败，请重试',
+      icon: 'none',
+      duration: 2000,
+    });
+  } finally {
+    // 隐藏加载提示
+    uni.hideLoading();
+  }
+}
 
-			if (!loginRes.code) {
-				throw new Error('微信登录失败，请重试');
-			}
-
-			// 发送登录凭证和昵称到后端进行微信认证
-			uni.showLoading({
-				title: '登录中',
-			});
-
-			const authRes = await new Promise((resolve, reject) => {
-				console.log("formData", loginRes.code, nickName.value);
-				uni.uploadFile({
-					url: 'http://122.51.231.155:8080/users/auth',
-					method: 'POST',
-					formData: {
-
-						code: loginRes.code,
-						nickname: nickName.value,
-					},
-					filePath: avatarUrl.value,
-					name: 'avatar', // 对应后端表单文件字段名
-					success: resolve,
-					fail: reject,
-				});
-			});
-
-			// 打印返回的数据，调试用
-			console.log("返回的完整响应：", authRes);
-			console.log("后端返回的数据：", authRes.data);
-
-			const returnData = JSON.parse(authRes.data);
-      console.log("returnData", returnData);
-
-			// 检查 code 是否是 200
-			if (authRes.statusCode !== 200) {
-				throw new Error(returnData.message || '登录失败');
-			}
-
-			console.log("authRes.data.token", returnData.token);
-
-			// 保存 token 和用户信息到本地存储
-			uni.setStorageSync('token', returnData.token);
-      console.log("保存的token", returnData.token);
-			uni.setStorageSync('userInfo', {
-				nickName: returnData.user.nickname,
-				avatarUrl: returnData.user.avatar_url || '/static/images/index/background_img.jpg',
-			});
-
-			// 更新 Pinia 用户存储
-			userStore.setUid(returnData.user.id);
-			userStore.setIsLoggedIn(true);
-
-			uni.showToast({
-				title: '登录成功',
-				icon: 'success',
-				duration: 2000,
-			});
-			login();
-			// 如果用户选择了头像，并且头像不是默认头像，则上传头像
-			// if (avatarUrl.value && avatarUrl.value !== '/static/images/index/background_img.jpg') {
-			//   await uploadAvatar(token, avatarUrl.value, user.id);
-			// }
-
-			// 跳转到首页
-			//login();
-		} catch (error) {
-			uni.showToast({
-				title: error.message || '登录失败，请重试',
-				icon: 'none',
-				duration: 2000,
-			});
-		} finally {
-			uni.hideLoading();
-		}
-	}
-
-	// 跳转到首页
-	function login() {
-		uni.switchTab({
-			url: '/pages/my_index/my_index',
-		});
-	}
+// 跳转到首页
+function login() {
+  uni.switchTab({
+    url: '/pages/my_index/my_index',
+  });
+}
 </script>
 
 <style scoped>
-	.container {
-		padding: 0;
-	}
+.container {
+  padding: 0;
+}
 
-	.avatarUrl {
-		padding: 80rpx 0 40rpx;
-		background: #fff;
-	}
+.avatarUrl {
+  padding: 80rpx 0 40rpx;
+  background: #fff;
+}
 
-	.avatarUrl button {
-		background: #fff;
-		line-height: 80rpx;
-		height: auto;
-		width: auto;
-		padding: 20rpx 30rpx;
-		margin: 0;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-	}
+.avatarUrl button {
+  background: #fff;
+  line-height: 80rpx;
+  height: auto;
+  width: auto;
+  padding: 20rpx 30rpx;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-	.refreshIcon {
-		width: 160rpx;
-		height: 160rpx;
-		border-radius: 50%;
-		object-fit: cover;
-		/* 保证图片不会变形 */
-	}
+.refreshIcon {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 50%;
+  object-fit: cover;
+  /* 保证图片不会变形 */
+}
 
-	.nickname {
-		background: #fff;
-		padding: 20rpx 30rpx 80rpx;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
+.nickname {
+  background: #fff;
+  padding: 20rpx 30rpx 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-	.weui-input {
-		padding-left: 60rpx;
-	}
+.weui-input {
+  padding-left: 60rpx;
+}
 
-	.btn {
-		width: 100%;
-	}
+.btn {
+  width: 100%;
+}
 
-	.btn-sub {
-		width: 670rpx;
-		margin: 80rpx auto 0;
-		height: 90rpx;
-		background: #48c079;
-		border-radius: 45rpx;
-		line-height: 90rpx;
-		text-align: center;
-		font-size: 36rpx;
-		color: #fff;
-	}
+.btn-sub {
+  width: 670rpx;
+  margin: 80rpx auto 0;
+  height: 90rpx;
+  background: #48c079;
+  border-radius: 45rpx;
+  line-height: 90rpx;
+  text-align: center;
+  font-size: 36rpx;
+  color: #fff;
+}
 </style>

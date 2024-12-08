@@ -46,6 +46,7 @@ func main() {
         &models.CarbonGoal{},
         &models.NutritionIntake{},
         &models.CarbonIntake{},
+        &models.RefreshToken{},
     )
     if err != nil {
         log.Fatal("自动迁移失败:", err)
