@@ -17,9 +17,9 @@ type User struct {
     RefreshTokens  []RefreshToken
 
     FamilyID    *uint      `json:"family_id"`                    // 所属家庭 ID，唯一
-    Family      *Family   `gorm:"foreignKey:FamilyID" json:"family"` // 与家庭的外键关系
+    Family           *Family           `gorm:"foreignKey:FamilyID;constraint:OnDelete:SET NULL;" json:"family"` // 与家庭的外键关系
     PendingFamilyID *uint     `json:"pending_family_id"`            // 正在等待批准的家庭 ID
-    PendingFamily  *Family    `gorm:"foreignKey:PendingFamilyID" json:"pending_family"` // 等待批准的家庭
+    PendingFamily    *Family           `gorm:"foreignKey:PendingFamilyID;constraint:OnDelete:SET NULL;" json:"pending_family"` // 等待批准的家庭
 
     // 用户与新闻的多对多关系
     LikedNews     []News `gorm:"many2many:user_likes_news;" json:"liked_news"`       // 用户点赞的新闻
@@ -28,6 +28,8 @@ type User struct {
     ViewedNews    []News `gorm:"many2many:user_viewed_news;" json:"viewed_news"`       // 用户看过的新闻
 
     FoodPreferences []FoodPreference `gorm:"foreignKey:UserID" json:"food_preferences"` // 用户的食物偏好
+
+    DesiredDishes    []FamilyDish      `gorm:"foreignKey:ProposerUserID" json:"desired_dishes"` // 家庭中用户提出的想吃的菜
 }
 
 type RefreshToken struct {
