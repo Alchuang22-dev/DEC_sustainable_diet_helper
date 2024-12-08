@@ -41,6 +41,7 @@ func validateDate(data []time.Time) (bool, error) {
     }
     return true, nil
 }
+
 // 设置营养目标
 func (nc *NutritionCarbonController) SetNutritionGoals(c *gin.Context){
     userID, err := c.Get("user_id")
@@ -77,21 +78,41 @@ func (nc *NutritionCarbonController) SetNutritionGoals(c *gin.Context){
         return
     }
 
-    // 创建新目标
+    // 处理每个目标
     for _, goal := range goals {
-        newGoal := models.NutritionGoal{
-            UserID: userID.(uint),
-            Date: goal.Date,
-            Calories: goal.Calories,
-            Protein: goal.Protein,
-            Fat: goal.Fat,
-            Carbohydrates: goal.Carbohydrates,
-            Sodium: goal.Sodium,
-        }
-        if err := tx.Create(&newGoal).Error; err != nil {
-            tx.Rollback()
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "创建目标失败"})
-            return
+        // 检查该日期是否已存在目标
+        var existingGoal models.NutritionGoal
+        result := tx.Where("user_id = ? AND date = ?", userID, goal.Date).First(&existingGoal)
+        
+        if result.Error == nil {
+            // 目标已存在，更新目标
+            existingGoal.Calories = goal.Calories
+            existingGoal.Protein = goal.Protein
+            existingGoal.Fat = goal.Fat
+            existingGoal.Carbohydrates = goal.Carbohydrates
+            existingGoal.Sodium = goal.Sodium
+            
+            if err := tx.Save(&existingGoal).Error; err != nil {
+                tx.Rollback()
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "更新目标失败"})
+                return
+            }
+        } else {
+            // 目标不存在，创建新目标
+            newGoal := models.NutritionGoal{
+                UserID: userID.(uint),
+                Date: goal.Date,
+                Calories: goal.Calories,
+                Protein: goal.Protein,
+                Fat: goal.Fat,
+                Carbohydrates: goal.Carbohydrates,
+                Sodium: goal.Sodium,
+            }
+            if err := tx.Create(&newGoal).Error; err != nil {
+                tx.Rollback()
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "创建目标失败"})
+                return
+            }
         }
     }
 
@@ -140,19 +161,35 @@ func (nc *NutritionCarbonController) SetCarbonGoals(c *gin.Context) {
         return
     }
 
-    // 创建新目标
+    // 处理每个目标
     for _, goal := range goals {
-        newGoal := models.CarbonGoal{
-            UserID: userID.(uint),
-            Date: goal.Date,
-            Emission: goal.Emission,
+        // 检查该日期是否已存在目标
+        var existingGoal models.CarbonGoal
+        result := tx.Where("user_id = ? AND date = ?", userID, goal.Date).First(&existingGoal)
+        
+        if result.Error == nil {
+            // 目标已存在，更新目标
+            existingGoal.Emission = goal.Emission
+            
+            if err := tx.Save(&existingGoal).Error; err != nil {
+                tx.Rollback()
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "更新目标失败"})
+                return
+            }
+        } else {
+            // 目标不存在，创建新目标
+            newGoal := models.CarbonGoal{
+                UserID: userID.(uint),
+                Date: goal.Date,
+                Emission: goal.Emission,
+            }
+            if err := tx.Create(&newGoal).Error; err != nil {
+                tx.Rollback()
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "创建目标失败"})
+                return
+            }
         }
-        if err := tx.Create(&newGoal).Error; err != nil {
-            tx.Rollback()
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "创建目标失败"})
-            return
-        }
-    } 
+    }
 
     // 提交事务
     if err := tx.Commit().Error; err != nil {
