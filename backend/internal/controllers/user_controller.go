@@ -469,15 +469,13 @@ func (uc *UserController) LogoutHandler(c *gin.Context) {
         return
     }
 
-    // 可选：撤销所有关联的 Refresh Tokens（如果需要）
-    /*
+    // 撤销所有关联的 Refresh Tokens（如果需要）
     if err := uc.DB.Model(&models.RefreshToken{}).
         Where("user_id = ? AND revoked = ?", storedRefreshToken.UserID, false).
         Update("revoked", true).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to revoke all refresh tokens"})
         return
     }
-    */
 
     c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }

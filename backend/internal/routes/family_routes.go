@@ -44,6 +44,10 @@ func RegisterFamilyRoutes(router *gin.Engine, db *gorm.DB) {
             authGroup.DELETE("/delete_family_member", familyController.DeleteFamilyMember)
             // 解散家庭
             authGroup.DELETE("/break", familyController.BreakFamily)
+
+            familyGroup.POST("/add_desired_dish", familyController.AddDesiredDish)
+            familyGroup.GET("/desired_dishes", familyController.GetDesiredDishes)
+            familyGroup.DELETE("/desired_dishes", familyController.DeleteDesiredDish)
         }
     }
 }
