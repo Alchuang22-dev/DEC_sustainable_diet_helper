@@ -21,7 +21,7 @@ type FoodPreferenceController struct {
 // 验证偏好是否存在于配置文件中
 func validatePreference(preferenceName string) bool {
     // 读取配置文件
-    filePath := filepath.Join("data", "food_preference", "foodPreferences.json")
+    filePath := "../data/food_preference/foodPreferences.json"
     data, err := os.ReadFile(filePath)
     if err != nil {
         log.Printf("读取配置文件失败: %v\n", err)
