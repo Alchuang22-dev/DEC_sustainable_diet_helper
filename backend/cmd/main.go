@@ -48,6 +48,7 @@ func main() {
         &models.CarbonIntake{},
         &models.RefreshToken{},
         &models.FamilyDish{},
+        &models.DislikedFoodPreference{},
     )
     if err != nil {
         log.Fatal("自动迁移失败:", err)

@@ -9,6 +9,12 @@ type FoodPreference struct {
     Name   string `gorm:"size:50;not null" json:"name"` // 如 "highProtein"
 }
 
+type DislikedFoodPreference struct {
+    ID     uint   `gorm:"primaryKey" json:"id"`
+    UserID uint   `json:"user_id"`
+    FoodID uint   `json:"food_id"`
+}
+
 // 获取用户设置界面食物偏好类型
 func GetUserFoodPreferences(db *gorm.DB, userID uint) ([]FoodPreference, error) {
     var preferences []FoodPreference

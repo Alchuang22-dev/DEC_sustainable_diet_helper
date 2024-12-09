@@ -19,14 +19,6 @@ type Food struct {
     Recipes       []Recipe `json:"recipes" gorm:"many2many:food_recipes;"`
 }
 
-// 用户不喜欢的食物
-type UserDislikedFood struct {
-    gorm.Model
-    UserID uint
-    FoodID uint
-    FoodName string
-}
-
 // TableName 指定表名
 func (Food) TableName() string {
     return "foods"
