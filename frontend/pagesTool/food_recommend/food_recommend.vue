@@ -42,13 +42,22 @@
 
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { onMounted, ref, reactive, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
+import { useUserStore } from "@/stores/user.js"; // 引入用户 Store
 
-// 初始化 i18n
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
-const user_id = ref('');
+const foodStore = useFoodListStore();
+const userStore = useUserStore();
+
+// 定义 BASE_URL 为 ref
+const BASE_URL = ref('http://122.51.231.155:8095');
+
+//const user_id = ref('');
+// 定义 token 为 computed 属性
+const token = computed(() => userStore.user.token);
 
 // 响应式数据
 const showRecipeBoxes = ref(false);
@@ -63,21 +72,21 @@ const dislikedIngredients = [];  // 用户不喜欢的食材ID
 const fetchRecommendedDishes = async () => {
   try {
     const response = await uni.request({
-      url: 'http://122.51.231.155:8095/ingredients/recommend',
+      url: `${BASE_URL.value}/ingredients/recommend`,
       method: 'POST',
       header: {
-		"Authorization": `Bearer ${user_id.value}`, // 替换为实际的 Token 变量
+		"Authorization": `Bearer ${token.value}`, // 替换为实际的 Token 变量
 		"Content-Type": "application/json", // 设置请求类型
       },
       data: {
-        use_last_ingredients: false,  // 默认为否
+        use_last_ingredients: true,  // 默认为否
         liked_ingredients: likedIngredients,
         disliked_ingredients: dislikedIngredients,
       },
     })
 
     // 处理成功响应
-    if (response[1].statusCode === 200 && response[1].data.recommended_ingredients) {
+    if (response.statusCode === 200 && response[1].data.recommended_ingredients) {
       const recommendedIngredients = response[1].data.recommended_ingredients
       // 将前6个推荐食材放入dishes
       dishes.value = recommendedIngredients.slice(0, 6).map((ingredient) => ({
@@ -152,12 +161,6 @@ const simulateFetchNewDish = () => {
 
 // 获取推荐的食材
 onMounted(() => {
-	const token = uni.getStorageSync('token');
-	if (token) {
-	  user_id.value = token; // 如果存在，则将 token 存储为 user_id
-	} else {
-	  console.warn('No tokens found in localStorage.');
-	}
   fetchRecommendedDishes();
 })
 </script>
