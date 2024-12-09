@@ -3,12 +3,18 @@
     <view class="header">
       <text class="title">{{$t('preferences_title')}}</text>
     </view>
-	<image src="/static/images/index/background_img.jpg" class="background-image"></image>
+    <image src="/static/images/index/background_img.jpg" class="background-image"></image>
     <view group="preferences" class="preferences">
-      <view v-for="(preference, index) in preferences" :key="index" :class="['preference-card', 'color-' + (index % 4)]">
+      <view
+        v-for="(preference, index) in preferences"
+        :key="index"
+        :class="['preference-card', 'color-' + (index % 4)]"
+      >
         <image :src="preference.icon" class="preference-icon" />
         <text class="preference-name">{{ preference.name }}</text>
-        <button class="delete-button" @click="removePreference(index)">{{$t('delete_button')}}</button>
+        <button class="delete-button" @click="removePreference(index)">
+          {{$t('delete_button')}}
+        </button>
       </view>
     </view>
     <view class="add-preference">
@@ -17,46 +23,65 @@
     <view v-if="showModal" class="modal">
       <view class="modal-content">
         <text class="modal-title">{{$t('modal_title')}}</text>
-        <view v-for="(option, index) in preferenceOptions" :key="index" class="modal-option" @click="selectPreference(option)">
+        <view
+          v-for="(option, index) in preferenceOptions"
+          :key="index"
+          class="modal-option"
+          @click="selectPreference(option)"
+        >
           <image :src="option.icon" class="option-icon" />
           <text class="option-name">{{ option.name }}</text>
         </view> 
       </view>
-	  <view class="button-content">
-		  <button class="close-button" @click="closeModal">{{$t('close_button')}}</button>
-	  </view>
+      <view class="button-content">
+        <button class="close-button" @click="closeModal">
+          {{$t('close_button')}}
+        </button>
+      </view>
     </view>
-	<view class="restrictions">
-	  <text class="restriction-label">{{$t('diet_restriction_label')}}</text>
-	  <view v-for="(restriction, index) in dietRestrictions" :key="index" class="restriction-card">
-	    <text class="restriction-name">{{ restriction.name }}</text>
-	    <button class="delete-button" @click="removeDietRestriction(index)">{{$t('delete_button')}}</button>
-	  </view>
-	</view>
-	<view class="add-restriction">
-	  
-	  <uni-combox
-	  :placeholder="$t('please_enter_food_name')"
-	  v-model="foodNameInput"
-	  :candidates="filteredFoods.map(item => displayName(item))"
-	  @input="onComboxInput"
-	        ></uni-combox>
-	  <button @click="addDietRestriction">{{$t('add_restriction_button')}}</button>
-	</view>
+    <view class="header">
+      <text class="title">{{$t('diet_restriction_label')}}</text>
+    </view>
+    <view class="restrictions">
+      <view
+        v-for="(restriction, index) in dietRestrictions"
+        :key="index"
+        class="restriction-card"
+      >
+        <text class="restriction-name">{{ restriction.name }}</text>
+        <button class="delete-button" @click="removeDietRestriction(index)">
+          {{$t('delete_button')}}
+        </button>
+      </view>
+    </view>
+    <view class="add-restriction">
+      <uni-combox
+        :placeholder="$t('please_enter_food_name')"
+        v-model="foodNameInput"
+        :candidates="filteredFoods.map(item => displayName(item))"
+        @input="onComboxInput"
+      ></uni-combox>
+      <button @click="addDietRestriction">{{$t('add_restriction_button')}}</button>
+    </view>
   </view>
 </template>
 
 <script setup>
-import { onMounted, ref, reactive, computed, watch } from 'vue';  // 添加 reactive
+import { onMounted, ref, reactive, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
+import { useUserStore } from "@/stores/user.js"; // 引入用户 Store
 
 const { t, locale } = useI18n();
 
 const foodStore = useFoodListStore();
+const userStore = useUserStore();
 
 // 获取 availableFoods
 const { availableFoods, fetchAvailableFoods, addFood } = foodStore;
+
+// 定义 BASE_URL 为 ref
+const BASE_URL = ref('http://122.51.231.155:8095');
 
 // 食品数据
 const food = reactive({
@@ -72,7 +97,6 @@ const food = reactive({
 // 食物名称输入
 const foodNameInput = ref('');
 const showFoodList = ref(false);
-
 
 // 模糊匹配过滤食物列表
 const filteredFoods = computed(() => {
@@ -129,6 +153,10 @@ watch(foodNameInput, (newValue) => {
   }
 });
 
+// 定义 token 为 computed 属性
+const token = computed(() => userStore.user.token);
+
+// 初始化 preferences 可以保留初始项
 const preferences = ref([
   { name: t('foodpreference_greeting'), key: 'foodpreference_greeting', icon: 'https://via.placeholder.com/50' },
 ]);
@@ -148,36 +176,30 @@ const preferenceOptions = ref([
 
 const showModal = ref(false);
 
-const user_id = ref('');
-
 const newRestriction = ref(''); // 新增饮食禁忌的输入
 const dietRestrictions = ref([]); // 存储用户的饮食禁忌
 
-
 onMounted(() => {
-  // 从 localStorage 中获取 token 信息作为 user_id
-  const token = uni.getStorageSync('token');
-  if (token) {
-    user_id.value = token; // 如果存在，则将 token 存储为 user_id
-  } else {
-    console.warn('No tokens found in localStorage.');
+  // 不再从 localStorage 中获取 token，而是使用 computed token
+  if (!token.value) {
+    console.warn('No token found in userStore.');
   }
 
   // 请求偏好数据
   uni.request({
-    url: 'http://122.51.231.155:8090/preferences',
+    url: `${BASE_URL.value}/preferences`, // 使用 BASE_URL.value
     method: 'GET',
     header: {
-      "Authorization": `Bearer ${user_id.value}`, // 替换为实际的 Token 变量
+      "Authorization": `Bearer ${token.value}`, // 使用 computed token
       "Content-Type": "application/json", // 设置请求类型
     },
     data: {},
     success: (res) => {
       if (res.statusCode === 200) {
         // 处理返回的数据
-		console.log('success to get preference');
-        const data = res.data;  // 假设返回的数据格式是 { data: [...] }
-        
+        console.log('success to get preference');
+        const data = res.data;  // 假设返回的数据格式是 [ ... ]
+
         // 将后端数据转移到 preferences 数组中
         data.forEach(item => {
           preferences.value.push({
@@ -200,14 +222,14 @@ const removePreference = (index) => {
   const preferenceToRemove = preferences.value[index];
   console.log(preferenceToRemove.key);
   uni.request({
-    url: 'http://122.51.231.155:8090/preferences',
+    url: `${BASE_URL.value}/preferences`, // 使用 BASE_URL.value
     method: 'DELETE',
-	header: {
-	      "Authorization": `Bearer ${user_id.value}`, // 替换为实际的 Token 变量
-	      "Content-Type": "application/json", // 设置请求类型
-	    },
+    header: {
+      "Authorization": `Bearer ${token.value}`, // 使用 computed token
+      "Content-Type": "application/json", // 设置请求类型
+    },
     data: {
-		preference_name: preferenceToRemove.key // 使用存储的 key 字段
+      preference_name: preferenceToRemove.key // 使用存储的 key 字段
     },
     success: (res) => {
       if (res.statusCode === 200) {
@@ -231,16 +253,16 @@ const closeModal = () => {
 };
 
 const selectPreference = (option) => {
-	console.log(option.key);
+  console.log(option.key);
   uni.request({
-    url: 'http://122.51.231.155:8090/preferences',
+    url: `${BASE_URL.value}/preferences`, // 使用 BASE_URL.value
     method: 'POST',
-	header: {
-	      "Authorization": `Bearer ${user_id.value}`, // 替换为实际的 Token 变量
-	      "Content-Type": "application/json", // 设置请求类型
-	    },
+    header: {
+      "Authorization": `Bearer ${token.value}`, // 使用 computed token
+      "Content-Type": "application/json", // 设置请求类型
+    },
     data: {
-		preference_name: option.key // 使用存储的 key 字段
+      preference_name: option.key // 使用存储的 key 字段
     },
     success: (res) => {
       if (res.statusCode === 200) {
@@ -249,11 +271,11 @@ const selectPreference = (option) => {
         preferences.value.push({ name: option.name, key: option.key, icon: option.icon });
         closeModal();
       }
-	  console.log(res.data);
+      console.log(res.data);
     },
     fail: (err) => {
-		console.log(res.data);
-		console.error('Error adding preference:', err);
+      console.log(err); // 修复：不应使用 res.data
+      console.error('Error adding preference:', err);
     }
   });
 };
@@ -272,7 +294,6 @@ const addDietRestriction = () => {
 const removeDietRestriction = (index) => {
   dietRestrictions.value.splice(index, 1);
 };
-
 </script>
 
 <style scoped>
@@ -319,7 +340,7 @@ body {
   border-radius: 8px;
 }
 .color-0 {
-  background-color: #4ca
+  background-color: #4ca;
 }
 .color-1 {
   background-color: #e0f7fa;
@@ -370,6 +391,7 @@ body {
   align-items: center;
   justify-content: center;
   flex-direction: column; /* 设置垂直排列 */
+  z-index: 10;
 }
 
 .modal-content {
@@ -451,19 +473,4 @@ body {
   background-color: #f8f8f8;
   margin-bottom: 10px;
 }
-
-.restriction-name {
-  flex: 1;
-  font-size: 16px;
-}
-
-.delete-button {
-  background-color: #ff4d4f;
-  color: #fff;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
 </style>
