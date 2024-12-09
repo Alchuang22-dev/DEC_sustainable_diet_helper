@@ -123,29 +123,29 @@ const regetRecipe = async () => {
       url: `${BASE_URL.value}/ingredients/recommend`,
       method: 'POST',
       header: {
-        "Authorization": `Bearer ${token.value}`, // 替换为实际的 Token 变量
-        "Content-Type": "application/json", // 设置请求类型
+        "Authorization": `Bearer ${token.value}`,
+        "Content-Type": "application/json",
       },
       data: {
-        use_last_ingredients: false,  // 不使用上次的食材
+        use_last_ingredients: false,
         liked_ingredients: likedIngredients,
         disliked_ingredients: dislikedIngredients,
       },
     });
-	console.log(response);
+    console.log(response);
 
     if (response.statusCode === 200 && response.data.recommended_ingredients) {
       const recommendedIngredients = response.data.recommended_ingredients;
       // 将前6个推荐食材放入dishes
       dishes.value = recommendedIngredients.slice(0, 6).map((ingredient) => ({
-		id: ingredient.id,
+        id: ingredient.id,
         name: ingredient.name,
-        image: `https://via.placeholder.com/300?text=${encodeURIComponent(ingredient.name)}`, // 根据食材生成图片URL
+        image: `https://via.placeholder.com/300?text=${encodeURIComponent(ingredient.name)}`,
         liked: false,
       }));
-      // 将其余食材放入availableNewDishes
+      // 将剩余食材放入availableNewDishes
       availableNewDishes.value = recommendedIngredients.slice(6).map((ingredient) => ({
-		id: ingredient.id,
+        id: ingredient.id,
         name: ingredient.name,
         image: `https://via.placeholder.com/300?text=${encodeURIComponent(ingredient.name)}`,
         liked: false,
@@ -190,9 +190,7 @@ const deleteDish = async (index) => {
 const simulateBackendDelete = (dish) => {
   return new Promise((resolve) => {
     console.log(`Simulating deletion of dish: ${dish.name}`)
-    setTimeout(() => {
-      resolve();
-    }, 1000)
+    resolve();
   })
 }
 
@@ -205,9 +203,7 @@ const simulateFetchNewDish = () => {
     }
     const randomIndex = Math.floor(Math.random() * availableNewDishes.value.length);
     const newDish = availableNewDishes.value.splice(randomIndex, 1)[0];
-    setTimeout(() => {
-      resolve(newDish);
-    }, 1000)
+    resolve(newDish);
   })
 }
 
