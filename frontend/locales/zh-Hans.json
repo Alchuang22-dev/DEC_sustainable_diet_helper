@@ -310,6 +310,9 @@
 	"glulenFree": "无麸质饮食",
 	"dairyFree": "避免乳制品",
 	"alcoholFree": "无酒精饮食",
+	"diet_restriction_label": "饮食黑名单",
+	"diet_restriction_placeholder": "输入您禁忌的食材",
+	"add_restriction_button": "加入黑名单",
 	
 	"enterNickname": "请输入昵称",
 	"Nickname":"昵称",
