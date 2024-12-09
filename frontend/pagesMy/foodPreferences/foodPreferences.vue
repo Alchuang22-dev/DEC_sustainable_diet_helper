@@ -1,5 +1,29 @@
 <template>
   <view class="container">
+	<view class="header">
+	  <text class="title">{{$t('diet_restriction_label')}}</text>
+	</view>
+	<view class="add-restriction">
+	  <uni-combox
+	    :placeholder="$t('please_enter_food_name')"
+	    v-model="foodNameInput"
+	    :candidates="filteredFoods.map(item => displayName(item))"
+	    @input="onComboxInput"
+	  ></uni-combox>
+	  <button @click="addDietRestriction">{{$t('add_restriction_button')}}</button>
+	</view>
+	<view class="restrictions">
+	  <view
+	    v-for="(restriction, index) in dietRestrictions"
+	    :key="index"
+	    class="restriction-card"
+	  >
+	    <text class="restriction-name">{{ restriction.name }}</text>
+	    <button class="delete-button" @click="removeDietRestriction(index)">
+	      {{$t('delete_button')}}
+	    </button>
+	  </view>
+	</view>
     <view class="header">
       <text class="title">{{$t('preferences_title')}}</text>
     </view>
@@ -38,30 +62,6 @@
           {{$t('close_button')}}
         </button>
       </view>
-    </view>
-    <view class="header">
-      <text class="title">{{$t('diet_restriction_label')}}</text>
-    </view>
-    <view class="restrictions">
-      <view
-        v-for="(restriction, index) in dietRestrictions"
-        :key="index"
-        class="restriction-card"
-      >
-        <text class="restriction-name">{{ restriction.name }}</text>
-        <button class="delete-button" @click="removeDietRestriction(index)">
-          {{$t('delete_button')}}
-        </button>
-      </view>
-    </view>
-    <view class="add-restriction">
-      <uni-combox
-        :placeholder="$t('please_enter_food_name')"
-        v-model="foodNameInput"
-        :candidates="filteredFoods.map(item => displayName(item))"
-        @input="onComboxInput"
-      ></uni-combox>
-      <button @click="addDietRestriction">{{$t('add_restriction_button')}}</button>
     </view>
   </view>
 </template>
@@ -184,7 +184,10 @@ onMounted(() => {
   if (!token.value) {
     console.warn('No token found in userStore.');
   }
-
+  if (availableFoods.length === 0) {
+    fetchAvailableFoods();
+  }
+   getDietRestriction();
   // 请求偏好数据
   uni.request({
     url: `${BASE_URL.value}/preferences`, // 使用 BASE_URL.value
@@ -282,18 +285,101 @@ const selectPreference = (option) => {
 
 // 添加饮食禁忌的方法
 const addDietRestriction = () => {
+  console.log('输入食品禁忌');
+  const matchedFood = availableFoods.find((f) => displayName(f) === foodNameInput.value);
+  if (matchedFood) {
+    // 如果找到匹配的食物项，使用 selectFood 方法
+    selectFood(matchedFood);
+  } else {
+    // 如果没有找到，提醒用户
+    uni.showToast({
+      title: t('no_matching_food'),
+      icon: 'none',
+      duration: 2000,
+    });
+    return; // 终止提交
+  }
   if (foodNameInput.value.trim()) {
-    dietRestrictions.value.push({ name: foodNameInput.value.trim() });
-    foodNameInput.value = ''; // 清空输入框
+    // 先向后端发送请求
+	console.log(food.id);
+    uni.request({
+      url: `${BASE_URL.value}/disliked_preferences`, // 使用 BASE_URL.value
+      method: 'POST',
+      header: {
+        "Authorization": `Bearer ${token.value}`, // 使用 computed token
+        "Content-Type": "application/json", // 设置请求类型
+      },
+      data: {
+        food_id: food.id, // 使用食物的 id 来提交
+      },
+      success: (res) => {
+        if (res.statusCode === 200) {
+          console.log(res.data.message); // 打印成功信息
+          dietRestrictions.value.push({ name: foodNameInput.value.trim(), id: food.id }); // 将禁忌添加到本地
+          foodNameInput.value = ''; // 清空输入框
+        }
+      },
+      fail: (err) => {
+        console.error('Error adding diet restriction:', err);
+      }
+    });
   } else {
     console.warn('Please enter a valid diet restriction');
   }
 };
 
+
 // 删除饮食禁忌的方法
 const removeDietRestriction = (index) => {
-  dietRestrictions.value.splice(index, 1);
+  const restrictionToRemove = dietRestrictions.value[index];
+  console.log('Deleting diet restriction for food ID:', restrictionToRemove.id);
+
+  // 向后端发送删除请求
+  uni.request({
+    url: `${BASE_URL.value}/disliked_preferences`, // 使用 BASE_URL.value
+    method: 'DELETE',
+    header: {
+      "Authorization": `Bearer ${token.value}`, // 使用 computed token
+      "Content-Type": "application/json", // 设置请求类型
+    },
+    data: {
+      food_id: restrictionToRemove.id, // 使用食物的 id 来删除
+    },
+    success: (res) => {
+      if (res.statusCode === 200) {
+        console.log(res.data.message); // 打印成功信息
+        // 删除本地数组中的禁忌
+        dietRestrictions.value.splice(index, 1);
+      }
+    },
+    fail: (err) => {
+      console.error('Error removing diet restriction:', err);
+    }
+  });
 };
+
+const getDietRestriction = () => {
+  uni.request({
+    url: `${BASE_URL.value}/disliked_preferences`, // 使用 BASE_URL.value
+    method: 'GET',
+    header: {
+      "Authorization": `Bearer ${token.value}`, // 使用 computed token
+      "Content-Type": "application/json", // 设置请求类型
+    },
+    data: {},
+    success: (res) => {
+      if (res.statusCode === 200) {
+        console.log('Fetched disliked foods:', res.data.disliked_foods);
+        // 将返回的禁忌食物名称列表更新到本地数据中
+        dietRestrictions.value = res.data.disliked_foods.map(food => ({ name: food }));
+      }
+    },
+    fail: (err) => {
+      console.error('Error fetching diet restrictions:', err);
+    }
+  });
+};
+
 </script>
 
 <style scoped>
@@ -313,7 +399,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: 0;
+  z-index: -1;
   opacity: 0.1;
 }	
 
@@ -364,7 +450,7 @@ body {
   background-color: #ff4d4f;
   color: #fff;
   border: none;
-  padding: 5px 10px;
+  padding-right: 5px;
   border-radius: 4px;
   cursor: pointer;
 }
@@ -391,7 +477,7 @@ body {
   align-items: center;
   justify-content: center;
   flex-direction: column; /* 设置垂直排列 */
-  z-index: 10;
+  z-index: 1;
 }
 
 .modal-content {
