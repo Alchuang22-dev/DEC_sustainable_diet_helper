@@ -4,7 +4,6 @@ package controllers
 import (
     "encoding/json"
     "net/http"
-    "path/filepath"
     "os"
 
     "github.com/gin-gonic/gin"
