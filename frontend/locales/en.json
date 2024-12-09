@@ -293,6 +293,9 @@
 	"glulenFree": "glulen free",
 	"dairyFree": "dairy free",
 	"alcoholFree": "alcohol free",
+	"diet_restriction_label": "Dietary Restrictions",
+	"diet_restriction_placeholder": "Enter your dietary restrictions (e.g., allergens)",
+	"add_restriction_button": "Add Restriction",
 	
 	"enterNickname": "Enter Nickname",
 	"Nickname": "Nickname",

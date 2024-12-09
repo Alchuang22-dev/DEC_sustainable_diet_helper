@@ -26,14 +26,108 @@
 		  <button class="close-button" @click="closeModal">{{$t('close_button')}}</button>
 	  </view>
     </view>
+	<view class="restrictions">
+	  <text class="restriction-label">{{$t('diet_restriction_label')}}</text>
+	  <view v-for="(restriction, index) in dietRestrictions" :key="index" class="restriction-card">
+	    <text class="restriction-name">{{ restriction.name }}</text>
+	    <button class="delete-button" @click="removeDietRestriction(index)">{{$t('delete_button')}}</button>
+	  </view>
+	</view>
+	<view class="add-restriction">
+	  
+	  <uni-combox
+	  :placeholder="$t('please_enter_food_name')"
+	  v-model="foodNameInput"
+	  :candidates="filteredFoods.map(item => displayName(item))"
+	  @input="onComboxInput"
+	        ></uni-combox>
+	  <button @click="addDietRestriction">{{$t('add_restriction_button')}}</button>
+	</view>
   </view>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, reactive, computed, watch } from 'vue';  // 添加 reactive
 import { useI18n } from 'vue-i18n';
+import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
 
 const { t, locale } = useI18n();
+
+const foodStore = useFoodListStore();
+
+// 获取 availableFoods
+const { availableFoods, fetchAvailableFoods, addFood } = foodStore;
+
+// 食品数据
+const food = reactive({
+  name: '',
+  id: null, // 添加 id 字段
+  weight: '',
+  price: '',
+  transportMethod: 'land', // 使用英文标识
+  foodSource: 'local', // 使用英文标识
+  imagePath: '',
+});
+
+// 食物名称输入
+const foodNameInput = ref('');
+const showFoodList = ref(false);
+
+
+// 模糊匹配过滤食物列表
+const filteredFoods = computed(() => {
+  if (foodNameInput.value === '') {
+    const currentLang = locale.value;
+    if (currentLang === 'zh-Hans') {
+      return availableFoods.filter((f) => f.name_zh !== '');
+    } else {
+      return availableFoods.filter((f) => f.name_en !== '');
+    }
+  } else {
+    const currentLang = locale.value;
+    return availableFoods.filter((f) => {
+      if (currentLang === 'zh-Hans') {
+        return f.name_zh.includes(foodNameInput.value);
+      } else {
+        return f.name_en.toLowerCase().includes(foodNameInput.value.toLowerCase());
+      }
+    });
+  }
+});
+
+// 根据当前语言显示名称
+const displayName = (item) => {
+  return locale.value === 'zh-Hans' ? item.name_zh : item.name_en;
+};
+
+const onComboxInput = (value) => {
+  console.log('onComboxInput', value);
+  foodNameInput.value = value;
+};
+
+// 当用户选择食物时
+const selectFood = (foodItem) => {
+  food.name = foodItem.name_en; // 始终使用英文名称存储
+  food.id = foodItem.id;
+  foodNameInput.value = displayName(foodItem); // 显示当前语言的名称
+  showFoodList.value = false;
+};
+
+// 处理输入框失焦事件
+const onInputBlur = () => {
+  setTimeout(() => {
+    showFoodList.value = false;
+  }, 100);
+};
+
+// 监听输入变化，控制下拉列表显示
+watch(foodNameInput, (newValue) => {
+  if (newValue !== '') {
+    showFoodList.value = true;
+  } else {
+    showFoodList.value = false;
+  }
+});
 
 const preferences = ref([
   { name: t('foodpreference_greeting'), key: 'foodpreference_greeting', icon: 'https://via.placeholder.com/50' },
@@ -55,6 +149,10 @@ const preferenceOptions = ref([
 const showModal = ref(false);
 
 const user_id = ref('');
+
+const newRestriction = ref(''); // 新增饮食禁忌的输入
+const dietRestrictions = ref([]); // 存储用户的饮食禁忌
+
 
 onMounted(() => {
   // 从 localStorage 中获取 token 信息作为 user_id
@@ -158,6 +256,21 @@ const selectPreference = (option) => {
 		console.error('Error adding preference:', err);
     }
   });
+};
+
+// 添加饮食禁忌的方法
+const addDietRestriction = () => {
+  if (foodNameInput.value.trim()) {
+    dietRestrictions.value.push({ name: foodNameInput.value.trim() });
+    foodNameInput.value = ''; // 清空输入框
+  } else {
+    console.warn('Please enter a valid diet restriction');
+  }
+};
+
+// 删除饮食禁忌的方法
+const removeDietRestriction = (index) => {
+  dietRestrictions.value.splice(index, 1);
 };
 
 </script>
@@ -310,6 +423,47 @@ body {
   border-radius: 4px;
   cursor: pointer;
   margin-top: 20px;
+}
+
+.add-restriction {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.restriction-label {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.restriction-input {
+  width: 80%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.restriction-card {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-radius: 8px;
+  background-color: #f8f8f8;
+  margin-bottom: 10px;
+}
+
+.restriction-name {
+  flex: 1;
+  font-size: 16px;
+}
+
+.delete-button {
+  background-color: #ff4d4f;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 </style>
