@@ -21,7 +21,7 @@
 		
 		<!-- 生成菜谱按钮 -->
 		<view class="button-container">
-		    <button class="generate-button fade-in-up delay-6" @click="generateRecipe">
+		    <button class="generate-button fade-in-up delay-6" @click="regetRecipe">
 		        {{$t('change_food')}}
 		    </button>
 		    <button class="generate-button fade-in-up delay-6" @click="generateRecipe">
@@ -71,31 +71,36 @@ const dislikedIngredients = [];  // 用户不喜欢的食材ID
 // 方法：从后端获取推荐食材数据
 const fetchRecommendedDishes = async () => {
   try {
+	console.log('请求菜谱');
     const response = await uni.request({
       url: `${BASE_URL.value}/ingredients/recommend`,
       method: 'POST',
       header: {
-		"Authorization": `Bearer ${token.value}`, // 替换为实际的 Token 变量
-		"Content-Type": "application/json", // 设置请求类型
+        "Authorization": `Bearer ${token.value}`, // 替换为实际的 Token 变量
+        "Content-Type": "application/json", // 设置请求类型
       },
       data: {
-        use_last_ingredients: true,  // 默认为否
+        use_last_ingredients: false,  // 不使用上次的食材
         liked_ingredients: likedIngredients,
         disliked_ingredients: dislikedIngredients,
       },
-    })
+    });
 
+	
+	console.log(response);
     // 处理成功响应
-    if (response.statusCode === 200 && response[1].data.recommended_ingredients) {
-      const recommendedIngredients = response[1].data.recommended_ingredients
+    if (response.statusCode === 200 && response.data.recommended_ingredients) {
+      const recommendedIngredients = response.data.recommended_ingredients
       // 将前6个推荐食材放入dishes
       dishes.value = recommendedIngredients.slice(0, 6).map((ingredient) => ({
+		id: ingredient.id,
         name: ingredient.name,
         image: `https://via.placeholder.com/300?text=${ingredient.name}`, // 这里可以根据食材生成图片URL
         liked: false,
       }))
       // 将其余食材放入availableNewDishes
       availableNewDishes.value = recommendedIngredients.slice(6).map((ingredient) => ({
+		id: ingredient.id,
         name: ingredient.name,
         image: `https://via.placeholder.com/300?text=${ingredient.name}`,
         liked: false,
@@ -105,6 +110,51 @@ const fetchRecommendedDishes = async () => {
     }
   } catch (error) {
     console.error('请求失败:', error)
+  }
+}
+
+const regetRecipe = async () => {
+  try {
+    // 清空现有的数组
+    dishes.value = [];
+    availableNewDishes.value = [];
+    
+    const response = await uni.request({
+      url: `${BASE_URL.value}/ingredients/recommend`,
+      method: 'POST',
+      header: {
+        "Authorization": `Bearer ${token.value}`, // 替换为实际的 Token 变量
+        "Content-Type": "application/json", // 设置请求类型
+      },
+      data: {
+        use_last_ingredients: false,  // 不使用上次的食材
+        liked_ingredients: likedIngredients,
+        disliked_ingredients: dislikedIngredients,
+      },
+    });
+	console.log(response);
+
+    if (response.statusCode === 200 && response.data.recommended_ingredients) {
+      const recommendedIngredients = response.data.recommended_ingredients;
+      // 将前6个推荐食材放入dishes
+      dishes.value = recommendedIngredients.slice(0, 6).map((ingredient) => ({
+		id: ingredient.id,
+        name: ingredient.name,
+        image: `https://via.placeholder.com/300?text=${encodeURIComponent(ingredient.name)}`, // 根据食材生成图片URL
+        liked: false,
+      }));
+      // 将其余食材放入availableNewDishes
+      availableNewDishes.value = recommendedIngredients.slice(6).map((ingredient) => ({
+		id: ingredient.id,
+        name: ingredient.name,
+        image: `https://via.placeholder.com/300?text=${encodeURIComponent(ingredient.name)}`,
+        liked: false,
+      }));
+    } else {
+      console.error('重新获取食材推荐失败:', response.data);
+    }
+  } catch (error) {
+    console.error('重新请求异常:', error);
   }
 }
 
@@ -124,10 +174,12 @@ const goToRecipe = (recipeName) => {
 // 喜欢菜品
 const likeDish = (index) => {
   dishes.value[index].liked = !dishes.value[index].liked;
+  likedIngredients.push(dishes.value[index].id);
 }
 
 // 删除菜品
 const deleteDish = async (index) => {
+  dislikedIngredients.push(dishes.value[index].id);
   const removedDish = dishes.value.splice(index, 1)[0];
   await simulateBackendDelete(removedDish);
   const newDish = await simulateFetchNewDish();
