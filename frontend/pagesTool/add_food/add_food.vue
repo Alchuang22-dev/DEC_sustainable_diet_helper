@@ -5,26 +5,6 @@
     <view class="form-container">
       <view class="form-group">
         <text class="label">{{ $t('name') }}</text>
-<!--        <input-->
-<!--          class="input"-->
-<!--          type="text"-->
-<!--          v-model="foodNameInput"-->
-<!--          @focus="showFoodList = true"-->
-<!--          @blur="onInputBlur"-->
-<!--          :placeholder="$t('please_enter_food_name')"-->
-<!--        />-->
-<!--        &lt;!&ndash; 食物名的模糊匹配下拉列表 &ndash;&gt;-->
-<!--        <view v-if="showFoodList && filteredFoods.length > 0" class="food-list">-->
-<!--          <view-->
-<!--            v-for="item in filteredFoods"-->
-<!--            :key="item.id"-->
-<!--            class="food-item"-->
-<!--            @mousedown.prevent-->
-<!--            @click="selectFood(item)"-->
-<!--          >-->
-<!--            {{ displayName(item) }}-->
-<!--          </view>-->
-<!--        </view>-->
             <uni-combox
       :placeholder="$t('please_enter_food_name')"
       v-model="foodNameInput"

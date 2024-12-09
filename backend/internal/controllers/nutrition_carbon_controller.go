@@ -1,12 +1,13 @@
 package controllers
 
 import (
-    "net/http"
-    "time"
-    "github.com/gin-gonic/gin"
-    "fmt"
-    "gorm.io/gorm"
-    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type NutritionCarbonController struct {
@@ -26,6 +27,25 @@ type NutritionGoalRequest struct {
 type CarbonGoalRequest struct {
     Date time.Time `json:"date" binding:"required"`
     Emission float64 `json:"emission" binding:"min=0"`
+}
+
+// UserShare 结构体
+type UserShare struct {
+    UserID  uint `json:"user_id" binding:"required"`
+    Ratio float64 `json:"ratio" binding:"required,min=0,max=1"`
+}
+
+// SharedNutritionIntakeRequest 共享营养摄入请求
+type SharedNutritionCarbonIntakeRequest struct {
+    Date          time.Time   `json:"date" binding:"required"`
+    MealType      models.MealType    `json:"meal_type" binding:"required"`
+    Calories      float64     `json:"calories" binding:"min=0"`
+    Protein       float64     `json:"protein" binding:"min=0"`
+    Fat           float64     `json:"fat" binding:"min=0"`
+    Carbohydrates float64     `json:"carbohydrates" binding:"min=0"`
+    Sodium        float64     `json:"sodium" binding:"min=0"`
+    Emission      float64     `json:"emission" binding:"min=0"`
+    UserShares    []UserShare `json:"user_shares" binding:"required,min=1"`
 }
 
 // 验证日期,需要保证起始是今天，且连续往后
@@ -456,4 +476,110 @@ func (nc *NutritionCarbonController) GetCarbonIntakes(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, defaultIntakes)
+}
+
+// validateUserShares 验证用户分摊信息
+func (nc *NutritionCarbonController) validateUserShares(currentUserID uint, shares []UserShare) (bool, error) {
+    // 获取当前用户家庭信息
+    var user models.User
+    if err := nc.DB.Preload("Family.Members").First(&user, currentUserID).Error; err != nil {
+        return false, fmt.Errorf("获取用户信息失败")
+    }
+
+    if user.Family == nil {
+        return false, fmt.Errorf("用户不属于任何家庭")
+    }
+
+    // 验证所有用户是否属于同一个家庭
+    familyMembers := make(map[uint]bool)
+    for _, member := range user.Family.Members {
+        familyMembers[member.ID] = true
+    }
+
+    // 先验证每个比例值是否有效
+    for _, share := range shares {
+        if share.Ratio <= 0 || share.Ratio > 1 {
+            return false, fmt.Errorf("无效的请求数据")
+        }
+    }
+
+    // 再验证比例总和是否为1
+    var totalRatio float64
+    for _, share := range shares {
+        if !familyMembers[share.UserID] {
+            return false, fmt.Errorf("用户 %d 不属于同一个家庭", share.UserID)
+        }
+        totalRatio += share.Ratio
+    }
+
+    // 允许有0.00001的误差
+    if totalRatio < 0.99999 || totalRatio > 1.00001 {
+        return false, fmt.Errorf("分摊比例之和必须等于1")
+    }
+
+    return true, nil
+}
+
+// SetSharedNutritionCarbonIntake 设置共享营养碳排放
+func (nc *NutritionCarbonController) SetSharedNutritionCarbonIntake(c *gin.Context) {
+    userID, err := c.Get("user_id")
+    if !err {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    var req SharedNutritionCarbonIntakeRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求数据"})
+        return
+    }
+
+    // 验证用户分摊信息
+    if valid, err := nc.validateUserShares(userID.(uint), req.UserShares); !valid {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    // 开启事务
+    tx := nc.DB.Begin()
+    if tx.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "开启事务失败"})
+        return
+    }
+
+    // 为每个用户创建营养和碳摄入记录
+    for _, share := range req.UserShares {
+        nutritionIntake := models.NutritionIntake{
+            UserID:        share.UserID,
+            Date:         req.Date,
+            MealType:     req.MealType,
+            Calories:     req.Calories * share.Ratio,
+            Protein:      req.Protein * share.Ratio,
+            Fat:         req.Fat * share.Ratio,
+            Carbohydrates: req.Carbohydrates * share.Ratio,
+            Sodium:       req.Sodium * share.Ratio,
+        }
+
+        carbonIntake := models.CarbonIntake{
+            UserID: share.UserID,
+            Date: req.Date,
+            MealType: req.MealType,
+            Emission: req.Emission * share.Ratio,
+        }
+
+        if err := tx.Create(&nutritionIntake).Error; err != nil {
+            tx.Rollback()
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "创建营养摄入记录失败"})
+            return
+        }
+
+        if err := tx.Create(&carbonIntake).Error; err != nil {
+            tx.Rollback()
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "创建碳排放记录失败"})
+            return
+        }
+    }
+
+    tx.Commit()
+    c.JSON(http.StatusOK, gin.H{"message": "共享营养碳排放记录创建成功"})
 }
