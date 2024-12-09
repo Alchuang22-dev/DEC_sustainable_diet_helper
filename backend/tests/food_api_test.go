@@ -271,9 +271,9 @@ func TestCalculateFoodNutritionAndEmissionAPI(t *testing.T) {
 }
 
 // 清理测试数据
-func cleanupTestDB(db *gorm.DB) error {
-    return db.Exec("DELETE FROM foods").Error
-}
+// func cleanupTestDB(db *gorm.DB) error {
+//     return db.Exec("DELETE FROM foods").Error
+// }
 
 func TestMain(m *testing.M) {
     // 在所有测试开始前的设置

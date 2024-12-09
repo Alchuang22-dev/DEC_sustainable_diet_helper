@@ -48,6 +48,7 @@ func main() {
         &models.CarbonIntake{},
         &models.RefreshToken{},
         &models.FamilyDish{},
+        &models.DislikedFoodPreference{},
     )
     if err != nil {
         log.Fatal("自动迁移失败:", err)
@@ -98,7 +99,7 @@ func main() {
     routes.RegisterFoodPreferenceRoutes(router, db)
 
     // 注册食材推荐路由
-    routes.RegisterIngredientControllerRoutes(router, db)
+    routes.RegisterRecommendRoutes(router, db)
 
     // 注册营养和碳排放路由
     routes.RegisterNutritionCarbonRoutes(router, db)

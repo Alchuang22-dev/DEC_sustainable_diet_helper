@@ -36,6 +36,9 @@ type User struct {
     NutritionIntakes []NutritionIntake `gorm:"foreignKey:UserID" json:"nutrition_intakes"`
     CarbonGoals      []CarbonGoal      `gorm:"foreignKey:UserID" json:"carbon_goals"`
     CarbonIntakes    []CarbonIntake    `gorm:"foreignKey:UserID" json:"carbon_intakes"`
+
+    UserIngredientHistory []UserIngredientHistory `gorm:"foreignKey:UserID" json:"user_ingredient_history"`
+    UserIngredientPreference []UserIngredientPreference `gorm:"foreignKey:UserID" json:"user_ingredient_preference"`
 }
 
 type RefreshToken struct {

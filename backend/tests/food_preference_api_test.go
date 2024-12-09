@@ -24,10 +24,17 @@ func setupFoodPreferenceTestDB(t *testing.T) *gorm.DB {
 	}
 
 	// Auto migrate the required tables
-	err = db.AutoMigrate(&models.User{}, &models.FoodPreference{})
+	err = db.AutoMigrate(&models.User{}, &models.FoodPreference{}, &models.DislikedFoodPreference{}, &models.Food{})
 	if err != nil {
 		t.Fatalf("Failed to migrate test database: %v", err)
 	}
+
+	// Add test food data
+	foods := []models.Food{
+		{ZhFoodName: "猪肉", EnFoodName: "pork"},
+		{ZhFoodName: "白菜", EnFoodName: "Chinese cabbage"},
+	}
+	db.Create(&foods)
 
 	return db
 }
@@ -297,4 +304,181 @@ func TestGetUserPreferences(t *testing.T) {
         name := pref["name"].(string)
         assert.Contains(t, []string{"highProtein", "lowSugar"}, name)
     }
+}
+
+func TestAddDislikedFoodPreference(t *testing.T) {
+	db := setupFoodPreferenceTestDB(t)
+	router, fpc := setupFoodPreferenceTestRouter(db)
+	user := createFoodPreferenceTestUser(db)
+
+	// Setup the test endpoint
+	router.POST("/disliked_preferences", func(c *gin.Context) {
+		c.Set("user_id", user.ID)
+		fpc.AddDislikedFoodPreference(c)
+	})
+
+	tests := []struct {
+		name           string
+		requestBody    map[string]interface{}
+		expectedStatus int
+		expectedBody   map[string]interface{}
+	}{
+		{
+			name: "Valid disliked preference",
+			requestBody: map[string]interface{}{
+				"food_id": 1,
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody: map[string]interface{}{
+				"message": "Disliked food preference added successfully",
+			},
+		},
+		{
+			name: "Duplicate disliked preference",
+			requestBody: map[string]interface{}{
+				"food_id": 1,
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody: map[string]interface{}{
+				"error": "Disliked preference already exists",
+			},
+		},
+		{
+			name: "Invalid food ID",
+			requestBody: map[string]interface{}{
+				"food_id": 999,
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody: map[string]interface{}{
+				"error": "Failed to add disliked preference",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			jsonBody, _ := json.Marshal(tt.requestBody)
+			req, _ := http.NewRequest(http.MethodPost, "/disliked_preferences", bytes.NewBuffer(jsonBody))
+			req.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			var response map[string]interface{}
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			assert.NoError(t, err)
+
+			// Check if response contains expected message/error
+			for key, expectedValue := range tt.expectedBody {
+				assert.Equal(t, expectedValue, response[key])
+			}
+		})
+	}
+}
+
+func TestDeleteDislikedFoodPreference(t *testing.T) {
+	db := setupFoodPreferenceTestDB(t)
+	router, fpc := setupFoodPreferenceTestRouter(db)
+	user := createFoodPreferenceTestUser(db)
+
+	// Create a test disliked preference
+	dislikedPreference := models.DislikedFoodPreference{
+		UserID: user.ID,
+		FoodID: 1,
+	}
+	db.Create(&dislikedPreference)
+
+	// Setup the test endpoint
+	router.DELETE("/disliked_preferences", func(c *gin.Context) {
+		c.Set("user_id", user.ID)
+		fpc.DeleteDislikedFoodPreference(c)
+	})
+
+	tests := []struct {
+		name           string
+		requestBody    map[string]interface{}
+		expectedStatus int
+		expectedBody   map[string]interface{}
+	}{
+		{
+			name: "Valid deletion",
+			requestBody: map[string]interface{}{
+				"food_id": 1,
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody: map[string]interface{}{
+				"message": "Disliked food preference deleted successfully",
+			},
+		},
+		{
+			name: "Non-existent disliked preference",
+			requestBody: map[string]interface{}{
+				"food_id": 1,
+			},
+			expectedStatus: http.StatusNotFound,
+			expectedBody: map[string]interface{}{
+				"error": "Disliked preference not found",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			jsonBody, _ := json.Marshal(tt.requestBody)
+			req, _ := http.NewRequest(http.MethodDelete, "/disliked_preferences", bytes.NewBuffer(jsonBody))
+			req.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			var response map[string]interface{}
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			assert.NoError(t, err)
+
+			// Check if response contains expected message/error
+			for key, expectedValue := range tt.expectedBody {
+				assert.Equal(t, expectedValue, response[key])
+			}
+		})
+	}
+}
+
+func TestGetUserDislikedPreferences(t *testing.T) {
+	db := setupFoodPreferenceTestDB(t)
+	router, fpc := setupFoodPreferenceTestRouter(db)
+	user := createFoodPreferenceTestUser(db)
+
+	// Create some disliked preferences
+	dislikedPreferences := []models.DislikedFoodPreference{
+		{UserID: user.ID, FoodID: 1},
+		{UserID: user.ID, FoodID: 2},
+	}
+	db.Create(&dislikedPreferences)
+
+	// Setup the test endpoint
+	router.GET("/disliked_preferences", func(c *gin.Context) {
+		c.Set("user_id", user.ID)
+		fpc.GetUserDislikedPreferences(c)
+	})
+
+	// Send test request
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodGet, "/disliked_preferences", nil)
+	router.ServeHTTP(w, req)
+
+	// Validate response status code
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Parse response
+	var response map[string][]string
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+
+	// Validate response content
+	expectedFoods := []string{"猪肉", "白菜"}
+	assert.ElementsMatch(t, expectedFoods, response["disliked_foods"])
 }
