@@ -1,65 +1,112 @@
 <!-- myFamily.vue -->
 <template>
   <view class="family-management">
-    <!-- 已加入的家庭成员列表 -->
     <view class="family-list">
-      <view v-for="(member, index) in allFamilyMembers" :key="member.id" class="family-member">
-        <view class="member-info">
-          <image :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`" alt="头像" class="avatar" />
-          <view class="info">
-            <text class="name">{{ member.nickname }}</text>
+      <!-- 已加入的家庭成员列表 -->
+      <uni-card v-for="member in sortedFamilyMembers"
+                :key="member.id"
+                :padding="0"
+                spacing="0"
+                class="member-card">
+        <view class="member-wrapper">
+          <view class="member-info">
+            <image :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+                   mode="aspectFill"
+                   class="avatar" />
+            <text class="nickname">{{ member.nickname }}</text>
+            <uni-tag v-if="member.role === 'admin'"
+                     text="管理员"
+                     type="primary"
+                     size="small"
+                     class="role-tag" />
+          </view>
+
+          <view class="actions" v-if="member.id !== currentUserId">
+            <text v-if="member.role !== 'admin'"
+                  class="action-btn promote-btn"
+                  @click="setAsAdmin(member.id)">
+              {{ $t('set_as_admin') }}
+            </text>
+            <text class="action-btn remove-btn"
+                  @click="removeMember(member.id)">
+              {{ $t('remove_member') }}
+            </text>
           </view>
         </view>
-        <view class="actions">
-          <button v-if="member.role !== 'admin'" @click.stop="setAsAdmin(member.id)" class="edit-btn">{{ $t('set_as_admin') }}</button>
-          <button @click.stop="removeMember(member.id)" class="remove-btn">{{ $t('remove_member') }}</button>
-        </view>
-      </view>
+      </uni-card>
     </view>
 
-    <!-- 分割线 -->
-    <view class="divider"></view>
+    <uni-section title="待审核成员"
+                 type="line"
+                 v-if="family.waiting_members?.length > 0">
+      <view class="family-list">
+        <uni-card v-for="member in family.waiting_members"
+                  :key="member.id"
+                  :padding="0"
+                  spacing="0"
+                  class="member-card">
+          <view class="member-wrapper">
+            <view class="member-info">
+              <image :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+                     mode="aspectFill"
+                     class="avatar" />
+              <text class="nickname">{{ member.nickname }}</text>
+              <uni-tag text="待审核"
+                       type="warning"
+                       size="small"
+                       class="role-tag" />
+            </view>
 
-    <!-- 等待加入的成员列表 -->
-    <view class="family-list" v-if="family.waiting_members && family.waiting_members.length > 0">
-      <view v-for="(member, index) in family.waiting_members" :key="member.id" class="family-member">
-        <view class="member-info">
-          <image :src="member.avatarUrl" alt="头像" class="avatar" />
-          <view class="info">
-            <text class="name">{{ member.nickname }}</text>
+            <view class="actions">
+              <text class="action-btn approve-btn"
+                    @click="admitMember(member.id)">
+                {{ $t('admit') }}
+              </text>
+              <text class="action-btn reject-btn"
+                    @click="rejectMember(member.id)">
+                {{ $t('reject') }}
+              </text>
+            </view>
           </view>
-        </view>
-        <view class="actions">
-          <button @click.stop="admitMember(member.id)" class="add-btn">{{ $t('admit') }}</button>
-          <button @click.stop="rejectMember(member.id)" class="remove-btn">{{ $t('reject') }}</button>
-        </view>
+        </uni-card>
       </view>
-    </view>
+    </uni-section>
   </view>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useFamilyStore } from '@/stores/family.js';
+import { useUserStore } from "../../stores/user.js";
+import { onShow } from '@dcloudio/uni-app';
 
 const { t } = useI18n();
 
 const familyStore = useFamilyStore();
 const family = computed(() => familyStore.family);
+const userStore = useUserStore();
+const currentUserId = computed(() => userStore.user.uid);
 
-// 获取当前用户ID（假设存储在localStorage中）
-const currentUserId = uni.getStorageSync('userId'); // 根据你的项目实际情况决定
 const isCurrentUserAdmin = computed(() => {
-  return familyStore.isAdmin(currentUserId);
+  return familyStore.isAdmin(currentUserId.value);
 });
 
-// 合并后的家庭成员列表（包括管理员和普通成员）
 const allFamilyMembers = computed(() => {
   return family.value.allMembers || [];
 });
 
-onMounted(async () => {
+const sortedFamilyMembers = computed(() => {
+  const members = [...allFamilyMembers.value];
+  const currentUserIndex = members.findIndex(member => member.id === currentUserId.value);
+  if (currentUserIndex > -1) {
+    const [currentUser] = members.splice(currentUserIndex, 1);
+    members.unshift(currentUser);
+  }
+  return members;
+});
+
+onShow(async () => {
   try {
     await familyStore.getFamilyDetails();
   } catch (error) {
@@ -67,7 +114,6 @@ onMounted(async () => {
   }
 });
 
-// 设为管理员
 const setAsAdmin = async (userId) => {
   try {
     await familyStore.setAdmin(userId);
@@ -77,7 +123,6 @@ const setAsAdmin = async (userId) => {
   }
 };
 
-// 删除成员
 const removeMember = async (userId) => {
   try {
     await familyStore.removeFamilyMember(userId);
@@ -87,7 +132,6 @@ const removeMember = async (userId) => {
   }
 };
 
-// 同意加入请求
 const admitMember = async (userId) => {
   try {
     await familyStore.admitJoinRequest(userId);
@@ -97,7 +141,6 @@ const admitMember = async (userId) => {
   }
 };
 
-// 拒绝加入请求
 const rejectMember = async (userId) => {
   try {
     await familyStore.rejectJoinRequest(userId);
@@ -110,82 +153,87 @@ const rejectMember = async (userId) => {
 
 <style scoped>
 .family-management {
-  padding: 20rpx;
-  background-color: #f5f5f5;
+  padding: 30rpx;
+  background-color: #f8f8f8;
 }
 
 .family-list {
   display: flex;
   flex-direction: column;
-  gap: 15rpx;
+  gap: 20rpx;
 }
 
-.family-member {
+.member-card {
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.member-wrapper {
+  padding: 24rpx;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  justify-content: space-between;
+  align-items: center;
   background-color: #ffffff;
-  padding: 15rpx;
-  border-radius: 8rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
-  position: relative;
-  box-sizing: border-box;
-  width: 100%;
 }
 
 .member-info {
   display: flex;
   align-items: center;
-  width: 100%;
-  margin-bottom: 10rpx;
-  box-sizing: border-box;
-}
-
-.avatar {
-  width: 50rpx;
-  height: 50rpx;
-  border-radius: 50%;
-  margin-right: 15rpx;
-}
-
-.info {
+  gap: 20rpx;
   flex: 1;
 }
 
-.name {
-  font-size: 18rpx;
-  font-weight: bold;
+.avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background-color: #f0f0f0;
+}
+
+.nickname {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.role-tag {
+  margin-left: 16rpx;
 }
 
 .actions {
   display: flex;
-  gap: 10rpx;
+  gap: 16rpx;
+  align-items: center;
 }
 
-.edit-btn {
-  color: #007aff;
-  background-color: #e0f0ff;
-  padding: 10rpx 20rpx;
-  border-radius: 5rpx;
+.action-btn {
+  padding: 12rpx 24rpx;
+  border-radius: 6rpx;
+  font-size: 24rpx;
+  transition: opacity 0.2s;
+}
+
+.action-btn:active {
+  opacity: 0.8;
+}
+
+.promote-btn {
+  color: #2979ff;
+  background-color: rgba(41, 121, 255, 0.1);
 }
 
 .remove-btn {
-  color: #ff3b30;
-  background-color: #ffe0e0;
-  padding: 10rpx 20rpx;
-  border-radius: 5rpx;
+  color: #ff5252;
+  background-color: rgba(255, 82, 82, 0.1);
 }
 
-.add-btn {
-  color: #34c759;
-  background-color: #e0ffe0;
-  padding: 10rpx 20rpx;
-  border-radius: 5rpx;
+.approve-btn {
+  color: #00c853;
+  background-color: rgba(0, 200, 83, 0.1);
 }
 
-.divider {
-  height: 2rpx;
-  background-color: #ddd;
-  margin: 20rpx 0;
+.reject-btn {
+  color: #ff5252;
+  background-color: rgba(255, 82, 82, 0.1);
 }
 </style>

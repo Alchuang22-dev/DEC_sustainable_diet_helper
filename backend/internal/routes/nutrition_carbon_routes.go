@@ -26,6 +26,9 @@ func RegisterNutritionCarbonRoutes(router *gin.Engine, db *gorm.DB) {
             authGroup.POST("/carbon/goals", nutritionCarbonController.SetCarbonGoals)
             authGroup.GET("/carbon/goals", nutritionCarbonController.GetCarbonGoals)
             authGroup.GET("/carbon/intakes", nutritionCarbonController.GetCarbonIntakes)
+
+            // 共享营养碳排放相关路由
+            authGroup.POST("/shared/nutrition-carbon", nutritionCarbonController.SetSharedNutritionCarbonIntake)
         }
     }
 } 
