@@ -98,7 +98,7 @@ func main() {
     routes.RegisterFoodPreferenceRoutes(router, db)
 
     // 注册食材推荐路由
-    routes.RegisterIngredientControllerRoutes(router, db)
+    routes.RegisterRecommendRoutes(router, db)
 
     // 注册营养和碳排放路由
     routes.RegisterNutritionCarbonRoutes(router, db)

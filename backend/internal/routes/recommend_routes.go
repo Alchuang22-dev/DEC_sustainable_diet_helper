@@ -8,8 +8,8 @@ import (
     "gorm.io/gorm"
 )
 
-func RegisterIngredientRoutes(router *gin.Engine, db *gorm.DB) {
-    controller := &controllers.IngredientController{DB: db}
+func RegisterRecommendRoutes(router *gin.Engine, db *gorm.DB) {
+    controller := &controllers.RecommendController{DB: db}
     
     ingredientGroup := router.Group("/ingredients")
     ingredientGroup.Use(middleware.AuthMiddleware())
