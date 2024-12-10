@@ -15,6 +15,7 @@ func RegisterRecommendRoutes(router *gin.Engine, db *gorm.DB) {
     ingredientGroup.Use(middleware.AuthMiddleware())
     {
         ingredientGroup.POST("/recommend", controller.RecommendIngredients)
+        ingredientGroup.POST("/set", controller.SetUserSelectedFoods)
     }
 
     recipeGroup := router.Group("/recipes")

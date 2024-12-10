@@ -27,3 +27,11 @@ type UserIngredientPreference struct {
     IsLike      bool      `gorm:"not null"` // true表示喜欢，false表示不喜欢
     UpdateTime  time.Time `gorm:"not null"`
 }
+
+// UserLastSelectedFoods 用户最近选择的食材
+type UserLastSelectedFoods struct {
+    ID          uint      `gorm:"primaryKey"`
+    UserID      uint      `gorm:"not null"`
+    FoodID      uint      `gorm:"not null"`
+    SelectTime  time.Time `gorm:"not null"`
+}

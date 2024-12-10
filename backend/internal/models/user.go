@@ -40,6 +40,8 @@ type User struct {
     UserIngredientHistory []UserIngredientHistory `gorm:"foreignKey:UserID" json:"user_ingredient_history"`
     UserIngredientPreference []UserIngredientPreference `gorm:"foreignKey:UserID" json:"user_ingredient_preference"`
     UserRecipeHistory []UserRecipeHistory `gorm:"foreignKey:UserID" json:"user_recipe_history"`
+
+    UserLastSelectedFoods []UserLastSelectedFoods `gorm:"foreignKey:UserID" json:"user_last_selected_foods"`
 }
 
 type RefreshToken struct {

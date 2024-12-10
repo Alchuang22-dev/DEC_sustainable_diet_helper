@@ -50,6 +50,7 @@ func main() {
         &models.FamilyDish{},
         &models.DislikedFoodPreference{},
         &models.UserRecipeHistory{},
+        &models.UserLastSelectedFoods{},
     )
     if err != nil {
         log.Fatal("自动迁移失败:", err)

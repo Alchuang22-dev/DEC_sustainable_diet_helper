@@ -25,8 +25,8 @@ type IngredientRecommendRequest struct {
     DislikedIngredients []uint  `json:"disliked_ingredients"`
 }
 
-// 食谱推荐请求结构体
-type RecipeRecommendRequest struct {
+// 食谱推荐以及设置用户最近选择的食材请求结构体
+type RecipeRecommendAndSetUserLastSelectedFoodsRequest struct {
     SelectedIngredients []uint `json:"selected_ingredients"`
 }
 
@@ -420,7 +420,7 @@ func (ic *RecommendController) RecommendRecipes(c *gin.Context) {
     log.Printf("获取历史菜谱成功")
 
     // 获取请求体
-    var request RecipeRecommendRequest
+    var request RecipeRecommendAndSetUserLastSelectedFoodsRequest
     if err := c.ShouldBindJSON(&request); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
         return
@@ -491,4 +491,46 @@ func (ic *RecommendController) RecommendRecipes(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, response)
+}
+
+// set user selected foods
+func (ic *RecommendController) SetUserSelectedFoods(c *gin.Context) {
+    log.Printf("开始设置用户选择的食材")
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "用户未认证"})
+        return
+    }
+
+    // 获取请求体
+    var request RecipeRecommendAndSetUserLastSelectedFoodsRequest
+    if err := c.ShouldBindJSON(&request); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+        return
+    }
+
+    // 验证SelectedIngredients不为空
+    if len(request.SelectedIngredients) == 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "No ingredients selected"})
+        return
+    }
+    
+    // 验证SelectedIngredients中的食材ID是否存在
+    for _, ingredientID := range request.SelectedIngredients {
+        var food models.Food
+        if err := ic.DB.First(&food, ingredientID).Error; err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ingredient ID"})
+            return
+        }
+    }
+
+    // 设置用户最近选择的食材
+    tx := ic.DB.Begin()
+    for _, ingredientID := range request.SelectedIngredients {
+        tx.Create(&models.UserLastSelectedFoods{UserID: userID.(uint), FoodID: ingredientID, SelectTime: time.Now()})
+    }
+    tx.Commit()
+    log.Printf("设置用户最近选择的食材成功")
+
+    c.JSON(http.StatusOK, gin.H{"message": "User selected foods set successfully"})
 }
