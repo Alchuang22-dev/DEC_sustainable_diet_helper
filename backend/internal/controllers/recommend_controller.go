@@ -18,14 +18,30 @@ type RecommendController struct {
     DB *gorm.DB
 }
 
-// 请求结构体
+// 食材推荐请求结构体
 type IngredientRecommendRequest struct {
     UseLastIngredients bool     `json:"use_last_ingredients"`
     LikedIngredients   []uint   `json:"liked_ingredients"`
     DislikedIngredients []uint  `json:"disliked_ingredients"`
 }
 
-// 响应结构体
+// 食谱推荐以及设置用户最近选择的食材请求结构体
+type RecipeRecommendAndSetUserLastSelectedFoodsRequest struct {
+    SelectedIngredients []uint `json:"selected_ingredients"`
+}
+
+// 食谱推荐响应结构体
+type RecipeRecommendResponse struct {
+    // 返回食谱的名称，图片url，食谱id，食谱的组成
+    RecommendedRecipes []struct {
+        Name string `json:"name"`
+        ImageURL string `json:"image_url"`
+        RecipeID uint `json:"recipe_id"`
+        Ingredients string `json:"ingredients"`
+    } `json:"recommended_recipes"`
+}
+
+// 食材推荐响应结构体
 type IngredientRecommendResponse struct {
     RecommendedIngredients []struct {
         ID          uint    `json:"id"`
@@ -192,6 +208,23 @@ func (ic *RecommendController) RecommendIngredients(c *gin.Context) {
         return
     }
     log.Printf("request: %v", request)
+
+    // 如果使用上一次的食材，则需要传输上一次的食材
+    if request.UseLastIngredients {
+        var lastSelectedFoods []models.UserLastSelectedFoods
+        if err := ic.DB.Where("user_id = ?", userID).Find(&lastSelectedFoods).Error; err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get last selected foods"})
+            return
+        }
+        for _, food := range lastSelectedFoods {
+            request.LikedIngredients = append(request.LikedIngredients, food.FoodID)
+        }
+        log.Printf("获取上一次的食材成功")
+        
+        // 传输
+        c.JSON(http.StatusOK, gin.H{"message": "User selected foods set successfully"})
+        return
+    }
 
     // 验证食材ID是否存在
     for _, id := range append(request.LikedIngredients, request.DislikedIngredients...) {
@@ -373,4 +406,148 @@ func (ic *RecommendController) RecommendIngredients(c *gin.Context) {
     }
     
     c.JSON(http.StatusOK, response)
+}
+
+// 推荐菜谱
+func (ic *RecommendController) RecommendRecipes(c *gin.Context) {
+    log.Printf("开始推荐菜谱")
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "用户未认证"})
+        return
+    }
+    log.Printf("用户ID: %v", userID)
+    // 清楚1周以上的历史数据
+    tx := ic.DB.Begin()
+    oneWeekAgo := time.Now().Add(-7 * 24 * time.Hour)
+    if err := tx.Where("user_id = ? AND select_time < ?", userID, oneWeekAgo).Delete(&models.UserRecipeHistory{}).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear history data"})
+        return
+    }
+    tx.Commit()
+    log.Printf("清除历史数据成功")
+
+    // 获取用户历史菜谱
+    var historyRecipes []models.UserRecipeHistory
+    if err := ic.DB.Where("user_id = ?", userID).Find(&historyRecipes).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get history recipes"})
+        return
+    }
+    log.Printf("获取历史菜谱成功")
+
+    // 获取请求体
+    var request RecipeRecommendAndSetUserLastSelectedFoodsRequest
+    if err := c.ShouldBindJSON(&request); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+        return
+    }
+    log.Printf("获取请求体成功")
+
+    // 验证SelectedIngredients不为空
+    if len(request.SelectedIngredients) == 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "No ingredients selected"})
+        return
+    }
+
+    // 对于每一个食材id，获取包含该食材的食谱
+    var recipes []models.Recipe
+    for _, ingredientID := range request.SelectedIngredients {
+        // 验证ingredientID是否存在
+        var food models.Food
+        if err := ic.DB.First(&food, ingredientID).Error; err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ingredient ID"})
+            return
+        }
+
+        recipeIDs, err := models.GetRecipeIDsByFoodID(ic.DB, ingredientID)
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get recipe IDs"})
+            return
+        }
+        log.Printf("获取包含食材%v的食谱成功", ingredientID)
+
+        // 对于recipeIDs,随机选取1个
+        if len(recipeIDs) > 0 {
+            randomIndex := rand.Intn(len(recipeIDs))
+            recipe, err := models.GetRecipeByID(ic.DB, recipeIDs[randomIndex])
+            if err != nil {
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get recipe"})
+                return
+            }
+            recipes = append(recipes, *recipe)
+        }
+        log.Printf("获取包含食材%v的食谱成功", ingredientID)
+    }
+
+    // 构造推荐菜谱响应
+    recommendedRecipes := make([]struct {
+        Name        string `json:"name"`
+        ImageURL    string `json:"image_url"`
+        RecipeID    uint   `json:"recipe_id"`
+        Ingredients string `json:"ingredients"`
+    }, 0, len(recipes))
+
+    for _, recipe := range recipes {
+        recommendedRecipes = append(recommendedRecipes, struct {
+            Name        string `json:"name"`
+            ImageURL    string `json:"image_url"`
+            RecipeID    uint   `json:"recipe_id"`
+            Ingredients string `json:"ingredients"`
+        }{
+            Name:        recipe.Name,
+            ImageURL:    recipe.ImageURL,
+            RecipeID:    recipe.ID,
+            Ingredients: recipe.Ingredients,
+        })
+    }
+    log.Printf("构造推荐菜谱响应成功")
+
+    response := RecipeRecommendResponse{
+        RecommendedRecipes: recommendedRecipes,
+    }
+
+    c.JSON(http.StatusOK, response)
+}
+
+// set user selected foods
+func (ic *RecommendController) SetUserSelectedFoods(c *gin.Context) {
+    log.Printf("开始设置用户选择的食材")
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "用户未认证"})
+        return
+    }
+
+    // 获取请求体
+    var request RecipeRecommendAndSetUserLastSelectedFoodsRequest
+    if err := c.ShouldBindJSON(&request); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+        return
+    }
+
+    // 验证SelectedIngredients不为空
+    if len(request.SelectedIngredients) == 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "No ingredients selected"})
+        return
+    }
+    
+    // 验证SelectedIngredients中的食材ID是否存在
+    for _, ingredientID := range request.SelectedIngredients {
+        var food models.Food
+        if err := ic.DB.First(&food, ingredientID).Error; err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ingredient ID"})
+            return
+        }
+    }
+
+    // 设置用户最近选择的食材
+    tx := ic.DB.Begin()
+    for _, ingredientID := range request.SelectedIngredients {
+        tx.Create(&models.UserLastSelectedFoods{UserID: userID.(uint), FoodID: ingredientID, SelectTime: time.Now()})
+    }
+    tx.Commit()
+    log.Printf("设置用户最近选择的食材成功")
+
+    c.JSON(http.StatusOK, gin.H{"message": "User selected foods set successfully"})
 }

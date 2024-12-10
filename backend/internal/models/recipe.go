@@ -3,6 +3,7 @@ package models
 import (
 	"gorm.io/gorm"
 	"encoding/json"
+	"fmt"
 )
 
 // Recipe 食谱模型
@@ -72,4 +73,22 @@ func (r *Recipe) UpdateRecipe(db *gorm.DB) error {
 // DeleteRecipe 删除食谱
 func (r *Recipe) DeleteRecipe(db *gorm.DB) error {
 	return db.Delete(r).Error
+}
+
+// GetRecipeIDsByFoodID 获取包含指定食材的所有食谱ID
+func GetRecipeIDsByFoodID(db *gorm.DB, foodID uint) ([]uint, error) {
+    var recipeIDs []uint
+    
+    // 使用food_recipes关联表查询
+    err := db.Table("food_recipes").
+        Select("recipe_id").
+        Where("food_id = ?", foodID).
+        Pluck("recipe_id", &recipeIDs).
+        Error
+    
+    if err != nil {
+        return nil, fmt.Errorf("查询食谱ID失败: %v", err)
+    }
+    
+    return recipeIDs, nil
 }
