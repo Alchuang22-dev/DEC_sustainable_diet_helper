@@ -1,8 +1,38 @@
 <template>
   <view class="container">
 	<view class="header">
-	  <text class="title">{{$t('diet_restriction_label')}}</text>
+	  <text class="title">{{$t('diet_restriction_label')}}{{$t('and')}}{{$t('preferences_title')}}</text>
 	</view>
+    <image src="/static/images/index/background_img.jpg" class="background-image"></image>
+    <view group="preferences" class="preferences">
+      <view
+        v-for="(preference, index) in preferences"
+        :key="index"
+        :class="['preference-card', 'color-' + ((index+1) % 4)]"
+      >
+        <image :src="preference.icon" class="preference-icon" />
+        <text class="preference-name">{{ preference.name }}</text>
+        <button class="delete-button" @click="removePreference(index)">
+          <image src="@/pagesMy/static/delete.svg" class="delete-icon" />
+        </button>
+      </view>
+    </view>
+	<view group="preferences" class="preferences">
+	  <view
+	    v-for="(restriction, index) in dietRestrictions"
+	    :key="index"
+	    :class="['preference-card', 'color-' + (index % 4)]"
+	  >
+		<image src='https://cdn.pixabay.com/photo/2015/03/14/14/00/carrots-673184_1280.jpg' class="preference-icon" />
+	    <text class="restriction-name">{{ restriction.name }}</text>
+	    <button class="delete-button" @click="removeDietRestriction(index)">
+	      <image src="@/pagesMy/static/delete.svg" class="delete-icon" />
+	    </button>
+	  </view>
+	</view>
+    <view class="add-preference">
+      <button @click="showPreferenceOptions">{{$t('add_preference_button')}}</button>
+    </view>
 	<view class="add-restriction">
 	  <uni-combox
 	    :placeholder="$t('please_enter_food_name')"
@@ -12,38 +42,6 @@
 	  ></uni-combox>
 	  <button @click="addDietRestriction">{{$t('add_restriction_button')}}</button>
 	</view>
-	<view class="restrictions">
-	  <view
-	    v-for="(restriction, index) in dietRestrictions"
-	    :key="index"
-	    class="restriction-card"
-	  >
-	    <text class="restriction-name">{{ restriction.name }}</text>
-	    <button class="delete-button" @click="removeDietRestriction(index)">
-	      {{$t('delete_button')}}
-	    </button>
-	  </view>
-	</view>
-    <view class="header">
-      <text class="title">{{$t('preferences_title')}}</text>
-    </view>
-    <image src="/static/images/index/background_img.jpg" class="background-image"></image>
-    <view group="preferences" class="preferences">
-      <view
-        v-for="(preference, index) in preferences"
-        :key="index"
-        :class="['preference-card', 'color-' + (index % 4)]"
-      >
-        <image :src="preference.icon" class="preference-icon" />
-        <text class="preference-name">{{ preference.name }}</text>
-        <button class="delete-button" @click="removePreference(index)">
-          {{$t('delete_button')}}
-        </button>
-      </view>
-    </view>
-    <view class="add-preference">
-      <button @click="showPreferenceOptions">{{$t('add_preference_button')}}</button>
-    </view>
     <view v-if="showModal" class="modal">
       <view class="modal-content">
         <text class="modal-title">{{$t('modal_title')}}</text>
@@ -370,8 +368,13 @@ const getDietRestriction = () => {
     success: (res) => {
       if (res.statusCode === 200) {
         console.log('Fetched disliked foods:', res.data.disliked_foods);
-        // 将返回的禁忌食物名称列表更新到本地数据中
-        dietRestrictions.value = res.data.disliked_foods.map(food => ({ name: food }));
+        // 将返回的禁忌食物名称列表更新到本地数据中，并包含 id
+        dietRestrictions.value = res.data.disliked_foods.map(food => ({
+          name: food.name,
+          id: food.id
+        }));
+      } else {
+        console.error('Failed to load diet restrictions:', res.data);
       }
     },
     fail: (err) => {
@@ -415,6 +418,7 @@ body {
   font-weight: bold;
 }
 .preferences {
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -447,12 +451,15 @@ body {
   font-size: 16px;
 }
 .delete-button {
-  background-color: #ff4d4f;
+  background: none;
   color: #fff;
   border: none;
-  padding-right: 5px;
   border-radius: 4px;
   cursor: pointer;
+}
+.delete-icon {
+  width: 20px;
+  height: 20px;
 }
 .add-preference {
   margin-top: 20px;
@@ -477,7 +484,7 @@ body {
   align-items: center;
   justify-content: center;
   flex-direction: column; /* 设置垂直排列 */
-  z-index: 1;
+  z-index: 2;
 }
 
 .modal-content {
