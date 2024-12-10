@@ -209,6 +209,23 @@ func (ic *RecommendController) RecommendIngredients(c *gin.Context) {
     }
     log.Printf("request: %v", request)
 
+    // 如果使用上一次的食材，则需要传输上一次的食材
+    if request.UseLastIngredients {
+        var lastSelectedFoods []models.UserLastSelectedFoods
+        if err := ic.DB.Where("user_id = ?", userID).Find(&lastSelectedFoods).Error; err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get last selected foods"})
+            return
+        }
+        for _, food := range lastSelectedFoods {
+            request.LikedIngredients = append(request.LikedIngredients, food.FoodID)
+        }
+        log.Printf("获取上一次的食材成功")
+        
+        // 传输
+        c.JSON(http.StatusOK, gin.H{"message": "User selected foods set successfully"})
+        return
+    }
+
     // 验证食材ID是否存在
     for _, id := range append(request.LikedIngredients, request.DislikedIngredients...) {
         var food models.Food
