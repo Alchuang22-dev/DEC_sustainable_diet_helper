@@ -98,164 +98,126 @@ func importFoodsData(db *gorm.DB, filename string) error {
     return nil
 }
 
-// cmd/import_recipe_data.go
+// // 自定义CSV行解析函数 (保持不变)
+// func parseCSVLine(line string) []string {
+//     var fields []string
+//     var currentField strings.Builder
+//     inQuotes := false
+//     inBrackets := 0
+//     inBraces := 0
 
+//     for _, ch := range line {
+//         switch ch {
+//         case '[':
+//             inBrackets++
+//             currentField.WriteRune(ch)
+//         case ']':
+//             inBrackets--
+//             currentField.WriteRune(ch)
+//         case '{':
+//             inBraces++
+//             currentField.WriteRune(ch)
+//         case '}':
+//             inBraces--
+//             currentField.WriteRune(ch)
+//         case '"':
+//             inQuotes = !inQuotes
+//             currentField.WriteRune(ch)
+//         case ',':
+//             if inQuotes || inBrackets > 0 || inBraces > 0 {
+//                 currentField.WriteRune(ch)
+//             } else {
+//                 fields = append(fields, currentField.String())
+//                 currentField.Reset()
+//             }
+//         default:
+//             currentField.WriteRune(ch)
+//         }
+//     }
+
+//     if currentField.Len() > 0 {
+//         fields = append(fields, currentField.String())
+//     }
+
+//     return fields
+// }
+
+// importRecipesData 导入食谱数据
 func importRecipesData(db *gorm.DB, filename string) error {
+    // 打开CSV文件
     file, err := os.Open(filename)
     if err != nil {
-        return fmt.Errorf("error opening file: %v", err)
+        return fmt.Errorf("打开文件错误: %v", err)
     }
     defer file.Close()
 
-    content, err := io.ReadAll(file)
-    if err != nil {
-        return fmt.Errorf("error reading file: %v", err)
-    }
-
-    lines := strings.Split(string(content), "\n")
-    if len(lines) < 2 {
-        return fmt.Errorf("file has insufficient lines")
+    // 创建CSV reader
+    reader := csv.NewReader(file)
+    
+    // 跳过表头
+    if _, err := reader.Read(); err != nil {
+        return fmt.Errorf("读取表头错误: %v", err)
     }
 
     var successful, failed int
-    for i, line := range lines[1:] {
-        if line == "" {
-            continue
-        }
+    recipeID := 1
 
-        fields := parseCSVLine(line)
-        if len(fields) < 5 {
-            log.Printf("Line %d: Insufficient fields", i+2)
+    // 逐行读取数据
+    for {
+        record, err := reader.Read()
+        if err == io.EOF {
+            break
+        }
+        if err != nil {
+            log.Printf("读取行错误: %v", err)
             failed++
             continue
         }
 
-        // 解析食物名字数组
-        foodNamesStr := strings.TrimSpace(fields[1])
-        var foodNames models.StringArray
-        if err := json.Unmarshal([]byte(foodNamesStr), &foodNames); err != nil {
-            log.Printf("Line %d: Error parsing food names: %v", i+2, err)
-            log.Printf("Food names string: %s", foodNamesStr)
+        // 替换单引号为双引号
+        jsonStr := strings.ReplaceAll(record[2], "'", "\"")
+
+        // 解析食材JSON字符串
+        var ingredients map[string]float64
+        if err := json.Unmarshal([]byte(jsonStr), &ingredients); err != nil {
+            log.Printf("解析食材JSON错误 %s: %v", record[3], err)
             failed++
             continue
         }
 
-        // 处理 ingredients 字符串
-        ingredientsStr := strings.TrimSpace(fields[2])
-        // 移除外部的引号（如果存在）
-        ingredientsStr = strings.Trim(ingredientsStr, "\"")
-        // 将单引号替换为双引号
-        ingredientsStr = strings.ReplaceAll(ingredientsStr, "'", "\"")
-        
-        // 创建一个临时的 map 来存储解析后的数据
-        ingredients := make(models.Ingredients)
-        
-        // 手动解析 JSON 字符串
-        ingredientsStr = strings.Trim(ingredientsStr, "{}")
-        pairs := strings.Split(ingredientsStr, ",")
-        for _, pair := range pairs {
-            pair = strings.TrimSpace(pair)
-            kv := strings.Split(pair, ":")
-            if len(kv) != 2 {
-                continue
-            }
-            
-            // 处理键
-            key := strings.Trim(strings.TrimSpace(kv[0]), "\"")
-            
-            // 处理值
-            valueStr := strings.TrimSpace(kv[1])
-            value, err := strconv.ParseFloat(valueStr, 64)
+        var foods []models.Food
+        for foodName := range ingredients {
+            foodID, err := models.FindFoodIDByName(db, foodName)
             if err != nil {
-                log.Printf("Error parsing value for key %s: %v", key, err)
+                log.Printf("找不到食材 %s: %v", foodName, err)
+                failed++
                 continue
             }
-            
-            ingredients[key] = value
+            foods = append(foods, models.Food{Model: gorm.Model{ID: foodID}})
         }
 
         // 创建Recipe记录
         recipe := models.Recipe{
-            URL:         strings.TrimSpace(fields[0]),
-            RecipeName:  strings.TrimSpace(fields[3]),
-            ImageURL:    strings.TrimSpace(fields[4]),
-            FoodNames:   foodNames,
-            Ingredients: ingredients,
+            URL:         record[0],
+            Name:        record[3],
+            ImageURL:    fmt.Sprintf("recipes_id_%d", recipeID),
+            Ingredients: jsonStr, // 直接存储JSON字符串
+            Foods:       foods,
         }
 
         // 保存到数据库
         if err := recipe.CreateRecipe(db); err != nil {
-            log.Printf("Error saving recipe %s: %v", recipe.RecipeName, err)
+            log.Printf("保存食谱错误 %s: %v", recipe.Name, err)
             failed++
             continue
         }
 
-        // 为每个食物名字建立关联
-        for _, foodName := range foodNames {
-            var relatedFood models.Food
-            result := db.Where("zh_food_name = ? OR en_food_name = ?", 
-                foodName, foodName).First(&relatedFood)
-                
-            if result.Error == nil {
-                if err := db.Model(&recipe).Association("Foods").Append(&relatedFood); err != nil {
-                    log.Printf("Error associating food %s with recipe %s: %v", 
-                        foodName, recipe.RecipeName, err)
-                }
-            } else {
-                log.Printf("Could not find food with name %s for recipe %s", 
-                    foodName, recipe.RecipeName)
-            }
-        }
-
         successful++
+        recipeID++
     }
 
-    log.Printf("Recipe import completed. Successful: %d, Failed: %d", successful, failed)
+    log.Printf("食谱导入完成. 成功: %d, 失败: %d", successful, failed)
     return nil
-}
-
-// 自定义CSV行解析函数 (保持不变)
-func parseCSVLine(line string) []string {
-    var fields []string
-    var currentField strings.Builder
-    inQuotes := false
-    inBrackets := 0
-    inBraces := 0
-
-    for _, ch := range line {
-        switch ch {
-        case '[':
-            inBrackets++
-            currentField.WriteRune(ch)
-        case ']':
-            inBrackets--
-            currentField.WriteRune(ch)
-        case '{':
-            inBraces++
-            currentField.WriteRune(ch)
-        case '}':
-            inBraces--
-            currentField.WriteRune(ch)
-        case '"':
-            inQuotes = !inQuotes
-            currentField.WriteRune(ch)
-        case ',':
-            if inQuotes || inBrackets > 0 || inBraces > 0 {
-                currentField.WriteRune(ch)
-            } else {
-                fields = append(fields, currentField.String())
-                currentField.Reset()
-            }
-        default:
-            currentField.WriteRune(ch)
-        }
-    }
-
-    if currentField.Len() > 0 {
-        fields = append(fields, currentField.String())
-    }
-
-    return fields
 }
 
 func main() {
@@ -315,5 +277,5 @@ func verifyImport(db *gorm.DB) {
     var recipe models.Recipe
     db.Preload("Foods").First(&recipe)
     log.Printf("Sample recipe '%s' has %d associated foods and %d food names\n", 
-        recipe.RecipeName, len(recipe.Foods), len(recipe.FoodNames))
+        recipe.Name, len(recipe.Foods), len(recipe.Ingredients))
 }

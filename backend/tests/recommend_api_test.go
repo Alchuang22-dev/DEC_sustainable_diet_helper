@@ -1,17 +1,11 @@
 package tests
 
 import (
-	"bytes"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/controllers"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -93,5 +87,3 @@ func setupRecommendTestFamilyMember(db *gorm.DB, nickname string, familyID uint)
     
     return user
 }
-
-func testRecommendAPI(t *testing.T) {
