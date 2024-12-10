@@ -474,11 +474,29 @@ func TestGetUserDislikedPreferences(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	// Parse response
-	var response map[string][]string
+	var response map[string][]map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	assert.NoError(t, err)
 
 	// Validate response content
-	expectedFoods := []string{"猪肉", "白菜"}
-	assert.ElementsMatch(t, expectedFoods, response["disliked_foods"])
+	dislikedFoods := response["disliked_foods"]
+	assert.Equal(t, 2, len(dislikedFoods))
+
+	// Create expected foods mapping
+	expectedFoods := []map[string]interface{}{
+		{"id": float64(1), "name": "猪肉"},
+		{"id": float64(2), "name": "白菜"},
+	}
+
+	// Validate returned data contains correct ID and name
+	for _, food := range dislikedFoods {
+		found := false
+		for _, expected := range expectedFoods {
+			if food["id"] == expected["id"] && food["name"] == expected["name"] {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "未找到匹配的食物: %v", food)
+	}
 }
