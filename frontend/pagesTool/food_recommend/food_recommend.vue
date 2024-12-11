@@ -29,16 +29,17 @@
 		    </button>
 		</view>
 	</view>
-	   <!-- 推荐菜谱列表 -->
-	   <view class="recipe-boxes" v-if="showRecipeBoxes">
-	       <view class="box fade-in-up delay-6" v-for="(recipe, index) in recommendedRecipes" :key="recipe.recipe_id" @click="goToRecipe(recipe.recipe_id)">
-	           <image :src="recipe.image_url" :alt="recipe.name" class="box-image"></image>
-	           <view class="box-description">
-	               <text class="box-title">{{ recipe.name }}</text>
-	               <text class="box-text">{{ parseIngredients(recipe.ingredients) }}</text>
-	           </view>
-	       </view>
-	   </view>
+		<!-- 推荐菜谱列表 -->
+		<view class="recipe-boxes" v-if="showRecipeBoxes">
+			<view class="box fade-in-up delay-6" v-for="(recipe, index) in recommendedRecipes" :key="recipe.recipe_id" @click="goToRecipe(index)">
+				<image :src="recipe.image_url" :alt="recipe.name" class="box-image"></image>
+				<view class="box-description">
+					<text class="box-title">{{ recipe.name }}</text>
+					<text class="box-text">{{ parseIngredients(recipe.ingredients) }}</text>
+				</view>
+			</view>
+		</view>
+
 </template>
 
 
@@ -83,7 +84,7 @@ const fetchRecommendedDishes = async () => {
         "Content-Type": "application/json", // 设置请求类型
       },
       data: {
-        use_last_ingredients: true,  // 不使用上次的食材
+        use_last_ingredients: true,  // 使用上次的食材
         liked_ingredients: likedIngredients,
         disliked_ingredients: dislikedIngredients,
       },
@@ -244,10 +245,11 @@ const parseIngredients = (ingredientsStr) => {
 
 
 // 方法：跳转到推荐的食谱
-const goToRecipe = (recipeName) => {
+const goToRecipe = (index) => {
+  const recipe = recommendedRecipes.value[index];
   uni.navigateTo({
-    url: `/pages/recipes/${recipeName}`,
-  })
+    url: `/pagesTool/recipe/recipe?name=${encodeURIComponent(recipe.name)}&ingredients=${encodeURIComponent(recipe.ingredients)}&image_url=${encodeURIComponent(recipe.image_url)}`
+  });
 }
 
 // 喜欢菜品
