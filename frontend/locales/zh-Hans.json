@@ -104,6 +104,14 @@
 	"settings_help_feedback": "帮助与反馈",
 	"settings_software_info": "软件信息",
 	"settings_contact_us": "联系我们",
+	"settings_profile": "账号名称",
+	"settings_id": "账号ID",
+	"settings_phonenumber": "手机号",
+	"settings_email": "邮箱",
+	"settings_passsword": "账户密码",
+	"settings_done": "已设置",
+	"settings_security": "安全中心",
+	"settings_frozen": "冻结账号",
 
 	"back": "返回",
 
