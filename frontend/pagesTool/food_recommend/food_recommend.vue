@@ -29,15 +29,16 @@
 		    </button>
 		</view>
 	</view>
+	   <!-- 推荐菜谱列表 -->
 	   <view class="recipe-boxes" v-if="showRecipeBoxes">
-	            <view class="box fade-in-up delay-6" @click="goToRecipe('dapanji')">
-	                <image src="/static/images/dapanji.png" alt="大盘鸡" class="box-image"></image>
-	                <view class="box-description">
-	                    <text class="box-title">{{$t('recommended_recipe')}}</text>
-	                    <text class="box-text">{{$t('recommended_recipe_info')}}</text>
-	                </view>
-	            </view>
-	        </view>
+	       <view class="box fade-in-up delay-6" v-for="(recipe, index) in recommendedRecipes" :key="recipe.recipe_id" @click="goToRecipe(recipe.recipe_id)">
+	           <image :src="recipe.image_url" :alt="recipe.name" class="box-image"></image>
+	           <view class="box-description">
+	               <text class="box-title">{{ recipe.name }}</text>
+	               <text class="box-text">{{ parseIngredients(recipe.ingredients) }}</text>
+	           </view>
+	       </view>
+	   </view>
 </template>
 
 
@@ -51,6 +52,8 @@ const { t, locale } = useI18n();
 
 const foodStore = useFoodListStore();
 const userStore = useUserStore();
+
+const recommendedRecipes = ref([]); // 推荐的菜谱
 
 // 定义 BASE_URL 为 ref
 const BASE_URL = ref('http://122.51.231.155:8095');
@@ -159,10 +162,84 @@ const regetRecipe = async () => {
 }
 
 // 方法：生成食谱
-const generateRecipe = () => {
-  console.log("推荐菜谱");
-  showRecipeBoxes.value = true;
+const generateRecipe = async () => {
+  try {
+    console.log("生成食谱");
+    // 获取当前选择的食材ID
+    const selectedIngredients = dishes.value.map(dish => dish.id);
+    console.log('Selected Ingredients:', selectedIngredients);
+
+    // 步骤1：保存用户选择的食材
+    const setResponse = await uni.request({
+      url: `${BASE_URL.value}/ingredients/set`,
+      method: 'POST',
+      header: {
+        "Authorization": `Bearer ${token.value}`, 
+        "Content-Type": "application/json", 
+      },
+      data: {
+        "selected_ingredients": selectedIngredients
+      }
+    });
+
+    console.log('设置选定食材响应:', setResponse);
+
+    // 检查设置食材是否成功
+    if (setResponse.statusCode === 200) {
+      console.log('设置成功:', setResponse.data.message);
+      
+      // 步骤2：根据用户选择的食材推荐菜谱
+      const recommendResponse = await uni.request({
+        url: `${BASE_URL.value}/recipes/recommend`,
+        method: 'POST',
+        header: {
+          "Authorization": `Bearer ${token.value}`, 
+          "Content-Type": "application/json", 
+        },
+        data: {
+          "selected_ingredients": selectedIngredients
+        }
+      });
+
+      console.log('推荐菜谱响应:', recommendResponse);
+
+      if (recommendResponse.statusCode === 200 && recommendResponse.data.recommended_recipes) {
+        recommendedRecipes.value = recommendResponse.data.recommended_recipes;
+        showRecipeBoxes.value = true;
+      } else {
+        console.error('推荐菜谱失败:', recommendResponse.data);
+      }
+    } else {
+      console.error('设置选定食材失败:', setResponse.data.message);
+    }
+  } catch (error) {
+    console.error('生成食谱异常:', error);
+  }
 }
+
+// 辅助方法：解析 JSON 字符串的原料组成
+const parseIngredients = (ingredientsStr) => {
+  try {
+    const ingredients = JSON.parse(ingredientsStr);
+    
+    if (Array.isArray(ingredients)) {
+      // 如果是数组，直接连接
+      return ingredients.join(', ');
+    } else if (typeof ingredients === 'object' && ingredients !== null) {
+      // 如果是对象，提取键名
+      return Object.keys(ingredients).join(', ');
+      
+      // 如果你希望显示键值对，可以使用以下代码：
+      // return Object.entries(ingredients).map(([key, value]) => `${key}: ${value}`).join(', ');
+    } else {
+      return '原料信息不可用';
+    }
+  } catch (e) {
+    console.error('解析原料失败:', e);
+    return '原料信息不可用';
+  }
+}
+
 
 // 方法：跳转到推荐的食谱
 const goToRecipe = (recipeName) => {

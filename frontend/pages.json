@@ -196,6 +196,12 @@
 					"style": {
 						"navigationBarTitleText": "修改食品"
 					}
+				},
+				{
+					"path": "recipe/recipe",
+					"style": {
+						"navigationBarTitleText": "食谱详情"
+					}
 				}
 			]
 		}
