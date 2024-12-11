@@ -76,7 +76,7 @@ func importFoodsData(db *gorm.DB, filename string) error {
         food := models.Food{
             ZhFoodName:    record[0],
             GHG:           ghg,
-            EnFoodName:    record[2],
+            EnFoodName:    strings.ToLower(record[2]),  // 将英文名称转换为小写
             Calories:      calories * 10, // 对于营养的部分，我们数据中的单位是每100g，但是我们的模型中的单位是每1kg
             Protein:       protein * 10,
             Fat:           fat * 10,
@@ -185,8 +185,22 @@ func importRecipesData(db *gorm.DB, filename string) error {
             continue
         }
 
+        // 创建新的 map 存储小写的食材名称
+        lowercaseIngredients := make(map[string]float64)
+        for foodName, amount := range ingredients {
+            lowercaseIngredients[strings.ToLower(foodName)] = amount
+        }
+
+        // 将新的 map 转换回 JSON 字符串
+        newJsonStr, err := json.Marshal(lowercaseIngredients)
+        if err != nil {
+            log.Printf("转换食材JSON错误 %s: %v", record[3], err)
+            failed++
+            continue
+        }
+
         var foods []models.Food
-        for foodName := range ingredients {
+        for foodName := range lowercaseIngredients {
             foodID, err := models.FindFoodIDByName(db, foodName)
             if err != nil {
                 log.Printf("找不到食材 %s: %v", foodName, err)
@@ -201,7 +215,7 @@ func importRecipesData(db *gorm.DB, filename string) error {
             URL:         record[0],
             Name:        record[3],
             ImageURL:    fmt.Sprintf("recipes_id_%d", recipeID),
-            Ingredients: jsonStr, // 直接存储JSON字符串
+            Ingredients: string(newJsonStr), // 使用转换后的小写JSON字符串
             Foods:       foods,
         }
 
