@@ -3,6 +3,14 @@ package models
 
 import "time"
 
+// UserRecipeHistory 用户菜谱选择历史
+type UserRecipeHistory struct {
+    ID        uint      `gorm:"primaryKey"`
+    UserID    uint      `gorm:"not null"`
+    RecipeID  uint      `gorm:"not null"`
+    SelectTime time.Time `gorm:"not null"`
+}
+
 // UserIngredientHistory 用户食材选择历史
 type UserIngredientHistory struct {
     ID          uint      `gorm:"primaryKey"`
@@ -20,10 +28,10 @@ type UserIngredientPreference struct {
     UpdateTime  time.Time `gorm:"not null"`
 }
 
-// UserRecipeHistory 用户菜谱选择历史
-type UserRecipeHistory struct {
-    ID        uint      `gorm:"primaryKey"`
-    UserID    uint      `gorm:"not null"`
-    RecipeID  uint      `gorm:"not null"`
-    SelectTime time.Time `gorm:"not null"`
+// UserLastSelectedFoods 用户最近选择的食材
+type UserLastSelectedFoods struct {
+    ID          uint      `gorm:"primaryKey"`
+    UserID      uint      `gorm:"not null"`
+    FoodID      uint      `gorm:"not null"`
+    SelectTime  time.Time `gorm:"not null"`
 }

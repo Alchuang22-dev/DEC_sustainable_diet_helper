@@ -19,5 +19,10 @@ func RegisterFoodPreferenceRoutes(router *gin.Engine, db *gorm.DB) {
         authorized.POST("/preferences", fpc.AddFoodPreference)
         authorized.DELETE("/preferences", fpc.DeleteFoodPreference)
         authorized.GET("/preferences", fpc.GetUserPreferences)
+
+        // 新增不喜欢的食材偏好路由
+        authorized.POST("/disliked_preferences", fpc.AddDislikedFoodPreference)
+        authorized.DELETE("/disliked_preferences", fpc.DeleteDislikedFoodPreference)
+        authorized.GET("/disliked_preferences", fpc.GetUserDislikedPreferences)
     }
 }
