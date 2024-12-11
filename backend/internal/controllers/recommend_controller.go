@@ -209,20 +209,40 @@ func (ic *RecommendController) RecommendIngredients(c *gin.Context) {
     }
     log.Printf("request: %v", request)
 
-    // 如果使用上一次的食材，则需要传输上一次的食材
+    // 如果使用上一次的食材，则直接返回上次的食材
     if request.UseLastIngredients {
         var lastSelectedFoods []models.UserLastSelectedFoods
         if err := ic.DB.Where("user_id = ?", userID).Find(&lastSelectedFoods).Error; err != nil {
             c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get last selected foods"})
             return
         }
-        for _, food := range lastSelectedFoods {
-            request.LikedIngredients = append(request.LikedIngredients, food.FoodID)
-        }
-        log.Printf("获取上一次的食材成功")
         
-        // 传输
-        c.JSON(http.StatusOK, gin.H{"message": "User selected foods set successfully"})
+        // 构造推荐食材响应
+        recommendedIngredients := make([]struct {
+            ID   uint   `json:"id"`
+            Name string `json:"name"`
+        }, 0, len(lastSelectedFoods))
+
+        // 获取每个食材的详细信息
+        for _, food := range lastSelectedFoods {
+            var foodInfo models.Food
+            if err := ic.DB.First(&foodInfo, food.FoodID).Error; err != nil {
+                continue
+            }
+            recommendedIngredients = append(recommendedIngredients, struct {
+                ID   uint   `json:"id"`
+                Name string `json:"name"`
+            }{
+                ID:   foodInfo.ID,
+                Name: foodInfo.EnFoodName,
+            })
+        }
+
+        response := IngredientRecommendResponse{
+            RecommendedIngredients: recommendedIngredients,
+        }
+        
+        c.JSON(http.StatusOK, response)
         return
     }
 

@@ -90,5 +90,10 @@ func GetRecipeIDsByFoodID(db *gorm.DB, foodID uint) ([]uint, error) {
         return nil, fmt.Errorf("查询食谱ID失败: %v", err)
     }
     
+    // 添加空结果检查
+    if len(recipeIDs) == 0 {
+        return nil, fmt.Errorf("未找到包含食材ID %d 的食谱", foodID)
+    }
+    
     return recipeIDs, nil
 }
