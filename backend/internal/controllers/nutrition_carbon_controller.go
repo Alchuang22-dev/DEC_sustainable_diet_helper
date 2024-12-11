@@ -486,6 +486,13 @@ func (nc *NutritionCarbonController) validateUserShares(currentUserID uint, shar
         return false, fmt.Errorf("获取用户信息失败")
     }
 
+    if len(shares) == 1 && shares[0].UserID == currentUserID {
+        if shares[0].Ratio != 1 {
+            return false, fmt.Errorf("用户分摊比例必须为1")
+        }
+        return true, nil
+    }
+
     if user.Family == nil {
         return false, fmt.Errorf("用户不属于任何家庭")
     }

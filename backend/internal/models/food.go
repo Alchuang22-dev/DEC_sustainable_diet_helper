@@ -141,7 +141,7 @@ func CalculateFoodNutritionAndEmission(db *gorm.DB, items []FoodCalculateItem) (
 
     return results, nil
 }
-func findFoodIDByName(db *gorm.DB, name string) (uint, error) {
+func FindFoodIDByName(db *gorm.DB, name string) (uint, error) {
     var food Food
     if err := db.Where("zh_food_name = ? OR en_food_name = ?", name, name).First(&food).Error; err != nil {
         return 0, err
