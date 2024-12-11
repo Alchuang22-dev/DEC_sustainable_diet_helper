@@ -104,6 +104,14 @@
 	"settings_help_feedback": "Help & Feedback",
 	"settings_software_info": "Software Information",
 	"settings_contact_us": "Contact Us",
+	"settings_profile": "User name",
+	"settings_id": "User ID",
+	"settings_phonenumber": "Phone Number",
+	"settings_email": "Email",
+	"settings_passsword": "User password",
+	"settings_done": "Done",
+	"settings_security": "Security Center",
+	"settings_frozen": "Frozen Profile",
 
 	"back": "Back",
 

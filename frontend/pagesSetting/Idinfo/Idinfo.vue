@@ -11,38 +11,38 @@
 
     <view class="list">
       <view class="list-item" @click="navigateTo('Idinfo')">
-        <text>账号名称</text>
+        <text>{{$t('settings_profile')}}</text>
         <text class="numbers right-align">{{ userData.username }}</text>
         <text class="arrow">></text>
       </view>
       <view class="list-item" @click="navigateTo('Idinfo')">
-        <text>账号ID</text>
+        <text>{{$t('settings_id')}}</text>
         <text class="numbers right-align">{{ userData.accountId }}</text>
         <text class="arrow">></text>
       </view>
       <view class="list-item" @click="navigateTo('Idinfo')">
-        <text>手机号</text>
+        <text>{{$t('settings_phonenumber')}}</text>
         <text class="numbers right-align">{{ userData.phoneNumber }}</text>
         <text class="arrow">></text>
       </view>
 
       <view class="list-item" @click="navigateTo('newsSetting')">
-        <text>邮箱</text>
+        <text>{{$t('settings_email')}}</text>
         <text class="numbers right-align">{{ userData.email }}</text>
         <text class="arrow">></text>
       </view>
       <view class="divider"></view>
       <view class="list-item" @click="navigateTo('recoSetting')">
-        <text>账户密码</text>
-        <text class="numbers right-align">已设置</text>
+        <text>{{$t('settings_password')}}</text>
+        <text class="numbers right-align">{{$t('settings_done')}}</text>
         <text class="arrow">></text>
       </view>
       <view class="divider"></view>
       <view class="list-item centered" @click="navigateTo('Bend')">
-        <text>安全中心</text>
+        <text>{{$t('settings_security')}}</text>
       </view>
       <view class="list-item centered red-text" @click="navigateTo('DeleteId')">
-        <text>冻结账号</text>
+        <text>{{$t('settings_frozen')}}</text>
       </view>
     </view>
   </view>
