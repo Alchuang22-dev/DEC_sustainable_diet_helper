@@ -103,13 +103,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n'
 import { useDraftStore } from '@/stores/draft';
+import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
 const draftStore = useDraftStore();
+const userStore = useUserStore();
 
-const authorAvatar = ref('path_to_avatar_image'); // 头像图片路径
-const authorNickname = ref('Author Nickname'); // 昵称
+const BASE_URL = 'http://122.51.231.155:8080';
+
+const authorNickname = computed(() => userStore.user.nickName);
+const authorAvatar = computed(() =>
+    userStore.user.avatarUrl
+        ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
+        : '/static/images/index/background_img.jpg'
+);
 
 const { t } = useI18n()
 
@@ -210,15 +218,6 @@ const handleImageChange = (index) => {
 // Simulate fetching data from backend
 onMounted(() => {
   // Example of an API call to fetch user data
-  const query = uni.getStorageSync('userInfo');  // 获取存储的用户信息
-  if (query && query.nickName) {
-	  authorNickname.value = query.nickName;
-	  if (query.avatarUrl && !query.avatarUrl.startsWith('http')) {
-	    authorAvatar.value = "http://122.51.231.155:8080/static/" + query.avatarUrl;
-	  } else {
-	    authorAvatar.value = query.avatarUrl; // 如果是完整 URL，直接使用
-	  }
-  }
 });
 </script>
 

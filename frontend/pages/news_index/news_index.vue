@@ -63,7 +63,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { onMounted, ref, reactive, computed, watch } from 'vue';
 import { useNewsStore } from '@/stores/news_list';
 import { useI18n } from 'vue-i18n';
 import { onShow, onPullDownRefresh } from '@dcloudio/uni-app';
@@ -74,8 +74,10 @@ const newsStore = useNewsStore();
 const userStore = useUserStore(); // 使用用户存储
 
 const activeIndex = ref(null);
-const { uid, isLoggedIn } = storeToRefs(userStore); // 从存储中解构
+const { uid, getUserID } = storeToRefs(userStore); // 从存储中解构
+const token = computed(() => userStore.user.token);
 const avatarSrc = ref('');
+const isLoggedIn = ref(false);
 
 // 从 Store 获取数据和方法
 const { filteredNewsItems, selectedSection, isRefreshing } = storeToRefs(newsStore);
@@ -132,28 +134,18 @@ const handlePullDownRefresh = async () => {
 
 function checkLoginStatus() {
   console.log("in check");
-  const query = uni.getStorageSync('userInfo');  // 获取存储的用户信息
+  const query = token.value;  // 获取存储的用户信息
   console.log(query);
- if (query && query.nickName) {  // 判断 userInfo 是否存在并且有 nickName 字段
-     uid.value = query.nickName;   // 将 nickName 设置为 uid
-     
-     // 如果 avatarUrl 是相对路径，就拼接成完整的 URL
-     if (query.avatarUrl && !query.avatarUrl.startsWith('http')) {
-       avatarSrc.value = "http://122.51.231.155:8080/static/" + query.avatarUrl;
-     } else {
-       avatarSrc.value = query.avatarUrl; // 如果是完整 URL，直接使用
-     }
- 
-     isLoggedIn.value = true;
-   } else {
-     isLoggedIn.value = false;
-   }
+  if(query.value != ''){
+	  isLoggedIn.value = true;
+  }
  };
 
 // 使用 uni.onPullDownRefresh() 将处理函数绑定到下拉刷新事件
 onPullDownRefresh(handlePullDownRefresh);
 
 onShow(() => {
+	console.log("用户进入社区");
 	isLoggedIn.value = false; // 显式设置为未登录状态
     uni.setNavigationBarTitle({
       title: t('news_index')
