@@ -109,7 +109,7 @@ function verifyCode() {
     });
   } else {
     uni.showToast({
-      title: '验证码错误',
+      title: '不支持此操作',
       icon: 'error'
     });
   }
