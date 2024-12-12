@@ -60,18 +60,24 @@
     <!-- 功能区 -->
     <!-- 功能区 -->
     <view class="functions">
-      <button @click="addText" class="function-btn">
+      <button v-if="showfunctions" @click="addText" class="function-btn">
         <image src="@/pagesNews/static/addtext.svg" alt="Add Text" class="icon"></image>
       </button>
-      <button @click="addImage" class="function-btn">
+      <button v-if="showfunctions" @click="addImage" class="function-btn">
         <image src="@/pagesNews/static/addpicture.svg" alt="Add Image" class="icon"></image>
       </button>
-      <button @click="publish" class="push-btn">
+      <button v-if="showfunctions" @click="publish" class="push-btn">
         <image src="@/pagesNews/static/share.svg" alt="Publish" class="icon"></image>
       </button>
-      <button @click="saveDraft" class="function-btn">
+      <button v-if="showfunctions" @click="saveDraft" class="function-btn">
         <image src="@/pagesNews/static/save.svg" alt="Save" class="icon"></image>
       </button>
+	  <button v-if="showfunctions" @click="changefunction" class="function-btn">
+	  		<image src="@/pagesNews/static/minus.svg" alt="-" class="icon"></image>
+	  </button>
+	  <button v-if="hidefunctions" @click="changefunction" class="add-btn">
+	  		<image src="@/pagesNews/static/plus.svg" alt="+" class="icon"></image>
+	  </button>
     </view>
 
     <!-- 发布确认弹窗 -->
@@ -97,11 +103,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n'
+import { useDraftStore } from '@/stores/draft';
+import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
+const draftStore = useDraftStore();
+const userStore = useUserStore();
 
-const authorAvatar = ref('path_to_avatar_image'); // 头像图片路径
-const authorNickname = ref('Author Nickname'); // 昵称
+const BASE_URL = 'http://122.51.231.155:8080';
+
+const authorNickname = computed(() => userStore.user.nickName);
+const authorAvatar = computed(() =>
+    userStore.user.avatarUrl
+        ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
+        : '/static/images/index/background_img.jpg'
+);
 
 const { t } = useI18n()
 
@@ -109,10 +125,23 @@ const title = ref('') // 文章标题
 const description = ref('') // 文章简介
 const items = ref([]) // 预览区的内容
 const showModal = ref(false) // 控制发布确认弹窗的显示与否
+const showfunctions = ref(true)
+const hidefunctions = ref(false)
 
 // 添加文字
 const addText = () => {
   items.value.push({ type: 'text', content: '' })
+}
+
+const changefunction = () => {
+	if(showfunctions.value === true){
+		showfunctions.value = false;
+		hidefunctions.value = true;
+	}
+	else{
+		showfunctions.value = true;
+		hidefunctions.value = false;
+	}
 }
 
 // 添加图片
@@ -145,7 +174,7 @@ const cancelPublish = () => {
 
 // 保存草稿
 const saveDraft = () => {
-  console.log('草稿已保存', { title: title.value, description: description.value, content: items.value })
+  draftStore.saveDraft();
   uni.showToast({
     title: '草稿已保存',
     icon: 'success',
@@ -189,15 +218,6 @@ const handleImageChange = (index) => {
 // Simulate fetching data from backend
 onMounted(() => {
   // Example of an API call to fetch user data
-  const query = uni.getStorageSync('userInfo');  // 获取存储的用户信息
-  if (query && query.nickName) {
-	  authorNickname.value = query.nickName;
-	  if (query.avatarUrl && !query.avatarUrl.startsWith('http')) {
-	    authorAvatar.value = "http://122.51.231.155:8080/static/" + query.avatarUrl;
-	  } else {
-	    authorAvatar.value = query.avatarUrl; // 如果是完整 URL，直接使用
-	  }
-  }
 });
 </script>
 
@@ -321,6 +341,20 @@ onMounted(() => {
   border-radius: 50%;
   border: none;
   font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.add-btn {
+  margin-bottom: 10px;
+  padding: 10px;
+  background-color: #ffffff;
+  color: black;
+  border-radius: 50%;
+  border: none;
+  font-size: 8px;
   cursor: pointer;
   display: flex;
   justify-content: center;

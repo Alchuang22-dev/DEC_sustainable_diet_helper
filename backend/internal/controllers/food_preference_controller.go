@@ -4,7 +4,6 @@ package controllers
 import (
     "encoding/json"
     "net/http"
-    "path/filepath"
     "os"
 
     "github.com/gin-gonic/gin"
@@ -18,10 +17,15 @@ type FoodPreferenceController struct {
     DB *gorm.DB
 }
 
+type foodDislikeResponse struct {
+    ID uint `json:"id"`
+    Name string `json:"name"`
+}
+
 // 验证偏好是否存在于配置文件中
 func validatePreference(preferenceName string) bool {
     // 读取配置文件
-    filePath := filepath.Join("data", "food_preference", "foodPreferences.json")
+    filePath := "../data/food_preference/foodPreferences.json"
     data, err := os.ReadFile(filePath)
     if err != nil {
         log.Printf("读取配置文件失败: %v\n", err)
@@ -149,4 +153,123 @@ func (fpc *FoodPreferenceController) GetUserPreferences(c *gin.Context) {
 	}
 
     c.JSON(http.StatusOK, response)
+}
+
+// AddDislikedFoodPreference 添加不喜欢的食材偏好
+func (fpc *FoodPreferenceController) AddDislikedFoodPreference(c *gin.Context) {
+    userID, exists := c.Get("user_id")
+    if !exists {
+        log.Println("未授权的访问尝试")
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    var request struct {
+        FoodID uint `json:"food_id" binding:"required"`
+    }
+
+    if err := c.ShouldBindJSON(&request); err != nil {
+        log.Printf("无效的请求体: %v", err)
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+        return
+    }
+
+    // 先检查食物是否存在
+    var food models.Food
+    if err := fpc.DB.First(&food, request.FoodID).Error; err != nil {
+        log.Printf("添加不喜欢的食材偏好失败: %v", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add disliked preference"})
+        return
+    }
+
+    // 检查是否已存在该不喜欢的偏好
+    var existingPreference models.DislikedFoodPreference
+    result := fpc.DB.Where("user_id = ? AND food_id = ?", userID, request.FoodID).First(&existingPreference)
+    if result.Error == nil {
+        log.Printf("用户 %v 已存在对食材 %v 的不喜欢偏好", userID, request.FoodID)
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Disliked preference already exists"})
+        return
+    }
+
+    // 创建新的不喜欢的食材偏好
+    preference := models.DislikedFoodPreference{
+        UserID: userID.(uint),
+        FoodID: request.FoodID,
+    }
+
+    if err := fpc.DB.Create(&preference).Error; err != nil {
+        log.Printf("创建不喜欢的食材偏好失败: %v", err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add disliked preference"})
+        return
+    }
+
+    log.Printf("用户 %v 成功添加对食材 %v 的不喜欢偏好", userID, request.FoodID)
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Disliked food preference added successfully",
+        "food_id": preference.FoodID,
+    })
+}
+
+// DeleteDislikedFoodPreference 删除不喜欢的食材偏好
+func (fpc *FoodPreferenceController) DeleteDislikedFoodPreference(c *gin.Context) {
+    userID, exists := c.Get("user_id")
+    if !exists {
+        log.Println("未授权的访问尝试")
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    var request struct {
+        FoodID uint `json:"food_id" binding:"required"`
+    }
+
+    if err := c.ShouldBindJSON(&request); err != nil {
+        log.Printf("无效的请求体: %v", err)
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+        return
+    }
+
+    result := fpc.DB.Where("user_id = ? AND food_id = ?", userID, request.FoodID).Delete(&models.DislikedFoodPreference{})
+    if result.RowsAffected == 0 {
+        log.Printf("未找到用户 %v 对食材 %v 的不喜欢偏好", userID, request.FoodID)
+        c.JSON(http.StatusNotFound, gin.H{"error": "Disliked preference not found"})
+        return
+    }
+
+    log.Printf("用户 %v 成功删除对食材 %v 的不喜欢偏好", userID, request.FoodID)
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Disliked food preference deleted successfully",
+        "food_id": request.FoodID,
+    })
+}
+
+// GetUserDislikedPreferences 获取用户不喜欢的食材偏好
+func (fpc *FoodPreferenceController) GetUserDislikedPreferences(c *gin.Context) {
+    userID, exists := c.Get("user_id")
+    if !exists {
+        log.Println("未授权的访问尝试")
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    var preferences []models.DislikedFoodPreference
+    if err := fpc.DB.Where("user_id = ?", userID).Find(&preferences).Error; err != nil {
+        log.Printf("获取用户 %v 的不喜欢食材偏好失败: %v", userID, err)
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user disliked preferences"})
+        return
+    }
+
+    var foodInfos []foodDislikeResponse
+    for _, pref := range preferences {
+        var food models.Food
+        if err := fpc.DB.First(&food, pref.FoodID).Error; err == nil {
+            foodInfos = append(foodInfos, foodDislikeResponse{
+                ID: food.ID,
+                Name: food.ZhFoodName,
+            })
+        }
+    }
+
+    log.Printf("成功获取用户 %v 的不喜欢食材偏好列表", userID)
+    c.JSON(http.StatusOK, gin.H{"disliked_foods": foodInfos})
 }

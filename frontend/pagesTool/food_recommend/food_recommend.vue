@@ -21,7 +21,7 @@
 		
 		<!-- 生成菜谱按钮 -->
 		<view class="button-container">
-		    <button class="generate-button fade-in-up delay-6" @click="generateRecipe">
+		    <button class="generate-button fade-in-up delay-6" @click="regetRecipe">
 		        {{$t('change_food')}}
 		    </button>
 		    <button class="generate-button fade-in-up delay-6" @click="generateRecipe">
@@ -29,102 +29,272 @@
 		    </button>
 		</view>
 	</view>
-	   <view class="recipe-boxes" v-if="showRecipeBoxes">
-	            <view class="box fade-in-up delay-6" @click="goToRecipe('dapanji')">
-	                <image src="/static/images/dapanji.png" alt="大盘鸡" class="box-image"></image>
-	                <view class="box-description">
-	                    <text class="box-title">{{$t('recommended_recipe')}}</text>
-	                    <text class="box-text">{{$t('recommended_recipe_info')}}</text>
-	                </view>
-	            </view>
-	        </view>
+		<!-- 推荐菜谱列表 -->
+		<view class="recipe-boxes" v-if="showRecipeBoxes">
+			<view class="box fade-in-up delay-6" v-for="(recipe, index) in recommendedRecipes" :key="recipe.recipe_id" @click="goToRecipe(index)">
+				<image :src="recipe.image_url" :alt="recipe.name" class="box-image"></image>
+				<view class="box-description">
+					<text class="box-title">{{ recipe.name }}</text>
+					<text class="box-text">{{ parseIngredients(recipe.ingredients) }}</text>
+				</view>
+			</view>
+		</view>
+
 </template>
 
 
 <script setup>
-import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { onMounted, ref, reactive, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
+import { useUserStore } from "@/stores/user.js"; // 引入用户 Store
 
-// 初始化 i18n
-const { t } = useI18n()
+const { t, locale } = useI18n();
+
+const foodStore = useFoodListStore();
+const userStore = useUserStore();
+
+const recommendedRecipes = ref([]); // 推荐的菜谱
+
+// 定义 BASE_URL 为 ref
+const BASE_URL = ref('http://122.51.231.155:8095');
+
+//const user_id = ref('');
+// 定义 token 为 computed 属性
+const token = computed(() => userStore.user.token);
 
 // 响应式数据
-const showRecipeBoxes = ref(false)
-const dishes = ref([
-    { name: t('dish_1'), image: 'https://cdn.pixabay.com/photo/2015/03/14/14/00/carrots-673184_1280.jpg', liked: false },
-    { name: t('dish_2'), image: 'https://cdn.pixabay.com/photo/2017/11/09/18/52/white-radish-2934281_1280.jpg', liked: false },
-    { name: t('dish_3'), image: 'https://cdn.pixabay.com/photo/2016/08/11/08/43/potatoes-1585060_1280.jpg', liked: false },
-    { name: t('dish_4'), image: 'https://cdn.pixabay.com/photo/2020/09/12/21/12/tomatoes-5566741_1280.jpg', liked: false },
-    { name: t('dish_5'), image: 'https://cdn.pixabay.com/photo/2018/02/08/15/02/meat-3139641_640.jpg', liked: false },
-    { name: t('dish_6'), image: 'https://cdn.pixabay.com/photo/2018/10/03/22/08/kohl-3722517_1280.jpg', liked: false },
-])
+const showRecipeBoxes = ref(false);
+const dishes = ref([]);  // 推荐的前6个菜品
+const availableNewDishes = ref([]);  // 其他的菜品
 
-const availableNewDishes = ref([
-	{ name: t('dish_7'), image: 'https://cdn.pixabay.com/photo/2020/09/03/14/40/lettuce-5541474_1280.jpg', liked: false },
-	{ name: t('dish_8'), image: 'https://cdn.pixabay.com/photo/2020/04/18/18/23/vegetables-5060432_1280.jpg', liked: false },
-    { name: t('dish_9'), image: 'https://cdn.pixabay.com/photo/2015/01/12/11/35/slice-the-tofu-597229_640.jpg', liked: false },
-    { name: t('dish_10'), image: 'https://cdn.pixabay.com/photo/2022/10/03/15/07/pumpkin-7496159_1280.jpg', liked: false },
-    { name: t('dish_11'), image: 'https://cdn.pixabay.com/photo/2017/12/15/16/10/squid-3021304_1280.jpg', liked: false },
-    { name: t('dish_12'), image: 'https://cdn.pixabay.com/photo/2015/07/31/12/07/soup-greens-869075_1280.jpg', liked: false },
-    // 添加更多菜品
-])
+// 模拟用户的偏好（可以根据实际情况修改）
+const likedIngredients = [];  // 用户喜欢的食材ID
+const dislikedIngredients = [];  // 用户不喜欢的食材ID
 
-// 方法
-const generateRecipe = () => {
-	console.log("推荐菜谱");
-    showRecipeBoxes.value = true;
+// 方法：从后端获取推荐食材数据
+const fetchRecommendedDishes = async () => {
+  try {
+	console.log('请求菜谱');
+    const response = await uni.request({
+      url: `${BASE_URL.value}/ingredients/recommend`,
+      method: 'POST',
+      header: {
+        "Authorization": `Bearer ${token.value}`, // 替换为实际的 Token 变量
+        "Content-Type": "application/json", // 设置请求类型
+      },
+      data: {
+        use_last_ingredients: true,  // 使用上次的食材
+        liked_ingredients: likedIngredients,
+        disliked_ingredients: dislikedIngredients,
+      },
+    });
+
+	
+	console.log(response);
+    // 处理成功响应
+    if (response.statusCode === 200 && response.data.recommended_ingredients) {
+      const recommendedIngredients = response.data.recommended_ingredients
+      // 将前6个推荐食材放入dishes
+      dishes.value = recommendedIngredients.slice(0, 6).map((ingredient) => ({
+		id: ingredient.id,
+        name: t(ingredient.name),
+        image: `https://via.placeholder.com/300?text=${ingredient.name}`, // 这里可以根据食材生成图片URL
+        liked: false,
+      }))
+      // 将其余食材放入availableNewDishes
+      availableNewDishes.value = recommendedIngredients.slice(6).map((ingredient) => ({
+		id: ingredient.id,
+        name: t(ingredient.name),
+        image: `https://via.placeholder.com/300?text=${ingredient.name}`,
+        liked: false,
+      }))
+    } else {
+      console.error('获取食材推荐失败:', response[1].data);
+	  regetRecipe();
+    }
+  } catch (error) {
+    console.error('请求失败:', error)
+  }
 }
 
-const goToRecipe = (recipeName) => {
-    // 跳转到对应的菜谱页面
-    uni.navigateTo({
-        url: `/pages/recipes/${recipeName}`,
-    })
+const regetRecipe = async () => {
+  try {
+    // 清空现有的数组
+    dishes.value = [];
+    availableNewDishes.value = [];
+    
+    const response = await uni.request({
+      url: `${BASE_URL.value}/ingredients/recommend`,
+      method: 'POST',
+      header: {
+        "Authorization": `Bearer ${token.value}`,
+        "Content-Type": "application/json",
+      },
+      data: {
+        use_last_ingredients: false,
+        liked_ingredients: likedIngredients,
+        disliked_ingredients: dislikedIngredients,
+      },
+    });
+    console.log(response);
+
+    if (response.statusCode === 200 && response.data.recommended_ingredients) {
+      const recommendedIngredients = response.data.recommended_ingredients;
+      // 将前6个推荐食材放入dishes
+      dishes.value = recommendedIngredients.slice(0, 6).map((ingredient) => ({
+        id: ingredient.id,
+        name: t(ingredient.name),
+        image: `https://via.placeholder.com/300?text=${encodeURIComponent(ingredient.name)}`,
+        liked: false,
+      }));
+      // 将剩余食材放入availableNewDishes
+      availableNewDishes.value = recommendedIngredients.slice(6).map((ingredient) => ({
+        id: ingredient.id,
+        name: t(ingredient.name),
+        image: `https://via.placeholder.com/300?text=${encodeURIComponent(ingredient.name)}`,
+        liked: false,
+      }));
+    } else {
+      console.error('重新获取食材推荐失败:', response.data);
+    }
+  } catch (error) {
+    console.error('重新请求异常:', error);
+  }
+}
+
+// 方法：生成食谱
+const generateRecipe = async () => {
+  try {
+    console.log("生成食谱");
+    // 获取当前选择的食材ID
+    const selectedIngredients = dishes.value.map(dish => dish.id);
+    console.log('Selected Ingredients:', selectedIngredients);
+
+    // 步骤1：保存用户选择的食材
+    const setResponse = await uni.request({
+      url: `${BASE_URL.value}/ingredients/set`,
+      method: 'POST',
+      header: {
+        "Authorization": `Bearer ${token.value}`, 
+        "Content-Type": "application/json", 
+      },
+      data: {
+        "selected_ingredients": selectedIngredients
+      }
+    });
+
+    console.log('设置选定食材响应:', setResponse);
+
+    // 检查设置食材是否成功
+    if (setResponse.statusCode === 200) {
+      console.log('设置成功:', setResponse.data.message);
+      
+      // 步骤2：根据用户选择的食材推荐菜谱
+      const recommendResponse = await uni.request({
+        url: `${BASE_URL.value}/recipes/recommend`,
+        method: 'POST',
+        header: {
+          "Authorization": `Bearer ${token.value}`, 
+          "Content-Type": "application/json", 
+        },
+        data: {
+          "selected_ingredients": selectedIngredients
+        }
+      });
+
+      console.log('推荐菜谱响应:', recommendResponse);
+
+      if (recommendResponse.statusCode === 200 && recommendResponse.data.recommended_recipes) {
+        recommendedRecipes.value = recommendResponse.data.recommended_recipes;
+        showRecipeBoxes.value = true;
+      } else {
+        console.error('推荐菜谱失败:', recommendResponse.data);
+      }
+    } else {
+      console.error('设置选定食材失败:', setResponse.data.message);
+    }
+  } catch (error) {
+    console.error('生成食谱异常:', error);
+  }
+}
+
+// 辅助方法：解析 JSON 字符串的原料组成
+const parseIngredients = (ingredientsStr) => {
+  try {
+    const ingredients = JSON.parse(ingredientsStr);
+    console.log('Parsed ingredients:', ingredients); // 调试日志
+    
+    if (Array.isArray(ingredients)) {
+      // 如果是数组，直接连接
+      return ingredients.join(', ');
+    } else if (typeof ingredients === 'object' && ingredients !== null) {
+      // 如果是对象，提取键名并使用 t() 方法进行翻译
+      return Object.keys(ingredients).map(key => t(key)).join(', ');
+      
+      // 如果需要显示键值对（例如，食材名称和数量），可以使用以下代码：
+      // return Object.entries(ingredients).map(([key, value]) => `${t(key)}: ${value}`).join(', ');
+    } else {
+      return t('ingredients_unavailable'); // 使用 t() 方法翻译默认信息
+    }
+  } catch (e) {
+    console.error('解析原料失败:', e);
+    return t('ingredients_unavailable'); // 使用 t() 方法翻译默认错误信息
+  }
+}
+
+
+
+// 方法：跳转到推荐的食谱
+const goToRecipe = (index) => {
+  const recipe = recommendedRecipes.value[index];
+  uni.navigateTo({
+    url: `/pagesTool/recipe/recipe?name=${encodeURIComponent(recipe.name)}&ingredients=${encodeURIComponent(recipe.ingredients)}&image_url=${encodeURIComponent(recipe.image_url)}`
+  });
 }
 
 // 喜欢菜品
 const likeDish = (index) => {
-    dishes.value[index].liked = !dishes.value[index].liked;
-    // 可以在这里添加进一步的处理，例如向后端发送喜欢状态
+  dishes.value[index].liked = !dishes.value[index].liked;
+  likedIngredients.push(dishes.value[index].id);
 }
 
 // 删除菜品
 const deleteDish = async (index) => {
-    const removedDish = dishes.value.splice(index, 1)[0];
-    // 模拟向后端发送删除请求
-    await simulateBackendDelete(removedDish);
-    // 模拟从后端获取新的菜品
-    const newDish = await simulateFetchNewDish();
-    dishes.value.push(newDish);
+  dislikedIngredients.push(dishes.value[index].id);
+  const removedDish = dishes.value.splice(index, 1)[0];
+  await simulateBackendDelete(removedDish);
+  const newDish = await simulateFetchNewDish();
+  dishes.value.push(newDish);
 }
 
 // 模拟删除请求
 const simulateBackendDelete = (dish) => {
-    return new Promise((resolve) => {
-        console.log(`Simulating deletion of dish: ${dish.name}`)
-        setTimeout(() => {
-            resolve();
-        }, 1000) // 模拟1秒的网络延迟
-    })
+  return new Promise((resolve) => {
+    console.log(`Simulating deletion of dish: ${dish.name}`)
+    resolve();
+  })
 }
 
 // 模拟获取新菜品
 const simulateFetchNewDish = () => {
-    return new Promise((resolve) => {
-        if (availableNewDishes.value.length === 0) {
-            // 如果没有更多新菜品，返回一个默认菜品
-            resolve({ name: t('default_dish'), image: 'https://cdn.pixabay.com/photo/2016/11/18/14/40/pasta-1836457_1280.jpg', liked: false });
-            return;
-        }
-        const randomIndex = Math.floor(Math.random() * availableNewDishes.value.length);
-        const newDish = availableNewDishes.value.splice(randomIndex, 1)[0];
-        console.log(`Simulating fetching new dish: ${newDish.name}`);
-        setTimeout(() => {
-            resolve(newDish);
-        }, 1000) // 模拟1秒的网络延迟
-    })
+  return new Promise((resolve) => {
+    if (availableNewDishes.value.length === 0) {
+      resolve({ name: t('default_dish'), image: 'https://cdn.pixabay.com/photo/2016/11/18/14/40/pasta-1836457_1280.jpg', liked: false });
+      return;
+    }
+    const randomIndex = Math.floor(Math.random() * availableNewDishes.value.length);
+    const newDish = availableNewDishes.value.splice(randomIndex, 1)[0];
+    resolve(newDish);
+  })
 }
+
+// 获取推荐的食材
+onMounted(() => {
+  fetchRecommendedDishes();
+})
 </script>
+
 
 <style scoped>
     /* 通用变量 */

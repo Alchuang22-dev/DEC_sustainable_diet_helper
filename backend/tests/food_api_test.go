@@ -127,14 +127,12 @@ func TestFoodNamesAPI(t *testing.T) {
                 // 验证第一个食物的数据完整性
                 firstFood := response[0]
                 assert.NotZero(t, firstFood.ID)
-                assert.NotEmpty(t, firstFood.ZhName)
-                assert.NotEmpty(t, firstFood.EnName)
+                assert.NotEmpty(t, firstFood.Name)
                 
                 // 验证所有条目都有完整的数据
                 for _, food := range response {
                     assert.NotZero(t, food.ID)
-                    assert.NotEmpty(t, food.ZhName)
-                    assert.NotEmpty(t, food.EnName)
+                    assert.NotEmpty(t, food.Name)
                 }
             },
         },
@@ -273,9 +271,9 @@ func TestCalculateFoodNutritionAndEmissionAPI(t *testing.T) {
 }
 
 // 清理测试数据
-func cleanupTestDB(db *gorm.DB) error {
-    return db.Exec("DELETE FROM foods").Error
-}
+// func cleanupTestDB(db *gorm.DB) error {
+//     return db.Exec("DELETE FROM foods").Error
+// }
 
 func TestMain(m *testing.M) {
     // 在所有测试开始前的设置

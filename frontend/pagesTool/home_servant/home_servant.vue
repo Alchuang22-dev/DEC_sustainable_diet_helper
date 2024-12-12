@@ -1,765 +1,1025 @@
 <template>
-	<view class="container">
-		<!-- 全屏背景图片 -->
-		<image src="/static/images/index/background_index_new.png" class="background-image"></image>
+  <view class="container">
+    <!-- 全屏背景图片 -->
+    <image src="/static/images/index/background_index_new.png" class="background-image"></image>
 
-		<!-- 头部标题 -->
-		<view v-if="family.status === FamilyStatus.JOINED" class="header">
-			<text class="header-title">{{ family.name || $t('default_family_name') }}</text>
-		</view>
+    <!-- 头部标题 -->
+    <view v-if="family.status === FamilyStatus.JOINED" class="header">
+      <text class="header-title">{{ family.name || $t('default_family_name') }}</text>
+    </view>
 
-		<!-- 家庭ID -->
-		<text v-if="family.status === FamilyStatus.JOINED" class="list-title">{{ $t('family_info') + family.id }}</text>
+    <!-- 家庭ID -->
+    <text v-if="family.status === FamilyStatus.JOINED" class="list-title">{{ $t('family_info') + family.familyId }}</text>
 
-		<!-- 用户未加入家庭时的视图 -->
-		<view v-if="family.status === FamilyStatus.NOT_JOINED" class="no-family-view">
-			<image src="https://cdn.pixabay.com/photo/2017/01/13/02/31/family-1976162_1280.png" class="centered-image">
-			</image>
-			<view class="family-actions">
-				<button class="action-button" @click="showCreateFamilyModal = true">{{ t('create_family') }}</button>
-				<button class="action-button" @click="showJoinFamilyModal = true">{{ t('join_family') }}</button>
-			</view>
-		</view>
+    <!-- 用户未加入家庭时的视图 -->
+    <view v-if="family.status === FamilyStatus.NOT_JOINED" class="no-family-view">
+      <image src="https://cdn.pixabay.com/photo/2017/01/13/02/31/family-1976162_1280.png" class="centered-image"></image>
+      <view class="family-actions">
+        <button class="action-button" @click="showCreateFamilyModal = true">{{ t('create_family') }}</button>
+        <button class="action-button" @click="showJoinFamilyModal = true">{{ t('join_family') }}</button>
+      </view>
+    </view>
 
-		<!-- 待审核状态的视图 -->
-		<view v-if="family.status === FamilyStatus.PENDING_APPROVAL" class="pending-view">
-			<image src="https://cdn.pixabay.com/photo/2021/09/20/22/15/hourglass-6641967_1280.png" class="pending-image"></image>
-			<text class="pending-text">待管理员审核</text>
-			<button class="cancel-button" @click="handleCancelJoin">退出等待</button>
-		</view>
+    <!-- 待审核状态的视图 -->
+    <view v-if="family.status === FamilyStatus.PENDING_APPROVAL" class="pending-view">
+      <image src="https://cdn.pixabay.com/photo/2021/09/20/22/15/hourglass-6641967_1280.png" class="pending-image"></image>
+      <text class="pending-text">{{ $t('pending_approval') }}</text>
+      <button class="cancel-button" @click="handleCancelJoin">{{ $t('cancel_join') }}</button>
+    </view>
 
-		<!-- 用户已加入家庭时的家庭管理部分 -->
-		<view v-if="family.status === FamilyStatus.JOINED" class="family-management">
-			<!-- 提出想吃的菜品 -->
-			<view class="dish-proposal">
-				<text class="section-title">{{ t('propose_dish') }}</text>
-				<input v-model="newDish.name" :placeholder="t('dish_name_placeholder')" class="input"></input>
-				<picker mode="selector" :range="dishPreferenceLevels" :value="newDish.preference"
-					@change="onDishPreferenceChange" class="picker">
-					<view>{{ $t('dish_preference') }}: {{ dishPreferenceLevels[newDish.preference] }}</view>
-				</picker>
-				<button class="submit-button" @click="submitDishProposal">{{ t('submit_proposal') }}</button>
-			</view>
+    <!-- 如果已加入家庭并且是管理员且有waiting_members，则显示提示框 -->
+    <uni-card v-if="isCurrentUserAdmin && family.waiting_members && family.waiting_members.length > 0"
+              class="admin-notice"
+              :is-shadow="false"
+              :border="false">
+      <view class="notice-content">
+        <view class="notice-left">
+          <uni-icons type="info-filled" size="20" color="#3A86FF"></uni-icons>
+          <text class="notice-text">{{ $t('new_join_requests') }}</text>
+        </view>
+        <text class="notice-btn" @click="goToMyFamily">
+          {{ $t('handle_requests') }}
+        </text>
+      </view>
+    </uni-card>
 
-			<!-- 家庭成员的提议 -->
-			<view class="dish-list">
-				<text class="section-title">{{ $t('family_dish_proposals') }}</text>
-				<scroll-view class="dish-scroll" scroll-y>
-					<view v-for="dish in sortedDishProposals" :key="dish.id" class="dish-item">
-						<uni-list>
-							<uni-list-item :title="dish.name" :note="dishPreferenceLevels[dish.preference]"
-								:rightText="dish.proposer" />
-						</uni-list>
-					</view>
-				</scroll-view>
-			</view>
+    <!-- 用户已加入家庭时的家庭管理部分 -->
+    <view v-if="family.status === FamilyStatus.JOINED" class="family-management">
+      <!-- 提出想吃的菜品 -->
+      <view class="dish-proposal">
+        <text class="section-title">{{ t('propose_dish') }}</text>
 
-			<!-- 共享家庭成员的五大营养成分达标情况 -->
-			<view class="shared-data">
-				<text class="section-title">{{ $t('shared_family_data') }}</text>
-				<!-- 添加家庭碳排放环形图 -->
-				<view class="charts">
-					<qiun-data-charts :canvas2d="true" canvas-id="familyCarbonChart" type="ring" :opts="carbonRingOpts"
-						:chartData="carbonChartData" />
-				</view>
-				<!-- 添加家庭五大营养成分达标情况的图表 -->
-				<view class="charts">
-					<qiun-data-charts :canvas2d="true" canvas-id="familyNutrientChart" type="column"
-						:opts="nutrientChartOpts" :chartData="nutrientChartData" />
-				</view>
-			</view>
+        <!-- 使用uni-combox替换原有的input输入框 -->
+        <uni-combox
+            :placeholder="t('dish_name_placeholder')"
+            v-model="foodNameInput"
+            :candidates="filteredFoods.map(item => displayName(item))"
+            @input="onComboxInput"
+        ></uni-combox>
 
-			<!-- 家庭成员部分 -->
-			<view class="family-info">
-				<text class="section-title">{{ $t('family_members') }}</text>
-				<view class="family-members">
-					<view v-for="member in family.members" :key="member.id" class="member">
-						<image :src="member.avatar" class="member-avatar"></image>
-						<text class="member-name">{{ `${member.nickname}(${t(member.family_name)})` }}</text>
-					</view>
-				</view>
-				<button class="manage-members-button" @click="manageMembers">{{ t('manage_members') }}</button>
-			</view>
-		</view>
+        <!-- 偏好选择器保持不变 -->
+        <picker mode="selector" :range="dishPreferenceLevels" :value="newDish.preference"
+                @change="onDishPreferenceChange" class="picker">
+          <view>{{ t('dish_preference') }}: {{ dishPreferenceLevels[newDish.preference] }}</view>
+        </picker>
+        <button class="submit-button" @click="submitDishProposal">{{ t('submit_proposal') }}</button>
+      </view>
 
-		<!-- 创建家庭的模态框 -->
-		<view v-if="showCreateFamilyModal" class="modal">
-			<view class="modal-content">
-				<text class="modal-title">{{ $t('create_family') }}</text>
-				<input v-model="newFamilyName" :placeholder="t('family_name_placeholder')" class="input"></input>
-				<button class="modal-button" @click="createFamily">{{ $t('confirm') }}</button>
-				<button class="modal-button cancel" @click="showCreateFamilyModal = false">{{ $t('cancel') }}</button>
-			</view>
-		</view>
+      <!-- 家庭成员的提议 -->
+      <view class="dish-list">
+        <text class="section-title">{{ $t('family_dish_proposals') }}</text>
+        <scroll-view scroll-y class="proposals-scroll">
+          <uni-collapse v-model="activeCollapse" :accordion="true">
+            <uni-collapse-item
+                v-for="dish in sortedDishProposals"
+                :key="dish.id"
+                :name="dish.id.toString()"
+            >
+              <!-- 自定义折叠面板标题 -->
+              <template #title>
+                <view class="collapse-title">
+                  <text class="dish-name">{{ dish.name }}</text>
+                  <view class="dish-info">
+                    <uni-tag
+                        :text="dishPreferenceLevels[dish.preference]"
+                        :type="getPreferenceTagType(dish.preference)"
+                        size="small"
+                    />
+                    <text class="proposer-text">{{ dish.proposer }}</text>
+                  </view>
+                </view>
+              </template>
+              <!-- 折叠面板内容 -->
+              <view class="dish-actions">
+                <uni-icons
+                    v-if="canDeleteDish(dish)"
+                    type="trash"
+                    size="24"
+                    color="#FF4D4F"
+                    @click.stop="confirmDeleteDish(dish.id)"
+                    class="delete-icon"
+                ></uni-icons>
+              </view>
+            </uni-collapse-item>
+          </uni-collapse>
+        </scroll-view>
+      </view>
 
-		<!-- 加入家庭的模态框 -->
-		<view v-if="showJoinFamilyModal" class="modal">
-			<view class="modal-content">
-				<text class="modal-title">{{ $t('join_family') }}</text>
-				<input v-model="joinFamilyId" :placeholder="t('family_id_placeholder')" class="input"></input>
-				<button class="modal-button" @click="joinFamily">{{ $t('confirm') }}</button>
-				<button class="modal-button cancel" @click="showJoinFamilyModal = false">{{ $t('cancel') }}</button>
-			</view>
-		</view>
-	</view>
+      <!-- 共享家庭成员的五大营养成分达标情况 -->
+      <view class="shared-data">
+        <text class="section-title">{{ $t('shared_family_data') }}</text>
+        <!-- 添加家庭碳排放环形图 -->
+        <view class="charts">
+          <qiun-data-charts :canvas2d="true" canvas-id="familyCarbonChart" type="ring" :opts="carbonRingOpts"
+                            :chartData="carbonChartData" />
+        </view>
+        <!-- 添加家庭五大营养成分达标情况的图表 -->
+        <view class="charts">
+          <qiun-data-charts :canvas2d="true" canvas-id="familyNutrientChart" type="column"
+                            :opts="nutrientChartOpts" :chartData="nutrientChartData" />
+        </view>
+      </view>
+
+      <!-- 家庭成员部分 -->
+      <view class="family-info">
+        <text class="section-title">{{ $t('family_members') }}</text>
+        <view class="family-members">
+          <view v-for="member in sortedFamilyMembers" :key="member.id" class="member">
+            <image :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`" class="member-avatar"></image>
+            <text class="member-name">{{ `${member.nickname} (${member.role === 'admin' ? $t('admin') : $t('member')})` }}</text>
+          </view>
+        </view>
+        <button class="manage-members-button" @click="manageMembers">{{ t('manage_members') }}</button>
+      </view>
+
+      <!-- 底部操作按钮部分 -->
+      <view class="bottom-container">
+        <uni-section class="action-section" type="line">
+          <view class="bottom-actions">
+            <text class="action-btn leave-btn" @click="handleLeaveFamily">
+              <uni-icons type="close" size="16" color="#fff"></uni-icons>
+              {{ $t('leave_family') }}
+            </text>
+            <text v-if="isCurrentUserAdmin" class="action-btn break-btn" @click="handleBreakFamily">
+              <uni-icons type="trash" size="16" color="#fff"></uni-icons>
+              {{ $t('break_family') }}
+            </text>
+          </view>
+        </uni-section>
+      </view>
+    </view>
+
+    <!-- 创建家庭的模态框 -->
+    <view v-if="showCreateFamilyModal" class="modal">
+      <view class="modal-content">
+        <text class="modal-title">{{ $t('create_family') }}</text>
+        <input v-model="newFamilyName" :placeholder="t('family_name_placeholder')" class="input"></input>
+        <button class="modal-button" @click="createFamily">{{ $t('confirm') }}</button>
+        <button class="modal-button cancel" @click="showCreateFamilyModal = false">{{ $t('cancel') }}</button>
+      </view>
+    </view>
+
+    <!-- 加入家庭的模态框 -->
+    <view v-if="showJoinFamilyModal" class="modal">
+      <view class="modal-content">
+        <text class="modal-title">{{ $t('join_family') }}</text>
+        <input v-model="joinFamilyId" :placeholder="t('family_id_placeholder')" class="input"></input>
+        <button class="modal-button" @click="joinFamily">{{ $t('confirm') }}</button>
+        <button class="modal-button cancel" @click="showJoinFamilyModal = false">{{ $t('cancel') }}</button>
+      </view>
+    </view>
+
+    <!-- 删除确认模态框 -->
+    <view v-if="showDeleteConfirm" class="modal">
+      <view class="modal-content">
+        <text class="modal-title">{{ $t('confirm_delete') }}</text>
+        <button class="modal-button" @click="deleteDish(selectedDishId)">{{ $t('confirm') }}</button>
+        <button class="modal-button cancel" @click="showDeleteConfirm = false">{{ $t('cancel') }}</button>
+      </view>
+    </view>
+  </view>
 </template>
 
 <script setup>
-	import {
-		ref,
-		computed,
-		onMounted,
-		onUnmounted,
-		reactive
-	} from 'vue';
-	import {
-		useI18n
-	} from 'vue-i18n';
-	import {
-		useFamilyStore
-	} from '@/stores/family.js';
-	import UniList from "@/uni_modules/uni-list/components/uni-list/uni-list.vue";
+import { ref, computed, onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useFamilyStore, FamilyStatus } from '../../stores/family.js';
+import { useUserStore } from "../../stores/user.js";
+import { onShow } from '@dcloudio/uni-app';
+import { useFoodListStore } from '../../stores/food_list'; // 引入食物列表store
 
-	// 国际化
-	const {
-		t
-	} = useI18n();
+const { t, locale } = useI18n();
 
-  const token = uni.getStorageSync('token');
-  console.log('这个页面', token);
+const familyStore = useFamilyStore();
+const family = computed(() => familyStore.family);
+const FamilyStatusEnum = FamilyStatus;
+const userStore = useUserStore();
 
-	// Pinia 状态管理
-	const familyStore = useFamilyStore();
-	const family = computed(() => familyStore.family);
-	const FamilyStatus = familyStore.FamilyStatus;
+// 确保用户已登录，否则跳转到登录页面
+if (!userStore.user.isLoggedIn) {
+  uni.navigateTo({ url: '/pagesMy/login/login' });
+}
 
-	// 定时器引用
-	let statusCheckTimer = null;
+const currentUserId = computed(() => userStore.user.uid);
+const isCurrentUserAdmin = computed(() => {
+  return familyStore.isAdmin(currentUserId.value);
+});
 
-	// 新菜品提议
-	const newDish = reactive({
-		name: '',
-		preference: 0,
-	});
+const allFamilyMembers = computed(() => family.value.allMembers || []);
+const sortedFamilyMembers = computed(() => {
+  const members = [...allFamilyMembers.value];
+  const currentUserIndex = members.findIndex(member => member.id === currentUserId.value);
+  if (currentUserIndex > -1) {
+    const [currentUser] = members.splice(currentUserIndex, 1);
+    members.unshift(currentUser);
+  }
+  return members;
+});
 
-	// 菜品偏好级别
-	const dishPreferenceLevels = computed(() => [
-		t('preference_low'),
-		t('preference_medium'),
-		t('preference_high'),
-	]);
+const newDish = ref({
+  name: '',
+  id: null,
+  preference: 0,
+});
 
-	// 模态框显示状态
-	const showCreateFamilyModal = ref(false);
-	const showJoinFamilyModal = ref(false);
+// 菜品偏好级别
+const dishPreferenceLevels = computed(() => [
+  t('preference_low'),
+  t('preference_medium'),
+  t('preference_high'),
+]);
 
-	// 创建家庭相关
-	const newFamilyName = ref('');
+// 根据偏好级别返回对应的标签类型
+const getPreferenceTagType = (preference) => {
+  switch (preference) {
+    case 0:
+      return 'info';    // 低偏好
+    case 1:
+      return 'warning'; // 中偏好
+    case 2:
+      return 'success'; // 高偏好
+    default:
+      return 'default';
+  }
+};
 
-	// 加入家庭相关
-	const joinFamilyId = ref('');
+// 控制uni-collapse的活动项
+const activeCollapse = ref([]);
 
-	// 定时检查状态
-	const startStatusCheck = () => {
-		// 清除可能存在的旧定时器
-		if (statusCheckTimer) {
-			clearInterval(statusCheckTimer);
-		}
-		// 设置新的定时器
-		statusCheckTimer = setInterval(async () => {
-			if (family.value.status === FamilyStatus.PENDING_APPROVAL) {
-				await familyStore.getFamilyDetails();
-			}
-		}, 30000); // 30秒
-	};
+// 模态框显示状态
+const showCreateFamilyModal = ref(false);
+const showJoinFamilyModal = ref(false);
+const showDeleteConfirm = ref(false);
 
-	// 取消加入申请
-	const handleCancelJoin = async () => {
-		try {
-			await familyStore.cancelJoinRequest();
-			uni.showToast({
-				title: '已取消申请',
-				icon: 'success'
-			});
-		} catch (error) {
-			uni.showToast({
-				title: '取消失败',
-				icon: 'error'
-			});
-		}
-	};
+// 创建家庭相关
+const newFamilyName = ref('');
 
-	// 提交菜品提议
-	const submitDishProposal = () => {
-		if (newDish.name.trim() === '') {
-			uni.showToast({
-				title: t('dish_name_required'),
-				icon: 'none'
-			});
-			return;
-		}
-		familyStore.addDishProposal({
-			id: Date.now(),
-			name: newDish.name,
-			preference: newDish.preference,
-			proposer: 'You',
-		});
-		newDish.name = '';
-		newDish.preference = 0;
-	};
+// 加入家庭相关
+const joinFamilyId = ref('');
 
-	// 创建家庭
-	const createFamily = async () => {
-		if (newFamilyName.value.trim() === '') {
-			uni.showToast({
-				title: t('family_name_required'),
-				icon: 'none'
-			});
-			return;
-		}
-		try {
-			await familyStore.createFamily(newFamilyName.value);
-			newFamilyName.value = '';
-			showCreateFamilyModal.value = false;
-		} catch (error) {
-			uni.showToast({
-				title: t('create_family_failed'),
-				icon: 'error'
-			});
-		}
-	};
+// 引入食物列表Store和相关方法
+const foodStore = useFoodListStore();
+const { availableFoods, fetchAvailableFoods, getFoodName } = foodStore;
 
-  // 加入家庭
-  const joinFamily = async () => {
-    if (joinFamilyId.value.trim() === '') {
+// 用于uni-combox的输入框和下拉列表逻辑
+const foodNameInput = ref('');
+const showFoodList = ref(false);
+
+// 用于删除确认
+const selectedDishId = ref(null);
+
+// 根据当前语言显示食物名称
+const displayName = (item) => {
+  return locale.value === 'zh-Hans' ? item.name_zh : item.name_en;
+};
+
+// 根据输入进行过滤
+const filteredFoods = computed(() => {
+  if (foodNameInput.value === '') {
+    const currentLang = locale.value;
+    if (currentLang === 'zh-Hans') {
+      return availableFoods.filter((f) => f.name_zh !== '');
+    } else {
+      return availableFoods.filter((f) => f.name_en !== '');
+    }
+  } else {
+    const currentLang = locale.value;
+    return availableFoods.filter((f) => {
+      if (currentLang === 'zh-Hans') {
+        return f.name_zh.includes(foodNameInput.value);
+      } else {
+        return f.name_en.toLowerCase().includes(foodNameInput.value.toLowerCase());
+      }
+    });
+  }
+});
+
+// 当用户在combox输入时
+const onComboxInput = (value) => {
+  foodNameInput.value = value;
+};
+
+// 当用户选择下拉项时
+const selectFood = (foodItem) => {
+  newDish.value.name = foodItem.name_en; // 内部存英文名
+  newDish.value.id = foodItem.id;
+  foodNameInput.value = displayName(foodItem); // 显示当前语言名称
+  showFoodList.value = false;
+};
+
+// 提交菜品提议
+const submitDishProposal = async () => {
+  // 尝试匹配用户已输入的食物名称
+  const matchedFood = availableFoods.find((f) => displayName(f) === foodNameInput.value);
+
+  if (matchedFood) {
+    // 选择食物
+    selectFood(matchedFood);
+  } else {
+    uni.showToast({
+      title: t('no_matching_food'),
+      icon: 'none',
+      duration: 2000,
+    });
+    return;
+  }
+
+  if (newDish.value.name.trim() === '') {
+    uni.showToast({
+      title: t('dish_name_required'),
+      icon: 'none'
+    });
+    return;
+  }
+
+  try {
+    console.log('newDish:', newDish.value);
+    await familyStore.addDishProposal({
+      dishId: Number(newDish.value.id),     // dish_id传递为数字
+      preference: newDish.value.preference  // level_of_desire
+    });
+
+    newDish.value.name = '';
+    newDish.value.id = null;
+    newDish.value.preference = 0;
+    foodNameInput.value = '';
+
+    uni.showToast({
+      title: t('submit_success'),
+      icon: 'success'
+    });
+  } catch (error) {
+    if (error.message === 'DISH_ALREADY_EXISTS') {
       uni.showToast({
-        title: t('family_id_required'),
+        title: t('dish_already_exists'), // 确保在您的翻译文件中添加此键
         icon: 'none'
       });
-      return;
-    }
-
-    try {
-      // 先搜索家庭
-      const searchResult = await familyStore.searchFamily(joinFamilyId.value);
-
-      // 如果搜索不到家庭
-      if (!searchResult || !searchResult.id) {
-        uni.showToast({
-          title: t('family_not_found'),
-          icon: 'error'
-        });
-        return;
-      }
-
-      // 搜索到家庭后，调用加入接口
-      await familyStore.joinFamily(searchResult.id);
-      joinFamilyId.value = '';
-      showJoinFamilyModal.value = false;
-      startStatusCheck(); // 开始定时检查状态
-
+    } else {
       uni.showToast({
-        title: t('join_request_sent'),
-        icon: 'success'
-      });
-
-    } catch (error) {
-      console.error('Join family error:', error);
-      uni.showToast({
-        title: t('join_family_failed'),
+        title: t('submit_failed'),
         icon: 'error'
       });
     }
-  };
+  }
+};
 
-	// 家庭五大营养成分达标情况数据
-	const nutrientChartData = ref({
-		categories: [],
-		series: []
-	});
+// 偏好变化
+const onDishPreferenceChange = (e) => {
+  newDish.value.preference = parseInt(e.detail.value, 10);
+};
 
-	// 图表配置
-	const nutrientChartOpts = {
-		color: ["#1890FF", "#2FC25B"],
-		padding: [15, 0, 0, 0],
-		xAxis: {
-			disableGrid: true,
-			axisLine: true,
-		},
-		yAxis: {},
-		extra: {
-			column: {
-				type: "stack",
-				width: 30,
-			},
-		},
-	};
+// 创建家庭
+const createFamily = async () => {
+  if (newFamilyName.value.trim() === '') {
+    uni.showToast({ title: t('family_name_required'), icon: 'none' });
+    return;
+  }
 
-	// 家庭碳排放环形图数据
-	const carbonChartData = ref({
-		series: [{
-			data: []
-		}]
-	});
+  try {
+    await familyStore.createFamily(newFamilyName.value);
+    newFamilyName.value = '';
+    showCreateFamilyModal.value = false;
+    uni.showToast({ title: t('create_family_success'), icon: 'success' });
+    // 获取菜品提议列表
+    await familyStore.getDesiredDishes();
+  } catch (error) {
+    uni.showToast({ title: t('create_family_failed'), icon: 'error' });
+  }
+};
 
-	// 环形图配置
-	const carbonRingOpts = {
-		rotate: false,
-		rotateLock: false,
-		color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE"],
-		padding: [0, 0, 0, 0],
-		dataLabel: true,
-		enableScroll: false,
-		legend: {
-			show: true,
-			position: "right",
-			lineHeight: 25
-		},
-		title: {
-			name: t('carbon_total'),
-			fontSize: 15,
-			color: "#666666"
-		},
-		subtitle: {
-			name: "",
-			fontSize: 25,
-			color: "#4CAF50"
-		},
-		extra: {
-			ring: {
-				ringWidth: 15,
-				activeOpacity: 0.5,
-				activeRadius: 10,
-				offsetAngle: 0,
-				labelWidth: 15,
-				border: false,
-				borderWidth: 3,
-				borderColor: "#FFFFFF"
-			}
-		}
-	};
+// 加入家庭
+const joinFamily = async () => {
+  if (joinFamilyId.value.trim() === '') {
+    uni.showToast({ title: t('family_id_required'), icon: 'none' });
+    return;
+  }
 
-	// 计算属性：排序后的菜品提议
-	const sortedDishProposals = computed(() => {
-		if (!family.value.dishProposals) return [];
-		return [...family.value.dishProposals].sort((a, b) => b.preference - a.preference);
-	});
+  try {
+    const searchResult = await familyStore.searchFamily(joinFamilyId.value);
+    if (!searchResult || !searchResult.id) {
+      uni.showToast({ title: t('family_not_found'), icon: 'error' });
+      return;
+    }
 
-	// 处理偏好选择变化
-	const onDishPreferenceChange = (e) => {
-		newDish.preference = parseInt(e.detail.value, 10);
-	};
+    await familyStore.joinFamily(searchResult.id);
+    joinFamilyId.value = '';
+    showJoinFamilyModal.value = false;
+    startStatusCheck();
+    uni.showToast({ title: t('join_request_sent'), icon: 'success' });
+    // 获取菜品提议列表
+    await familyStore.getDesiredDishes();
+  } catch (error) {
+    uni.showToast({ title: t('join_family_failed'), icon: 'error' });
+  }
+};
 
-  // 修改管理成员方法
-  const manageMembers = () => {
-      // 获取当前用户ID
-      const currentUserId = userStore.userId; // 假设用户store中有userId字段
+// 取消加入申请
+const handleCancelJoin = async () => {
+  try {
+    await familyStore.cancelJoinRequest();
+    uni.showToast({ title: t('cancel_success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: t('cancel_failed'), icon: 'error' });
+  }
+};
 
-      if (familyStore.isAdmin(currentUserId)) {
-          // 是管理员，允许跳转
-          uni.navigateTo({
-              url: '/pagesMy/myFamily/myFamily'
-          });
-      } else {
-          // 不是管理员，显示错误提示
-          uni.showToast({
-              title: t('not_admin'),
-              icon: 'error',
-              duration: 2000
-          });
-      }
-  };
+// 跳转到 myFamily 页面
+const goToMyFamily = () => {
+  uni.navigateTo({ url: '/pagesMy/myFamily/myFamily' });
+};
 
-	// 生命周期钩子
-	onMounted(async () => {
-		// 初始化营养成分数据
-		nutrientChartData.value.categories = [
-			t('energy_unit'),
-			t('protein_unit'),
-			t('fat_unit'),
-			t('carbohydrates_unit'),
-			t('sodium_unit'),
-		];
-		nutrientChartData.value.series = [{
-				name: t('user_name1'),
-				data: [80, 90, 85, 70, 75],
-			},
-			{
-				name: t('user_name2'),
-				data: [100, 100, 100, 100, 120],
-			}
-		];
+// 退出家庭
+const handleLeaveFamily = async () => {
+  try {
+    await familyStore.leaveFamily();
+    uni.showToast({ title: t('leave_family_success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: t('leave_family_failed'), icon: 'error' });
+  }
+};
 
-		// 初始化碳排放数据
-		const memberCarbonData = [{
-				name: 'Alice',
-				value: 2.5
-			},
-			{
-				name: 'Bob',
-				value: 3.0
-			},
-			{
-				name: 'Charlie',
-				value: 1.5
-			}
-		];
-		carbonChartData.value.series[0].data = memberCarbonData;
-		const totalCarbonEmission = memberCarbonData.reduce((sum, item) => sum + item.value, 0);
-		carbonRingOpts.subtitle.name = `${totalCarbonEmission.toFixed(1)}Kg`;
+// 解散家庭
+const handleBreakFamily = async () => {
+  try {
+    await familyStore.breakFamily();
+    uni.showToast({ title: t('break_family_success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: t('break_family_failed'), icon: 'error' });
+  }
+};
 
-		// 如果当前是待审核状态，启动定时检查
-		if (family.value.status === FamilyStatus.PENDING_APPROVAL) {
-			startStatusCheck();
-		}
-	});
+// 处理成员管理
+const manageMembers = () => {
+  uni.navigateTo({ url: '/pagesMy/myFamily/myFamily' });
+};
 
-	onUnmounted(() => {
-		// 清除定时器
-		if (statusCheckTimer) {
-			clearInterval(statusCheckTimer);
-		}
-	});
+// 使用foodStore的getFoodName，根据dish_id返回正确的名称
+const sortedDishProposals = computed(() => {
+  if (!family.value.dishProposals) return [];
+  return family.value.dishProposals.map(item => ({
+    id: item.dish_id,
+    name: getFoodName(item.dish_id) || 'Unknown Dish',
+    preference: item.level_of_desire,
+    proposer: item.proposer_user ? item.proposer_user.nickname : 'Unknown'
+  })).sort((a, b) => b.preference - a.preference);
+});
+
+// 确认删除菜品
+const confirmDeleteDish = (dishId) => {
+  selectedDishId.value = dishId;
+  showDeleteConfirm.value = true;
+};
+
+// 删除菜品
+const deleteDish = async (dishId) => {
+  try {
+    await familyStore.deleteDesiredDish(dishId);
+    uni.showToast({ title: t('delete_success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: t('delete_failed'), icon: 'error' });
+  } finally {
+    showDeleteConfirm.value = false;
+    selectedDishId.value = null;
+  }
+};
+
+// 判断是否可以删除菜品（提议者或管理员）
+const canDeleteDish = (dish) => {
+  return dish.proposer === userStore.user.nickName || isCurrentUserAdmin.value;
+};
+
+// 页面显示时
+onShow(async () => {
+  try {
+    await familyStore.getFamilyDetails();
+    if (family.value.status === FamilyStatusEnum.JOINED) {
+      // 获取想吃的菜品列表
+      await familyStore.getDesiredDishes();
+    }
+    if (family.value.status === FamilyStatusEnum.PENDING_APPROVAL) {
+      startStatusCheck();
+    }
+  } catch (error) {
+    uni.showToast({ title: t('fetch_family_failed'), icon: 'none' });
+  }
+});
+
+// 页面mounted时获取可用食物列表
+onMounted(async () => {
+  if (availableFoods.length === 0) {
+    await fetchAvailableFoods();
+  }
+});
+
+// 监听语言变化，重新计算食物名称显示（可选）
+watch(locale, () => {
+  // 任何需要响应语言变化的逻辑可以在这里添加
+});
+
+// startStatusCheck 如果有需要请补上您的逻辑
+const startStatusCheck = () => {
+  // 具体实现根据项目需求
+};
 </script>
 
 <style scoped>
-	/* 全局样式变量 */
-	:root {
-		--primary-color: #4CAF50;
-		--secondary-color: #2fc25b;
-		--background-color: #f5f5f5;
-		--card-background: rgba(255, 255, 255, 0.8);
-		--text-color: #333;
-		--shadow-color: rgba(0, 0, 0, 0.1);
-		--font-size-title: 32rpx;
-		--font-size-subtitle: 24rpx;
-	}
+/* 全局样式变量 */
+:root {
+  --primary-color: #4CAF50;
+  --secondary-color: #2fc25b;
+  --background-color: #f5f5f5;
+  --card-background: rgba(255, 255, 255, 0.8);
+  --text-color: #333;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --font-size-title: 32rpx;
+  --font-size-subtitle: 24rpx;
+}
 
-	/* 容器 */
-	.container {
-		display: flex;
-		flex-direction: column;
-		background-color: var(--background-color);
-		min-height: 100vh;
-		padding-bottom: 80rpx;
-		position: relative;
-		overflow: hidden;
-	}
+/* 容器 */
+.container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--background-color);
+  min-height: 100vh;
+  padding-bottom: 80rpx;
+  position: relative;
+  overflow: hidden;
+}
 
-	/* 全屏背景图片 */
-	.background-image {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		z-index: -1;
-		opacity: 0.1;
-	}
+/* 全屏背景图片 */
+.background-image {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+  opacity: 0.1;
+}
 
-	/* 头部标题 */
-	.header {
-		padding: 40rpx 20rpx 20rpx;
-		text-align: center;
-	}
+/* 头部标题 */
+.header {
+  padding: 40rpx 20rpx 20rpx;
+  text-align: center;
+}
 
-	.header-title {
-		font-size: 48rpx;
-		color: var(--primary-color);
-		font-weight: bold;
-		animation: slideDown 1s ease-out;
-	}
+.header-title {
+  font-size: 48rpx;
+  color: var(--primary-color);
+  font-weight: bold;
+  animation: slideDown 1s ease-out;
+}
 
-	/* 家庭ID */
-	.list-title {
-		margin-left: 10rpx;
-		font-size: 20rpx;
-		font-weight: bold;
-		color: var(--text-color);
-		margin-bottom: 20rpx;
-		text-align: center;
-	}
+/* 家庭ID */
+.list-title {
+  margin-left: 10rpx;
+  font-size: 20rpx;
+  font-weight: bold;
+  color: var(--text-color);
+  margin-bottom: 20rpx;
+  text-align: center;
+}
 
-	/* 用户未加入家庭时的视图 */
-	.no-family-view {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		padding: 20rpx;
-	}
+/* 用户未加入家庭时的视图 */
+.no-family-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx;
+}
 
-	.centered-image {
-		width: 200rpx;
-		height: 200rpx;
-		border-radius: 50%;
-		margin-bottom: 30rpx;
-		object-fit: cover;
-		/* 添加其他样式如边框或阴影根据需要 */
-	}
+.centered-image {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 50%;
+  margin-bottom: 30rpx;
+  object-fit: cover;
+}
 
-  /* 添加待审核状态的样式 */
-	.pending-view {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		padding: 20rpx;
-	}
+/* 待审核状态的样式 */
+.pending-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20rpx;
+}
 
-	.pending-image {
-		width: 200rpx;
-		height: 200rpx;
-		border-radius: 50%;
-		margin-bottom: 30rpx;
-		object-fit: cover;
-	}
+.pending-image {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 50%;
+  margin-bottom: 30rpx;
+  object-fit: cover;
+}
 
-	.pending-text {
-		font-size: 32rpx;
-		color: #666;
-		margin-bottom: 40rpx;
-	}
+.pending-text {
+  font-size: 32rpx;
+  color: #666;
+  margin-bottom: 40rpx;
+}
 
-	.cancel-button {
-		background-color: #ff4d4f;
-		color: #fff;
-		padding: 15rpx 40rpx;
-		border-radius: 10rpx;
-		font-size: 28rpx;
-	}
+.cancel-button {
+  background-color: #ff4d4f;
+  color: #fff;
+  padding: 15rpx 40rpx;
+  border-radius: 10rpx;
+  font-size: 28rpx;
+}
 
-	/* 家庭管理部分 */
-	.family-management {
-		flex: 1;
-		padding: 20rpx;
-	}
+/* 管理员提示框样式 */
+.admin-notice {
+  margin: 20rpx;
+  background: linear-gradient(to right, #EEF2FF, #E0E7FF);
+  border-radius: 16rpx;
+}
 
-	/* 创建或加入家庭 */
-	.family-actions {
-		display: flex;
-		justify-content: center;
-		margin-top: 20rpx;
-	}
+.admin-notice :deep(.uni-card__content) {
+  padding: 0 !important;
+}
 
-	.action-button {
-		background-color: var(--primary-color);
-		color: #fff;
-		padding: 15rpx 30rpx;
-		margin: 0 10rpx;
-		border-radius: 10rpx;
-		font-size: var(--font-size-subtitle);
-	}
+.notice-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx;
+}
 
-	/* 提出想吃的菜品 */
-	.dish-proposal {
-		background-color: var(--card-background);
-		padding: 20rpx;
-		border-radius: 10rpx;
-		box-shadow: 0 2rpx 5rpx var(--shadow-color);
-		margin-bottom: 20rpx;
-	}
+.notice-left {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
 
-	.section-title {
-		font-size: var(--font-size-title);
-		font-weight: bold;
-		color: var(--primary-color);
-		margin-bottom: 10rpx;
-	}
+.notice-text {
+  color: #3A86FF;
+  font-size: 28rpx;
+  font-weight: 500;
+}
 
-	/* 输入框 */
-	.input {
-		width: 100%;
-		padding: 10rpx;
-		border: 1rpx solid #ccc;
-		border-radius: 5rpx;
-		margin-bottom: 20rpx;
-		margin-top: 20rpx;
-	}
+.notice-btn {
+  color: #3A86FF;
+  font-size: 28rpx;
+  font-weight: 600;
+  background-color: rgba(58, 134, 255, 0.1);
+  padding: 8rpx 24rpx;
+  border-radius: 30rpx;
+  transition: all 0.3s ease;
+}
 
-	.picker {
-		width: 100%;
-		padding: 10rpx;
-		border: 1rpx solid #ccc;
-		border-radius: 5rpx;
-		margin-bottom: 20rpx;
-		margin-top: 20rpx;
-		color: #666666;
-	}
+.notice-btn:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
 
-	.submit-button {
-		background-color: var(--primary-color);
-		color: #fff;
-		padding: 15rpx;
-		border-radius: 10rpx;
-		font-size: var(--font-size-subtitle);
-		width: 100%;
-		text-align: center;
-	}
+/* 家庭管理部分 */
+.family-management {
+  flex: 1;
+  padding: 20rpx;
+}
 
-	/* 菜品列表 */
-	.dish-list {
-		background-color: var(--card-background);
-		padding: 20rpx;
-		border-radius: 10rpx;
-		box-shadow: 0 2rpx 5rpx var(--shadow-color);
-		margin-bottom: 20rpx;
-	}
+/* 创建或加入家庭 */
+.family-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 20rpx;
+}
 
-	/* Scroll-View 滚动区域 */
-	.dish-scroll {
-		max-height: 300rpx;
-		/* 固定最大高度 */
-		overflow-y: auto;
-	}
+.action-button {
+  background-color: var(--primary-color);
+  color: #fff;
+  padding: 15rpx 30rpx;
+  margin: 0 10rpx;
+  border-radius: 10rpx;
+  font-size: var(--font-size-subtitle);
+}
 
-	/* 菜品项 */
-	.dish-item {
-		padding: 10rpx;
-		border-bottom: 1rpx solid #eee;
-	}
+/* 提出想吃的菜品 */
+.proposals-scroll {
+  max-height: 600rpx;
+  margin: 20rpx 0;
+}
 
-	/* 共享数据 */
-	.shared-data {
-		background-color: var(--card-background);
-		padding: 20rpx;
-		border-radius: 10rpx;
-		box-shadow: 0 2rpx 5rpx var(--shadow-color);
-		margin-bottom: 20rpx;
-	}
+/* 折叠面板标题样式 */
+.collapse-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8rpx 0;
+}
 
-	.charts {
-		width: 100%;
-		height: 300rpx;
-		margin-bottom: 20rpx;
-	}
+.dish-name {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+  margin-right: 16rpx;
+}
 
-	/* 家庭成员部分（移到最下方） */
-	.family-info {
-		background-color: var(--card-background);
-		padding: 20rpx;
-		border-radius: 10rpx;
-		box-shadow: 0 2rpx 5rpx var(--shadow-color);
-		margin-bottom: 20rpx;
-	}
+.dish-info {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex-shrink: 0;
+}
 
-	.family-members {
-		display: flex;
-		flex-wrap: wrap;
-	}
+.proposer-text {
+  font-size: 24rpx;
+  color: #666;
+}
 
-	.member {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		width: 25%;
-		margin-bottom: 20rpx;
-	}
+/* 折叠面板内容样式 */
+.dish-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16rpx 0;
+}
 
-	.member-avatar {
-		width: 80rpx;
-		height: 80rpx;
-		border-radius: 50%;
-		margin-bottom: 5rpx;
-	}
+/* uni-collapse 样式优化 */
+.dish-list :deep(.uni-collapse) {
+  background-color: transparent;
+}
 
-	.member-name {
-		font-size: 20rpx;
-		color: var(--text-color);
-	}
+.dish-list :deep(.uni-collapse-item__title) {
+  padding: 16rpx;
+}
 
-	/* 管理成员按钮 */
-	.manage-members-button {
-		background-color: var(--secondary-color);
-		color: #fff;
-		padding: 15rpx;
-		border-radius: 10rpx;
-		font-size: var(--font-size-subtitle);
-		width: 100%;
-		text-align: center;
-		margin-top: 10rpx;
-	}
+.dish-list :deep(.uni-collapse-item__title-box) {
+  width: 100%;
+}
 
-	/* 模态框 */
-	.modal {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background-color: rgba(0, 0, 0, 0.5);
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		z-index: 10;
-	}
+.dish-list :deep(.uni-collapse-item__wrap) {
+  background-color: rgba(255, 255, 255, 0.6);
+}
 
-	.modal-content {
-		background-color: #fff;
-		padding: 20rpx;
-		border-radius: 10rpx;
-		width: 80%;
-	}
+.dish-proposal {
+  background-color: var(--card-background);
+  padding: 20rpx;
+  border-radius: 10rpx;
+  box-shadow: 0 2rpx 5rpx var(--shadow-color);
+  margin-bottom: 20rpx;
+}
 
-	.modal-title {
-		font-size: var(--font-size-subtitle);
-		color: var(--primary-color);
-		margin-bottom: 15rpx;
-		text-align: center;
-	}
+.section-title {
+  font-size: var(--font-size-title);
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-bottom: 10rpx;
+}
 
-	.modal-button {
-		background-color: var(--primary-color);
-		color: #fff;
-		padding: 15rpx;
-		border-radius: 10rpx;
-		font-size: var(--font-size-subtitle);
-		width: 100%;
-		text-align: center;
-		margin-top: 10rpx;
-	}
+/* 输入框 */
+.input {
+  width: 100%;
+  padding: 10rpx;
+  border: 1rpx solid #ccc;
+  border-radius: 5rpx;
+  margin-bottom: 20rpx;
+  margin-top: 20rpx;
+}
 
-	.modal-button.cancel {
-		background-color: #ccc;
-	}
+.picker {
+  width: 100%;
+  padding: 10rpx;
+  border: 1rpx solid #ccc;
+  border-radius: 5rpx;
+  margin-bottom: 20rpx;
+  margin-top: 20rpx;
+  color: #666666;
+}
 
-	/* 动画效果 */
-	@keyframes slideDown {
-		from {
-			transform: translateY(-20rpx);
-			opacity: 0;
-		}
+.submit-button {
+  background-color: var(--primary-color);
+  color: #fff;
+  padding: 15rpx;
+  border-radius: 10rpx;
+  font-size: var(--font-size-subtitle);
+  width: 100%;
+  text-align: center;
+}
 
-		to {
-			transform: translateY(0);
-			opacity: 1;
-		}
-	}
+/* 菜品列表 */
+.dish-list {
+  background-color: var(--card-background);
+  padding: 20rpx;
+  border-radius: 10rpx;
+  box-shadow: 0 2rpx 5rpx var(--shadow-color);
+  margin-bottom: 20rpx;
+}
 
-	@keyframes fadeInDown {
-		from {
-			opacity: 0;
-			transform: translateY(-20px);
-		}
+/* uni-collapse 样式覆盖 */
+.dish-list .uni-collapse__item {
+  border-bottom: 1rpx solid #eee;
+}
 
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
+.dish-list .uni-collapse__title {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: bold;
+}
 
-	@keyframes fadeInUp {
-		from {
-			opacity: 0;
-			transform: translateY(20px);
-		}
+.dish-details {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 10rpx 0;
+}
 
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
+.delete-icon {
+  margin-right: 10rpx;
+}
+
+/* 共享数据 */
+.shared-data {
+  background-color: var(--card-background);
+  padding: 20rpx;
+  border-radius: 10rpx;
+  box-shadow: 0 2rpx 5rpx var(--shadow-color);
+  margin-bottom: 20rpx;
+}
+
+.charts {
+  width: 100%;
+  height: 300rpx;
+  margin-bottom: 20rpx;
+}
+
+/* 家庭成员部分 */
+.family-info {
+  background-color: var(--card-background);
+  padding: 20rpx;
+  border-radius: 10rpx;
+  box-shadow: 0 2rpx 5rpx var(--shadow-color);
+  margin-bottom: 20rpx;
+}
+
+.family-members {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.member {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 25%;
+  margin-bottom: 20rpx;
+}
+
+.member-avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  margin-bottom: 5rpx;
+}
+
+.member-name {
+  font-size: 20rpx;
+  color: var(--text-color);
+}
+
+/* 管理成员按钮 */
+.manage-members-button {
+  background-color: var(--secondary-color);
+  color: #fff;
+  padding: 15rpx;
+  border-radius: 10rpx;
+  font-size: var(--font-size-subtitle);
+  width: 100%;
+  text-align: center;
+  margin-top: 10rpx;
+}
+
+/* 底部操作按钮样式 */
+.bottom-container {
+  padding: 20rpx 30rpx 40rpx;
+  margin-top: auto;
+}
+
+.action-section :deep(.uni-section-header) {
+  display: none;
+}
+
+.bottom-actions {
+  display: flex;
+  justify-content: center;
+  gap: 30rpx;
+  padding: 20rpx 0;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 20rpx 40rpx;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.action-btn:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.leave-btn {
+  background: linear-gradient(to right, #FF9800, #F57C00);
+  color: #fff;
+  box-shadow: 0 4rpx 12rpx rgba(255, 152, 0, 0.3);
+}
+
+.break-btn {
+  background: linear-gradient(to right, #FF4B4B, #E53935);
+  color: #fff;
+  box-shadow: 0 4rpx 12rpx rgba(229, 57, 53, 0.3);
+}
+
+/* 模态框 */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 40rpx;
+  border-radius: 16rpx;
+  width: 60%;  /* 减小宽度从80%到60% */
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+}
+
+.modal-title {
+  font-size: 36rpx;  /* 增大字体从24rpx到36rpx */
+  color: #333;
+  margin-bottom: 40rpx;
+  text-align: center;
+  font-weight: 500;
+}
+
+.modal-button {
+  background-color: var(--primary-color);
+  color: #fff;
+  padding: 20rpx;  /* 增加内边距使按钮更大 */
+  border-radius: 12rpx;
+  font-size: 24rpx;  /* 增大按钮字体从24rpx到32rpx */
+  width: 100%;
+  text-align: center;
+  margin-top: 20rpx;
+  font-weight: 500;
+}
+
+.modal-button.cancel {
+  background-color: #f5f5f5;
+  color: #666;
+}
+
+/* 动画效果 */
+@keyframes slideDown {
+  from {
+    transform: translateY(-20rpx);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 </style>

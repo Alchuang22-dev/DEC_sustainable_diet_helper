@@ -29,7 +29,19 @@ type User struct {
 
     FoodPreferences []FoodPreference `gorm:"foreignKey:UserID" json:"food_preferences"` // 用户的食物偏好
 
+
     DesiredDishes    []FamilyDish      `gorm:"foreignKey:ProposerUserID" json:"desired_dishes"` // 家庭中用户提出的想吃的菜
+
+    NutritionGoals   []NutritionGoal   `gorm:"foreignKey:UserID" json:"nutrition_goals"` 
+    NutritionIntakes []NutritionIntake `gorm:"foreignKey:UserID" json:"nutrition_intakes"`
+    CarbonGoals      []CarbonGoal      `gorm:"foreignKey:UserID" json:"carbon_goals"`
+    CarbonIntakes    []CarbonIntake    `gorm:"foreignKey:UserID" json:"carbon_intakes"`
+
+    UserIngredientHistory []UserIngredientHistory `gorm:"foreignKey:UserID" json:"user_ingredient_history"`
+    UserIngredientPreference []UserIngredientPreference `gorm:"foreignKey:UserID" json:"user_ingredient_preference"`
+    UserRecipeHistory []UserRecipeHistory `gorm:"foreignKey:UserID" json:"user_recipe_history"`
+
+    UserLastSelectedFoods []UserLastSelectedFoods `gorm:"foreignKey:UserID" json:"user_last_selected_foods"`
 }
 
 type RefreshToken struct {

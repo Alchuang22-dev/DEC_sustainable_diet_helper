@@ -28,6 +28,7 @@
         环保专栏
       </button>
 	  <button
+		v-if = "isLoggedIn"
 	    @click="createNews()"
 	  >
 	    写文章
@@ -62,7 +63,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { onMounted, ref, reactive, computed, watch } from 'vue';
 import { useNewsStore } from '@/stores/news_list';
 import { useI18n } from 'vue-i18n';
 import { onShow, onPullDownRefresh } from '@dcloudio/uni-app';
@@ -73,7 +74,10 @@ const newsStore = useNewsStore();
 const userStore = useUserStore(); // 使用用户存储
 
 const activeIndex = ref(null);
-const { uid, isLoggedIn } = storeToRefs(userStore); // 从存储中解构
+const { uid, getUserID } = storeToRefs(userStore); // 从存储中解构
+const token = computed(() => userStore.user.token);
+const avatarSrc = ref('');
+const isLoggedIn = ref(false);
 
 // 从 Store 获取数据和方法
 const { filteredNewsItems, selectedSection, isRefreshing } = storeToRefs(newsStore);
@@ -130,20 +134,18 @@ const handlePullDownRefresh = async () => {
 
 function checkLoginStatus() {
   console.log("in check");
-  const query = userStore.uid;
+  const query = token.value;  // 获取存储的用户信息
   console.log(query);
-  if (query && query !== '') {
-    uid.value = query;
-    isLoggedIn.value = true;
-  } else {
-    isLoggedIn.value = false;
+  if(query.value != ''){
+	  isLoggedIn.value = true;
   }
-}
+ };
 
 // 使用 uni.onPullDownRefresh() 将处理函数绑定到下拉刷新事件
 onPullDownRefresh(handlePullDownRefresh);
 
 onShow(() => {
+	console.log("用户进入社区");
 	isLoggedIn.value = false; // 显式设置为未登录状态
     uni.setNavigationBarTitle({
       title: t('news_index')

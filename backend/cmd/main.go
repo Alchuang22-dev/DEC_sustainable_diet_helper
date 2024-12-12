@@ -41,8 +41,16 @@ func main() {
         &models.Food{},
         &models.Recipe{},
         &models.Family{},
+        &models.FoodPreference{},
+        &models.NutritionGoal{},
+        &models.CarbonGoal{},
+        &models.NutritionIntake{},
+        &models.CarbonIntake{},
         &models.RefreshToken{},
         &models.FamilyDish{},
+        &models.DislikedFoodPreference{},
+        &models.UserRecipeHistory{},
+        &models.UserLastSelectedFoods{},
     )
     if err != nil {
         log.Fatal("自动迁移失败:", err)
@@ -91,6 +99,12 @@ func main() {
 
     // 注册食材偏好路由
     routes.RegisterFoodPreferenceRoutes(router, db)
+
+    // 注册食材推荐路由
+    routes.RegisterRecommendRoutes(router, db)
+
+    // 注册营养和碳排放路由
+    routes.RegisterNutritionCarbonRoutes(router, db)
 
     // 启动服务器
     err = router.Run(":8080")

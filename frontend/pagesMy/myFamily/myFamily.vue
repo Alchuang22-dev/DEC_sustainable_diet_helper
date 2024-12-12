@@ -1,213 +1,239 @@
+<!-- myFamily.vue -->
 <template>
   <view class="family-management">
     <view class="family-list">
-      <view v-for="(member, index) in familyMembers" :key="index" class="family-member">
-        <view class="member-info" @click="toggleDetails(index)">
-          <image :src="member.avatar" alt="头像" class="avatar" />
-          <view class="info">
-            <text class="name">{{ member.name }}</text>
-            <text class="role">{{ member.role }}</text>
+      <!-- 已加入的家庭成员列表 -->
+      <uni-card v-for="member in sortedFamilyMembers"
+                :key="member.id"
+                :padding="0"
+                spacing="0"
+                class="member-card">
+        <view class="member-wrapper">
+          <view class="member-info">
+            <image :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+                   mode="aspectFill"
+                   class="avatar" />
+            <text class="nickname">{{ member.nickname }}</text>
+            <uni-tag v-if="member.role === 'admin'"
+                     text="管理员"
+                     type="primary"
+                     size="small"
+                     class="role-tag" />
+          </view>
+
+          <view class="actions" v-if="member.id !== currentUserId">
+            <text v-if="member.role !== 'admin'"
+                  class="action-btn promote-btn"
+                  @click="setAsAdmin(member.id)">
+              {{ $t('set_as_admin') }}
+            </text>
+            <text class="action-btn remove-btn"
+                  @click="removeMember(member.id)">
+              {{ $t('remove_member') }}
+            </text>
           </view>
         </view>
-        <view class="actions">
-          <button @click.stop="editMember(index)" class="edit-btn">编辑</button>
-          <button @click.stop="removeMember(index)" class="remove-btn">删除</button>
-        </view>
-        <view v-if="member.showDetails" class="details">
-          <view class='wrapper'>   
-            <view class="editor-wrapper">
-              <editor id="editor" class="ql-container" placeholder="开始输入..." show-img-size show-img-toolbar
-                show-img-resize @statuschange="onStatusChange" :read-only="readOnly" @ready="onEditorReady">
-              </editor>
-            </view>
-          </view>
-        </view>
-      </view>
-    </view>
-    <view class="add-member">
-      <button @click="addMember" class="add-btn">添加家庭成员</button>
+      </uni-card>
     </view>
 
-    <!-- 新增的 uni-drawer 用于编辑家庭成员信息 -->
-    <uni-drawer v-if="drawerVisible" :show="drawerVisible" mode="right" @close="closeDrawer">
-      <view class="drawer-content">
-        <view class="input-wrapper">
-          <input v-model="editedName" placeholder="请输入新的姓名" class="uni-input" />
-        </view>
-        <view class="input-wrapper">
-          <input v-model="editedRole" placeholder="请输入新的家庭位置" class="uni-input" />
-        </view>
-        <button @click="confirmEdit" class="confirm-btn">确认修改</button>
+    <uni-section title="待审核成员"
+                 type="line"
+                 v-if="family.waiting_members?.length > 0">
+      <view class="family-list">
+        <uni-card v-for="member in family.waiting_members"
+                  :key="member.id"
+                  :padding="0"
+                  spacing="0"
+                  class="member-card">
+          <view class="member-wrapper">
+            <view class="member-info">
+              <image :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+                     mode="aspectFill"
+                     class="avatar" />
+              <text class="nickname">{{ member.nickname }}</text>
+              <uni-tag text="待审核"
+                       type="warning"
+                       size="small"
+                       class="role-tag" />
+            </view>
+
+            <view class="actions">
+              <text class="action-btn approve-btn"
+                    @click="admitMember(member.id)">
+                {{ $t('admit') }}
+              </text>
+              <text class="action-btn reject-btn"
+                    @click="rejectMember(member.id)">
+                {{ $t('reject') }}
+              </text>
+            </view>
+          </view>
+        </uni-card>
       </view>
-    </uni-drawer>
+    </uni-section>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import UniDrawer from "@/uni_modules/uni-drawer/components/uni-drawer/uni-drawer.vue";
+import { onMounted, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useFamilyStore } from '@/stores/family.js';
+import { useUserStore } from "../../stores/user.js";
+import { onShow } from '@dcloudio/uni-app';
 
-const familyMembers = ref([
-  { name: '张三', role: '父亲', avatar: 'path/to/avatar1.png', showDetails: false },
-  { name: '李四', role: '母亲', avatar: 'path/to/avatar2.png', showDetails: false },
-]);
+const { t } = useI18n();
 
-const drawerVisible = ref(false);
-const editedIndex = ref(null);
-const editedName = ref('');
-const editedRole = ref('');
+const familyStore = useFamilyStore();
+const family = computed(() => familyStore.family);
+const userStore = useUserStore();
+const currentUserId = computed(() => userStore.user.uid);
 
-const addMember = () => {
-  const newMember = { name: '新成员', role: '未知', avatar: 'path/to/default_avatar.png', showDetails: false };
-  familyMembers.value.push(newMember);
-};
+const isCurrentUserAdmin = computed(() => {
+  return familyStore.isAdmin(currentUserId.value);
+});
 
-const removeMember = (index) => {
-  familyMembers.value.splice(index, 1);
-};
+const allFamilyMembers = computed(() => {
+  return family.value.allMembers || [];
+});
 
-const editMember = (index) => {
-  editedIndex.value = index;
-  editedName.value = familyMembers.value[index].name;
-  editedRole.value = familyMembers.value[index].role;
-  drawerVisible.value = true;
-};
-
-const toggleDetails = (index) => {
-  familyMembers.value[index].showDetails = !familyMembers.value[index].showDetails;
-};
-
-const closeDrawer = () => {
-  drawerVisible.value = false;
-};
-
-const confirmEdit = () => {
-  if (editedIndex.value !== null) {
-    familyMembers.value[editedIndex.value].name = editedName.value;
-    familyMembers.value[editedIndex.value].role = editedRole.value;
+const sortedFamilyMembers = computed(() => {
+  const members = [...allFamilyMembers.value];
+  const currentUserIndex = members.findIndex(member => member.id === currentUserId.value);
+  if (currentUserIndex > -1) {
+    const [currentUser] = members.splice(currentUserIndex, 1);
+    members.unshift(currentUser);
   }
-  closeDrawer();
+  return members;
+});
+
+onShow(async () => {
+  try {
+    await familyStore.getFamilyDetails();
+  } catch (error) {
+    uni.showToast({ title: t('fetch_family_details_failed'), icon: 'none' });
+  }
+});
+
+const setAsAdmin = async (userId) => {
+  try {
+    await familyStore.setAdmin(userId);
+    uni.showToast({ title: t('set_admin_success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: t('set_admin_failed'), icon: 'error' });
+  }
+};
+
+const removeMember = async (userId) => {
+  try {
+    await familyStore.removeFamilyMember(userId);
+    uni.showToast({ title: t('remove_member_success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: t('remove_member_failed'), icon: 'error' });
+  }
+};
+
+const admitMember = async (userId) => {
+  try {
+    await familyStore.admitJoinRequest(userId);
+    uni.showToast({ title: t('admit_success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: t('admit_failed'), icon: 'error' });
+  }
+};
+
+const rejectMember = async (userId) => {
+  try {
+    await familyStore.rejectJoinRequest(userId);
+    uni.showToast({ title: t('reject_success'), icon: 'success' });
+  } catch (error) {
+    uni.showToast({ title: t('reject_failed'), icon: 'error' });
+  }
 };
 </script>
 
 <style scoped>
 .family-management {
-  padding: 20px;
-  background-color: #f5f5f5;
+  padding: 30rpx;
+  background-color: #f8f8f8;
 }
+
 .family-list {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20rpx;
 }
 
-.family-member {
+.member-card {
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.member-wrapper {
+  padding: 24rpx;
   display: flex;
-  flex-direction: column; /* 改为列方向，以便各部分垂直排列 */
-  align-items: flex-start;
+  justify-content: space-between;
+  align-items: center;
   background-color: #ffffff;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  position: relative;
-  box-sizing: border-box; /* 计算边框和内边距 */
-  width: 100%; /* 确保家庭成员容器不会超出父级宽度 */
 }
 
 .member-info {
   display: flex;
   align-items: center;
-  cursor: pointer;
-  width: 100%; /* 确保占据整个宽度 */
-  margin-bottom: 10px; /* 增加底部间距，让详情部分与信息分隔开 */
-  box-sizing: border-box; /* 防止边距导致溢出 */
-}
-
-.details {
-  width: 100%; /* 占据整行宽度 */
-  margin-top: 10px;
-  padding: 10px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  box-sizing: border-box; /* 防止内容溢出父级容器 */
+  gap: 20rpx;
+  flex: 1;
 }
 
 .avatar {
-  width: 50px;
-  height: 50px;
+  width: 80rpx;
+  height: 80rpx;
   border-radius: 50%;
-  margin-right: 15px;
-}
-.info {
-  flex: 1;
-}
-.name {
-  font-size: 18px;
-  font-weight: bold;
-}
-.role {
-  font-size: 14px;
-  color: #888;
-}
-.actions {
-  display: flex;
-  gap: 10px;
-}
-.icon-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-}
-.edit-btn {
-  color: #007aff;
-}
-.remove-btn {
-  color: #ff3b30;
-}
-.details {
-  margin-top: 10px;
-  padding: 10px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-}
-.detail-edit-btn {
-  margin-top: 10px;
-  background-color: #007aff;
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.add-member {
-  margin-top: 20px;
-  text-align: center;
-}
-.add-btn {
-  background-color: #34c759;
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
+  background-color: #f0f0f0;
 }
 
-.drawer-content {
-  padding: 20px;
+.nickname {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
 }
-.input-wrapper {
-  margin-bottom: 15px;
+
+.role-tag {
+  margin-left: 16rpx;
 }
-.confirm-btn {
-  background-color: #007aff;
-  color: #fff;
-  border: none;
-  padding: 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  width: 100%;
+
+.actions {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+}
+
+.action-btn {
+  padding: 12rpx 24rpx;
+  border-radius: 6rpx;
+  font-size: 24rpx;
+  transition: opacity 0.2s;
+}
+
+.action-btn:active {
+  opacity: 0.8;
+}
+
+.promote-btn {
+  color: #2979ff;
+  background-color: rgba(41, 121, 255, 0.1);
+}
+
+.remove-btn {
+  color: #ff5252;
+  background-color: rgba(255, 82, 82, 0.1);
+}
+
+.approve-btn {
+  color: #00c853;
+  background-color: rgba(0, 200, 83, 0.1);
+}
+
+.reject-btn {
+  color: #ff5252;
+  background-color: rgba(255, 82, 82, 0.1);
 }
 </style>

@@ -1,8 +1,8 @@
 <template>
   <view class="settings">
     <view class="header">
-      <view @click="goBack" class="back-icon">返回</view>
-      <text class="title">user_test</text>
+      <view @click="goBack" class="back-icon">{{$t('back')}}</view>
+      <text class="title">{{userData.username}}</text>
       <view class="header-actions">
         <button class="menu-icon"></button>
         <button class="camera-icon"></button>
@@ -11,51 +11,72 @@
 
     <view class="list">
       <view class="list-item" @click="navigateTo('Idinfo')">
-        <text>账号名称</text>
+        <text>{{$t('settings_profile')}}</text>
         <text class="numbers right-align">{{ userData.username }}</text>
         <text class="arrow">></text>
       </view>
       <view class="list-item" @click="navigateTo('Idinfo')">
-        <text>账号ID</text>
+        <text>{{$t('settings_id')}}</text>
         <text class="numbers right-align">{{ userData.accountId }}</text>
         <text class="arrow">></text>
       </view>
       <view class="list-item" @click="navigateTo('Idinfo')">
-        <text>手机号</text>
+        <text>{{$t('settings_phonenumber')}}</text>
         <text class="numbers right-align">{{ userData.phoneNumber }}</text>
         <text class="arrow">></text>
       </view>
 
       <view class="list-item" @click="navigateTo('newsSetting')">
-        <text>邮箱</text>
+        <text>{{$t('settings_email')}}</text>
         <text class="numbers right-align">{{ userData.email }}</text>
         <text class="arrow">></text>
       </view>
       <view class="divider"></view>
       <view class="list-item" @click="navigateTo('recoSetting')">
-        <text>账户密码</text>
-        <text class="numbers right-align">已设置</text>
+        <text>{{$t('settings_password')}}</text>
+        <text class="numbers right-align">{{$t('settings_done')}}</text>
         <text class="arrow">></text>
       </view>
       <view class="divider"></view>
       <view class="list-item centered" @click="navigateTo('Bend')">
-        <text>安全中心</text>
+        <text>{{$t('settings_security')}}</text>
       </view>
       <view class="list-item centered red-text" @click="navigateTo('DeleteId')">
-        <text>冻结账号</text>
+        <text>{{$t('settings_frozen')}}</text>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, nextTick, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
+import { onShow } from '@dcloudio/uni-app';
+const BASE_URL = 'http://122.51.231.155:8080';
+
+// 国际化
+const { t } = useI18n();
+
+// Pinia 用户存储
+const userStore = useUserStore();
+
+// 计算属性从 Pinia store 获取用户状态
+const isLoggedIn = computed(() => userStore.user.isLoggedIn);
+const nickname = computed(() => userStore.user.nickName);
+const uid = computed(() => userStore.user.accountId);
+const email = computed(() => userStore.user.email);
+const avatarSrc = computed(() =>
+    userStore.user.avatarUrl
+        ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
+        : '/static/images/index/background_img.jpg'
+);
 
 const userData = ref({
-  username: '',
-  accountId: '',
+  username: nickname.value,
+  accountId: uid.value,
   phoneNumber: '',
-  email: ''
+  email: email.value
 });
 
 function goBack() {
@@ -71,15 +92,6 @@ function navigateTo(link) {
 // Simulate fetching data from backend
 onMounted(() => {
   // Example of an API call to fetch user data
-  const query = uni.getStorageSync('userInfo');  // 获取存储的用户信息
-  if (query && query.nickName) {
-	  userData.value = {
-      username: query.nickName,
-      accountId: '00001',
-      phoneNumber: '(+86)12345678900',
-      email: '2901@mails.com'
-    };
-  }
 });
 </script>
 
