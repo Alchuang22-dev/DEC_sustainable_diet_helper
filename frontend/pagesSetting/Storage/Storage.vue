@@ -7,7 +7,7 @@
       <text style="font-weight: bold;">存储空间</text>
     </view>
     <view class="text_holder" :style="{ fontSize: fontSize + 'px' }">
-      <text>微信小程序不支持此功能</text>
+      <text>小程序不支持此功能</text>
     </view>
     <view class="button_holder">
       <button class="confirm-button" @click="deleteData">获取存储信息</button> 
