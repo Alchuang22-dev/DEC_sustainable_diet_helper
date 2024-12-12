@@ -37,6 +37,14 @@ func setupTestDB() (*gorm.DB, error) {
         return nil, fmt.Errorf("连接数据库失败: %v", err)
     }
 
+    // 在清空表之前，先自动创建表结构
+    if err := db.AutoMigrate(
+        &models.User{},
+        &models.Food{},
+    ); err != nil {
+        return nil, fmt.Errorf("自动迁移表结构失败: %v", err)
+    }
+
     // 先清空关联表，再清空主表
     if err := db.Exec("DELETE FROM food_recipes").Error; err != nil {
         return nil, fmt.Errorf("清空关联表失败: %v", err)
@@ -47,12 +55,27 @@ func setupTestDB() (*gorm.DB, error) {
         return nil, fmt.Errorf("清空食物表失败: %v", err)
     }
 
+    // 清空 users 表
+    if err := db.Exec("DELETE FROM users").Error; err != nil {
+        return nil, fmt.Errorf("清空用户表失败: %v", err)
+    }
+
     // 重置自增ID
     if err := db.Exec("ALTER TABLE foods AUTO_INCREMENT = 1").Error; err != nil {
         return nil, fmt.Errorf("重置自增ID失败: %v", err)
     }
 
-    // 插入测试数据
+    // 创建测试用户
+    testUser := &models.User{
+        ID:       1,
+        Nickname: "TestUser",
+        OpenID:   "test_open_id",
+    }
+    if err := db.Create(testUser).Error; err != nil {
+        return nil, fmt.Errorf("创建测试用户失败: %v", err)
+    }
+
+    // 插入测试食物数据
     testFoods := []models.Food{
         {
             ZhFoodName:    "苹果",
@@ -93,6 +116,13 @@ func setupTestRouter(db *gorm.DB) *gin.Engine {
     router := gin.New()
     router.Use(gin.Recovery())
 
+    // 添加测试用的认证中间件
+    router.Use(func(c *gin.Context) {
+        // 模拟认证中间件，设置测试用户ID
+        c.Set("user_id", uint(1))
+        c.Next()
+    })
+
     // 注册路由
     routes.RegisterFoodRoutes(router, db)
 
@@ -110,11 +140,13 @@ func TestFoodNamesAPI(t *testing.T) {
 
     tests := []struct {
         name           string
+        language      string
         expectedCode   int
         checkResponse  func(*testing.T, *httptest.ResponseRecorder)
     }{
         {
             name:          "获取名称列表成功",
+            language:     "zh",
             expectedCode:  200,
             checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
                 var response []models.FoodNameResponse
@@ -141,7 +173,7 @@ func TestFoodNamesAPI(t *testing.T) {
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             w := httptest.NewRecorder()
-            req, _ := http.NewRequest("GET", "/foods/names", nil)
+            req, _ := http.NewRequest("GET", "/foods/names?lang="+tt.language, nil)
             router.ServeHTTP(w, req)
 
             assert.Equal(t, tt.expectedCode, w.Code)
@@ -268,17 +300,4 @@ func TestCalculateFoodNutritionAndEmissionAPI(t *testing.T) {
             }
         })
     }
-}
-
-// 清理测试数据
-// func cleanupTestDB(db *gorm.DB) error {
-//     return db.Exec("DELETE FROM foods").Error
-// }
-
-func TestMain(m *testing.M) {
-    // 在所有测试开始前的设置
-    gin.SetMode(gin.TestMode)
-    
-    // 运行测试
-    m.Run()
 }

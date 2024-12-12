@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -86,6 +87,30 @@ func createTestFamilyMember(db *gorm.DB, nickname string, familyID uint) *models
     
     return user
 }
+func calculateTimeRange() (time.Time, time.Time) {
+    now := time.Now()
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+    startDate := today.AddDate(0, 0, -6)
+    endDate := today.AddDate(0, 0, 1)
+    return startDate, endDate
+}
+
+func TestCalculateTimeRange(t *testing.T) {
+    startDate, endDate := calculateTimeRange()
+    
+    // 获取今天的零点时间
+    now := time.Now()
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+    
+    // 验证开始时间是否是6天前的零点
+    expectedStartDate := today.AddDate(0, 0, -6)
+    assert.Equal(t, expectedStartDate, startDate)
+    
+    // 验证结束时间是否是明天的零点
+    expectedEndDate := today.AddDate(0, 0, 1)
+    assert.Equal(t, expectedEndDate, endDate)
+}
+
 // 测试设置营养目标
 func TestSetNutritionGoals(t *testing.T) {
 	db := setupNutritionCarbonTestDB(t)
@@ -181,41 +206,69 @@ func TestSetNutritionGoals(t *testing.T) {
 
 // 测试获取营养目标
 func TestGetNutritionGoals(t *testing.T) {
-	db := setupNutritionCarbonTestDB(t)
-	router, nc := setupNutritionCarbonTestRouter(db)
-	user := createNutritionCarbonTestUser(db)
+    db := setupNutritionCarbonTestDB(t)
+    router, nc := setupNutritionCarbonTestRouter(db)
+    user := createNutritionCarbonTestUser(db)
 
-	// 创建测试数据
-	goal := models.NutritionGoal{
-		UserID:        user.ID,
-		Date:          time.Now(),
-		Calories:      2000,
-		Protein:       60,
-		Fat:           70,
-		Carbohydrates: 250,
-		Sodium:        2000,
-	}
-	db.Create(&goal)
+    // 获取时间范围
+    startDate, endDate := calculateTimeRange()
+    
+    // 添加日期输出
+    t.Logf("测试时间范围: %v 到 %v", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 
-	router.GET("/nutrition/goals", func(c *gin.Context) {
-		c.Set("user_id", user.ID)
-		nc.GetNutritionGoals(c)
-	})
+    // 创建测试数据：在不同时间点设置目标
+    testGoals := []models.NutritionGoal{
+        {
+            UserID:        user.ID,
+            Date:          startDate,
+            Calories:      2000,
+            Protein:       60,
+            Fat:           70,
+            Carbohydrates: 250,
+            Sodium:        2000,
+        },
+        {
+            UserID:        user.ID,
+            Date:          endDate.AddDate(0, 0, -1), // 今天
+            Calories:      2200,
+            Protein:       65,
+            Fat:           75,
+            Carbohydrates: 275,
+            Sodium:        2100,
+        },
+    }
 
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/nutrition/goals", nil)
-	router.ServeHTTP(w, req)
+    for _, goal := range testGoals {
+        db.Create(&goal)
+    }
 
-	assert.Equal(t, http.StatusOK, w.Code)
+    router.GET("/nutrition/goals", func(c *gin.Context) {
+        c.Set("user_id", user.ID)
+        nc.GetNutritionGoals(c)
+    })
 
-	var response map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
+    w := httptest.NewRecorder()
+    req, _ := http.NewRequest(http.MethodGet, "/nutrition/goals", nil)
+    router.ServeHTTP(w, req)
 
-	data, ok := response["data"].([]interface{})
-	assert.True(t, ok)
-	assert.NotEmpty(t, data)
+    assert.Equal(t, http.StatusOK, w.Code)
+
+    var response map[string]interface{}
+    err := json.Unmarshal(w.Body.Bytes(), &response)
+    assert.NoError(t, err)
+
+    data, ok := response["data"].([]interface{})
+    assert.True(t, ok)
+    assert.Equal(t, 8, len(data)) // 确保返回8天的数据
+
+    // 验证第一天和最后一天的数据
+    firstDay := data[0].(map[string]interface{})
+    assert.Equal(t, float64(2000), firstDay["calories"])
+    
+    lastDay := data[6].(map[string]interface{}) // 今天
+    assert.Equal(t, float64(2200), lastDay["calories"])
 }
+
 
 // 测试设置碳排放目标
 func TestSetCarbonGoals(t *testing.T) {
@@ -299,70 +352,125 @@ func TestSetCarbonGoals(t *testing.T) {
 
 // 测试获取实际营养摄入
 func TestGetActualNutrition(t *testing.T) {
-	db := setupNutritionCarbonTestDB(t)
-	router, nc := setupNutritionCarbonTestRouter(db)
-	user := createNutritionCarbonTestUser(db)
+    db := setupNutritionCarbonTestDB(t)
+    router, nc := setupNutritionCarbonTestRouter(db)
+    user := createNutritionCarbonTestUser(db)
 
-	// 创建测试数据
-	intake := models.NutritionIntake{
-		UserID:        user.ID,
-		Date:          time.Now(),
-		MealType:      models.Breakfast,
-		Calories:      500,
-		Protein:       15,
-		Fat:           20,
-		Carbohydrates: 60,
-		Sodium:        500,
-	}
-	db.Create(&intake)
+    // 获取时间范围
+    startDate, endDate := calculateTimeRange()
+    endDate = endDate.AddDate(0, 0, -1) // 调整为今天
 
-	router.GET("/nutrition/intakes", func(c *gin.Context) {
-		c.Set("user_id", user.ID)
-		nc.GetActualNutrition(c)
-	})
+    // 创建测试数据：在不同时间点和不同餐次记录摄入
+    testIntakes := []models.NutritionIntake{
+        {
+            UserID:        user.ID,
+            Date:          startDate,
+            MealType:      models.Breakfast,
+            Calories:      500,
+            Protein:       15,
+            Fat:           20,
+            Carbohydrates: 60,
+            Sodium:        500,
+        },
+        {
+            UserID:        user.ID,
+            Date:          endDate,
+            MealType:      models.Dinner,
+            Calories:      800,
+            Protein:       25,
+            Fat:           30,
+            Carbohydrates: 90,
+            Sodium:        700,
+        },
+    }
 
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/nutrition/intakes", nil)
-	router.ServeHTTP(w, req)
+    for _, intake := range testIntakes {
+        db.Create(&intake)
+    }
 
-	assert.Equal(t, http.StatusOK, w.Code)
+    router.GET("/nutrition/intakes", func(c *gin.Context) {
+        c.Set("user_id", user.ID)
+        nc.GetActualNutrition(c)
+    })
 
-	var response []models.NutritionIntake
-	err := json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, response)
+    w := httptest.NewRecorder()
+    req, _ := http.NewRequest(http.MethodGet, "/nutrition/intakes", nil)
+    router.ServeHTTP(w, req)
+
+    assert.Equal(t, http.StatusOK, w.Code)
+
+    var response []models.NutritionIntake
+    err := json.Unmarshal(w.Body.Bytes(), &response)
+    assert.NoError(t, err)
+    assert.Equal(t, 28, len(response)) // 7天 x 4餐
+
+    // 验证第一天早餐的数据
+    firstDayBreakfast := response[0]
+    assert.Equal(t, float64(500), firstDayBreakfast.Calories)
+    assert.Equal(t, models.Breakfast, firstDayBreakfast.MealType)
+
+    // 验证最后一天晚餐的数据
+    lastDayDinner := response[26] // 第7天的晚餐索引：(7-1)*4 + 2 = 26
+    assert.Equal(t, float64(800), lastDayDinner.Calories)
+    assert.Equal(t, models.Dinner, lastDayDinner.MealType)
 }
 
 // 测试获取实际碳排放
-func TestGetCarbonIntakes(t *testing.T) {
-	db := setupNutritionCarbonTestDB(t)
-	router, nc := setupNutritionCarbonTestRouter(db)
-	user := createNutritionCarbonTestUser(db)
+func TestGetCarbonGoals(t *testing.T) {
+    db := setupNutritionCarbonTestDB(t)
+    router, nc := setupNutritionCarbonTestRouter(db)
+    user := createNutritionCarbonTestUser(db)
 
-	// 创建测试数据
-	intake := models.CarbonIntake{
-		UserID:   user.ID,
-		Date:     time.Now(),
-		MealType: models.Breakfast,
-		Emission: 2.5,
-	}
-	db.Create(&intake)
+    // 获取时间范围
+    startDate, endDate := calculateTimeRange()
+    
+    // 添加日期输出
+    t.Logf("测试时间范围: %v 到 %v", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 
-	router.GET("/carbon/intakes", func(c *gin.Context) {
-		c.Set("user_id", user.ID)
-		nc.GetCarbonIntakes(c)
-	})
+    // 创建测试数据
+    testGoals := []models.CarbonGoal{
+        {
+            UserID:   user.ID,
+            Date:     startDate,
+            Emission: 10.5,
+        },
+        {
+            UserID:   user.ID,
+            Date:     endDate.AddDate(0, 0, -1), // 今天
+            Emission: 12.5,
+        },
+    }
 
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/carbon/intakes", nil)
-	router.ServeHTTP(w, req)
+    for _, goal := range testGoals {
+        db.Create(&goal)
+    }
 
-	assert.Equal(t, http.StatusOK, w.Code)
+    router.GET("/carbon/goals", func(c *gin.Context) {
+        c.Set("user_id", user.ID)
+        nc.GetCarbonGoals(c)
+    })
 
-	var response []models.CarbonIntake
-	err := json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, response)
+    w := httptest.NewRecorder()
+    req, _ := http.NewRequest(http.MethodGet, "/carbon/goals", nil)
+    router.ServeHTTP(w, req)
+
+    assert.Equal(t, http.StatusOK, w.Code)
+
+    var response map[string]interface{}
+    err := json.Unmarshal(w.Body.Bytes(), &response)
+    assert.NoError(t, err)
+
+    data, ok := response["data"].([]interface{})
+	log.Printf("data: %v", data)
+    assert.True(t, ok)
+    assert.Equal(t, 8, len(data)) // 确保返回8天的数据
+
+    // 验证第一天和最后一天的数据
+    firstDay := data[0].(map[string]interface{})
+    assert.Equal(t, 10.5, firstDay["emission"])
+    
+    lastDay := data[6].(map[string]interface{}) // 今天
+    assert.Equal(t, 12.5, lastDay["emission"])
 }
 
 // 添加新的测试函数，专门测试更新功能
@@ -469,7 +577,6 @@ func TestUpdateCarbonGoal(t *testing.T) {
 	assert.NoError(t, result.Error)
 	assert.Equal(t, float64(12.5), updatedGoal.Emission)
 } 
-
 
 func TestSetSharedNutritionCarbonIntake(t *testing.T) {
     db := setupNutritionCarbonTestDB(t)
@@ -596,7 +703,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
             expectedError: "分摊比例之和必须等于1",
         },
         {
-            name: "无效的比例值-失败",
+            name: "比例值大于1-失败",
             requestBody: controllers.SharedNutritionCarbonIntakeRequest{
                 Date:          time.Now(),
                 MealType:      models.Dinner,
@@ -614,18 +721,18 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
             expectedError: "无效的请求数据",
         },
         {
-            name: "负数营养值-失败",
+            name: "负数比例值-失败",
             requestBody: controllers.SharedNutritionCarbonIntakeRequest{
                 Date:          time.Now(),
                 MealType:      models.Dinner,
-                Calories:      -1500,
+                Calories:      1500,
                 Protein:       45,
                 Fat:           60,
                 Carbohydrates: 180,
                 Sodium:        1500,
                 Emission:      7.5,
                 UserShares: []controllers.UserShare{
-                    {UserID: user1.ID, Ratio: 1.0},
+                    {UserID: user1.ID, Ratio: -0.5},
                 },
             },
             expectedStatus: http.StatusBadRequest,
@@ -635,6 +742,9 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
 
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
+            // 添加日期输出
+            t.Logf("测试日期: %v", tt.requestBody.Date.Format("2006-01-02"))
+            
             jsonBody, _ := json.Marshal(tt.requestBody)
             req, _ := http.NewRequest(http.MethodPost, "/shared/nutrition-carbon", bytes.NewBuffer(jsonBody))
             req.Header.Set("Content-Type", "application/json")
