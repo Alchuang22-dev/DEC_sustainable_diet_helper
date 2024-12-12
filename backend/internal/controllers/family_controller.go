@@ -3,11 +3,11 @@ package controllers
 
 import (
 	// "fmt"
+	"math/rand"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
-    "math/rand"
-    "sort"
 
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
@@ -27,7 +27,11 @@ func NewFamilyController(db *gorm.DB) *FamilyController {
 // TODO maybe不需要在函数内判断是否 exists
 func (fc *FamilyController) CreateFamily(c *gin.Context) {
     // 从 JWT 中解析用户 ID
-    userID, _ := c.Get("user_id")
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     // 检查用户是否已属于某个家庭
     var user models.User
@@ -110,11 +114,16 @@ func (fc *FamilyController) CreateFamily(c *gin.Context) {
 // 查看自己的家庭的信息, 如果自己不在家庭或在 waiting list 也要相应显示
 func (fc *FamilyController) FamilyDetails(c *gin.Context) {
     // 从 JWT 中解析用户 ID
-    userID, _ := c.Get("user_id")
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     // 查询用户信息并预加载家庭信息
     var user models.User
-    if err := fc.DB.Preload("Family.Admins").Preload("Family.Members").Preload("Family.WaitingList").Preload("PendingFamily").First(&user, userID).Error; err != nil {
+    if err := fc.DB.Preload("Family.Admins").Preload("Family.Members").Preload("Family.WaitingList").Preload("PendingFamily").
+    Preload("NutritionGoals").Preload("NutritionIntakes").Preload("CarbonGoals").Preload("CarbonIntakes").First(&user, userID).Error; err != nil {
         c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
         return
     }
@@ -128,9 +137,40 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
         })
         return
     } else if user.Family != nil { // 用户已在某个家庭中
+        today := time.Now().Truncate(24 * time.Hour)
+
         // 准备管理员和成员的信息
         admins := make([]gin.H, len(user.Family.Admins))
         for i, admin := range user.Family.Admins {
+            todayCarbonGoal := 0
+            todatNutritionIntake := 0
+            todayCarbonGoal := 0
+            todayCarbonIntake := 0
+
+            for carbonGoal := range admin.CarbonGoals {
+                if carbonGoal.Date == today {
+                    todayCarbonGoal = carbonGoal.Emission
+                    break
+                }
+            }
+            for carbonIntake := range admin.CarbonIntakes {
+                if carbonIntake.Date == today {
+                    todatNutritionIntake += carbonIntake.Emission
+                }
+            }
+            for nutritionGoal := range admin.NutritionGoals {
+                if nutritionGoal.Date == today {
+                    todayNutritionGoal = nutritionGoal.Emission
+                    break
+                }
+            }
+            for nutritionGoal := range admin.NutritionGoals {
+                if nutritionGoal.Date == today {
+                    todayNutritionGoal = nutritionGoal.Emission
+                    break
+                }
+            }
+
             admins[i] = gin.H{
                 "id":         admin.ID,
                 "nickname":   admin.Nickname,
@@ -178,7 +218,11 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
 
 // 查看搜索家庭结果
 func (fc *FamilyController) SearchFamily(c *gin.Context) {
-    c.Get("user_id")
+    _, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     // 获取 token 参数
     token := c.Query("family_id")
@@ -210,7 +254,11 @@ func (fc *FamilyController) SearchFamily(c *gin.Context) {
 // 发送加入家庭请求
 func (fc *FamilyController) JoinFamily(c *gin.Context) {
     // 从 JWT 中解析当前用户 ID
-    userID, _ := c.Get("user_id")
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     // 获取家庭 ID
     familyID, err := strconv.Atoi(c.Param("id"))
@@ -266,7 +314,11 @@ func (fc *FamilyController) JoinFamily(c *gin.Context) {
 // 批准加入家庭
 func (fc *FamilyController) AdmitJoinFamily(c *gin.Context) {
     // 从 JWT 中解析当前用户 ID
-    adminUserID, _ := c.Get("user_id")
+    adminUserID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     // 获取被批准用户的 ID
     var request struct {
@@ -371,7 +423,11 @@ func (fc *FamilyController) AdmitJoinFamily(c *gin.Context) {
 // 拒绝加入家庭
 func (fc *FamilyController) RejectJoinFamily(c *gin.Context) {
     // 从 JWT 中解析当前用户 ID
-    adminUserID, _ := c.Get("user_id")
+    adminUserID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     // 获取被拒绝用户的 ID
     var request struct {
@@ -449,7 +505,11 @@ func (fc *FamilyController) RejectJoinFamily(c *gin.Context) {
 // 取消申请
 func (fc *FamilyController) CancelJoinFamily(c *gin.Context) {
     // 从 JWT 中解析当前用户 ID
-    userID, _ := c.Get("user_id")
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     // 获取当前用户
     var user models.User
@@ -493,7 +553,11 @@ func (fc *FamilyController) CancelJoinFamily(c *gin.Context) {
 
 // 查看当前试图加入的家庭信息
 func (fc *FamilyController) PendingFamilyDetails(c *gin.Context) {
-    userID, _ := c.Get("user_id")
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     var user models.User
     if err := fc.DB.First(&user, userID).Error; err != nil {
@@ -521,7 +585,11 @@ func (fc *FamilyController) PendingFamilyDetails(c *gin.Context) {
 
 // 更改某个家庭成员为 member
 func (fc *FamilyController) SetMember(c *gin.Context) {
-    adminUserID, _ := c.Get("user_id")
+    adminUserID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     var request struct {
         UserID  uint `json:"user_id" binding:"required"`
@@ -619,7 +687,11 @@ func (fc *FamilyController) SetMember(c *gin.Context) {
 
 // 更改某个家庭成员为 admin
 func (fc *FamilyController) SetAdmin(c *gin.Context) {
-    adminUserID, _ := c.Get("user_id")
+    adminUserID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     var request struct {
         UserID  uint `json:"user_id" binding:"required"`
@@ -810,7 +882,11 @@ func (fc *FamilyController) LeaveFamily(c *gin.Context) {
 
 // 踢出家庭
 func (fc *FamilyController) DeleteFamilyMember(c *gin.Context) {
-    adminUserID, _ := c.Get("user_id")
+    adminUserID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     var request struct {
         UserID uint `json:"user_id" binding:"required"`
@@ -890,7 +966,11 @@ func (fc *FamilyController) DeleteFamilyMember(c *gin.Context) {
 // 解散家庭
 func (fc *FamilyController) BreakFamily(c *gin.Context) {
     // 从 JWT 中解析用户 ID
-    adminUserID, _ := c.Get("user_id")
+    adminUserID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     // 查询当前用户信息并预加载家庭信息
     var adminUser models.User
@@ -959,19 +1039,29 @@ func (fc *FamilyController) BreakFamily(c *gin.Context) {
     })
 }
 
-
 // AddDesiredDish 处理添加想吃的菜请求
 func (fc *FamilyController) AddDesiredDish(c *gin.Context) {
-    userID, _ := c.Get("user_id")
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+    // fmt.Println(userID)
 
     type AddDesiredDishRequest struct {
-        DishID        uint `json:"dish_id" binding:"required"`
-        LevelOfDesire uint `json:"level_of_desire" binding:"required,oneof=0 1 2"`
+        DishID        uint  `json:"dish_id" binding:"required"`
+        LevelOfDesire *uint `json:"level_of_desire" binding:"required,oneof=0 1 2"`
     }
 
     var request AddDesiredDishRequest
     if err := c.ShouldBindJSON(&request); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+        return
+    }
+
+    // 确保 LevelOfDesire 不为 nil
+    if request.LevelOfDesire == nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "LevelOfDesire is required"})
         return
     }
 
@@ -992,18 +1082,21 @@ func (fc *FamilyController) AddDesiredDish(c *gin.Context) {
         return
     }
 
-    // 检查菜品是否已被其他成员提出
+    // 检查菜品是否已被该用户提出
     var existingFamilyDish models.FamilyDish
-    if err := fc.DB.Where("family_id = ? AND dish_id = ?", family.ID, request.DishID).First(&existingFamilyDish).Error; err == nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Dish already desired by another member"})
+    if err := fc.DB.Where("family_id = ? AND dish_id = ? AND proposer_user_id = ?", family.ID, request.DishID, user.ID).First(&existingFamilyDish).Error; err == nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "You have already desired this dish"})
         return
     }
+    // fmt.Println("user.id")
+    // fmt.Println(user.ID)
 
+    // 允许同一个菜被多个成员提出，因此不需要检查其他成员的记录
     // 创建 FamilyDish 记录
     familyDish := models.FamilyDish{
         FamilyID:       family.ID,
         DishID:         request.DishID,
-        LevelOfDesire:  request.LevelOfDesire,
+        LevelOfDesire:  *request.LevelOfDesire, // 解引用指针
         ProposerUserID: user.ID,
     }
 
@@ -1017,7 +1110,11 @@ func (fc *FamilyController) AddDesiredDish(c *gin.Context) {
 
 // GetDesiredDishes handles the request to retrieve all desired dishes of a family, sorted by LevelOfDesire
 func (fc *FamilyController) GetDesiredDishes(c *gin.Context) {
-    userID, _ := c.Get("user_id")
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     var user models.User
     if err := fc.DB.First(&user, userID).Error; err != nil {
@@ -1104,4 +1201,8 @@ func (fc *FamilyController) DeleteDesiredDish(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, gin.H{"message": "Desired dish deleted successfully"})
+}
+
+// TODO 营养/碳排放 家庭接口
+func (fc *FamilyController) GetFamily(c *gin.Context) {
 }

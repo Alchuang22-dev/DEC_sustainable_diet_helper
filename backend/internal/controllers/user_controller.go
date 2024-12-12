@@ -251,7 +251,11 @@ func (uc *UserController) SetNickname(c *gin.Context) {
     log.Println("SetNickname 被调用")
 
     // 从上下文中获取用户 ID
-    userID, _ := c.Get("user_id")
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     // 解析请求体
     var request struct {
@@ -284,7 +288,11 @@ func (uc *UserController) SetAvatar(c *gin.Context) {
     log.Println("SetAvatar 被调用")
 
     // 获取用户 ID
-    id, _ := c.Get("user_id")
+    id, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
 
     // 检查用户是否存在
     var user models.User
