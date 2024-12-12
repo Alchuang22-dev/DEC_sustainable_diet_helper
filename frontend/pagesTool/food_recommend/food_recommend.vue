@@ -110,7 +110,8 @@ const fetchRecommendedDishes = async () => {
         liked: false,
       }))
     } else {
-      console.error('获取食材推荐失败:', response[1].data)
+      console.error('获取食材推荐失败:', response[1].data);
+	  regetRecipe();
     }
   } catch (error) {
     console.error('请求失败:', error)
