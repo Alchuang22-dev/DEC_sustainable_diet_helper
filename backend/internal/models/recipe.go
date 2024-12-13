@@ -97,3 +97,13 @@ func GetRecipeIDsByFoodID(db *gorm.DB, foodID uint) ([]uint, error) {
     
     return recipeIDs, nil
 }
+
+func GetIngredientIDsByRecipeID(db *gorm.DB, recipeID uint) ([]uint, error) {
+	var ingredientIDs []uint
+	err := db.Table("food_recipes").
+		Select("food_id").
+		Where("recipe_id = ?", recipeID).
+		Pluck("food_id", &ingredientIDs).
+		Error
+	return ingredientIDs, err
+}
