@@ -12,6 +12,7 @@ import (
     "slices"
     "math/rand"
     "log"
+    "path/filepath"
 )
 
 type RecommendController struct {
@@ -108,7 +109,9 @@ func union(a, b []string) []string {
 
 // 辅助函数：加载食物偏好
 func (ic *RecommendController) loadFoodPreferences(preferences []models.FoodPreference) (Pos_id []uint, Neg_id []uint, err error) {
-    data, err := os.ReadFile("../../data/food_preference/foodPreferences.json")
+    projectRoot := getProjectRoot()
+    filePath := filepath.Join(projectRoot, "data", "food_preference", "foodPreferences.json")
+    data, err := os.ReadFile(filePath)
     if err != nil {
         return nil, nil, err
     }
