@@ -1,15 +1,13 @@
-package tests
+package controllers
 
 import (
 	"bytes"
 	"encoding/json"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/controllers"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -41,10 +39,10 @@ func setupNutritionCarbonTestDB(t *testing.T) *gorm.DB {
 }
 
 // 设置测试路由
-func setupNutritionCarbonTestRouter(db *gorm.DB) (*gin.Engine, *controllers.NutritionCarbonController) {
+func setupNutritionCarbonTestRouter(db *gorm.DB) (*gin.Engine, *NutritionCarbonController) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	nc := &controllers.NutritionCarbonController{DB: db}
+	nc := &NutritionCarbonController{DB: db}
 	return router, nc
 }
 
@@ -87,18 +85,18 @@ func createTestFamilyMember(db *gorm.DB, nickname string, familyID uint) *models
     
     return user
 }
-func calculateTimeRange() (time.Time, time.Time) {
-    now := time.Now()
-    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-    startDate := today.AddDate(0, 0, -6)
-    endDate := today.AddDate(0, 0, 1)
-    return startDate, endDate
-}
+// func calculateTimeRange() (time.Time, time.Time) {
+//     now := time.Now()
+//     today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+//     startDate := today.AddDate(0, 0, -6)
+//     endDate := today.AddDate(0, 0, 1)
+//     return startDate, endDate
+// }
 
 func TestCalculateTimeRange(t *testing.T) {
     startDate, endDate := calculateTimeRange()
     
-    // 获取今天的零点时间
+    // 获��今天的零点时间
     now := time.Now()
     today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
     
@@ -124,13 +122,13 @@ func TestSetNutritionGoals(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		requestBody    []controllers.NutritionGoalRequest
+		requestBody    []NutritionGoalRequest
 		expectedStatus int
 		expectedBody   map[string]interface{}
 	}{
 		{
 			name: "有效的营养目标",
-			requestBody: []controllers.NutritionGoalRequest{
+			requestBody: []NutritionGoalRequest{
 				{
 					Date:          time.Now(),
 					Calories:      2000,
@@ -147,7 +145,7 @@ func TestSetNutritionGoals(t *testing.T) {
 		},
 		{
 			name: "无效的营养值",
-			requestBody: []controllers.NutritionGoalRequest{
+			requestBody: []NutritionGoalRequest{
 				{
 					Date:          time.Now(),
 					Calories:      -100,
@@ -164,7 +162,7 @@ func TestSetNutritionGoals(t *testing.T) {
 		},
 		{
 			name: "更新已存在的营养目标",
-			requestBody: []controllers.NutritionGoalRequest{
+			requestBody: []NutritionGoalRequest{
 				{
 					Date:          time.Now(),
 					Calories:      2500,
@@ -283,13 +281,13 @@ func TestSetCarbonGoals(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		requestBody    []controllers.CarbonGoalRequest
+		requestBody    []CarbonGoalRequest
 		expectedStatus int
 		expectedBody   map[string]interface{}
 	}{
 		{
 			name: "有效的碳排放目标",
-			requestBody: []controllers.CarbonGoalRequest{
+			requestBody: []CarbonGoalRequest{
 				{
 					Date:     time.Now(),
 					Emission: 10.5,
@@ -302,7 +300,7 @@ func TestSetCarbonGoals(t *testing.T) {
 		},
 		{
 			name: "无效的碳排放值",
-			requestBody: []controllers.CarbonGoalRequest{
+			requestBody: []CarbonGoalRequest{
 				{
 					Date:     time.Now(),
 					Emission: -1,
@@ -315,7 +313,7 @@ func TestSetCarbonGoals(t *testing.T) {
 		},
 		{
 			name: "更新已存在的碳排放目标",
-			requestBody: []controllers.CarbonGoalRequest{
+			requestBody: []CarbonGoalRequest{
 				{
 					Date:     time.Now(),
 					Emission: 12.5,
@@ -348,6 +346,63 @@ func TestSetCarbonGoals(t *testing.T) {
 			}
 		})
 	}
+}
+
+// 测试获取碳排放目标
+func TestGetCarbonGoals(t *testing.T) {
+    db := setupNutritionCarbonTestDB(t)
+    router, nc := setupNutritionCarbonTestRouter(db)
+    user := createNutritionCarbonTestUser(db)
+
+    // 获取时间范围
+    startDate, endDate := calculateTimeRange()
+    
+    // 添加日期输出
+    t.Logf("测试时间范围: %v 到 %v", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+
+    // 创建测试数据：在不同时间点设置目标
+    testGoals := []models.CarbonGoal{
+        {
+            UserID:        user.ID,
+            Date:          startDate,
+            Emission:      10.5,
+        },
+        {
+            UserID:        user.ID,
+            Date:          endDate.AddDate(0, 0, -1), // 今天
+            Emission:      12.5,
+        },
+    }
+
+    for _, goal := range testGoals {
+        db.Create(&goal)
+    }
+
+    router.GET("/carbon/goals", func(c *gin.Context) {
+        c.Set("user_id", user.ID)
+        nc.GetCarbonGoals(c)
+    })
+
+    w := httptest.NewRecorder()
+    req, _ := http.NewRequest(http.MethodGet, "/carbon/goals", nil)
+    router.ServeHTTP(w, req)
+
+    assert.Equal(t, http.StatusOK, w.Code)
+
+    var response map[string]interface{}
+    err := json.Unmarshal(w.Body.Bytes(), &response)
+    assert.NoError(t, err)
+
+    data, ok := response["data"].([]interface{})
+    assert.True(t, ok)
+    assert.Equal(t, 8, len(data)) // 确保返回8天的数据
+
+    // 验证第一天和最后一天的数据
+    firstDay := data[0].(map[string]interface{})
+    assert.Equal(t, float64(10.5), firstDay["emission"])
+    
+    lastDay := data[6].(map[string]interface{}) // 今天
+    assert.Equal(t, float64(12.5), lastDay["emission"])
 }
 
 // 测试获取实际营养摄入
@@ -409,69 +464,69 @@ func TestGetActualNutrition(t *testing.T) {
     assert.Equal(t, float64(500), firstDayBreakfast.Calories)
     assert.Equal(t, models.Breakfast, firstDayBreakfast.MealType)
 
-    // 验证最后一天晚餐的数据
+    // 验证最后一天��餐的数据
     lastDayDinner := response[26] // 第7天的晚餐索引：(7-1)*4 + 2 = 26
     assert.Equal(t, float64(800), lastDayDinner.Calories)
     assert.Equal(t, models.Dinner, lastDayDinner.MealType)
 }
 
 // 测试获取实际碳排放
-func TestGetCarbonGoals(t *testing.T) {
+func TestGetActualCarbon(t *testing.T) {
     db := setupNutritionCarbonTestDB(t)
     router, nc := setupNutritionCarbonTestRouter(db)
     user := createNutritionCarbonTestUser(db)
 
     // 获取时间范围
     startDate, endDate := calculateTimeRange()
-    
-    // 添加日期输出
-    t.Logf("测试时间范围: %v 到 %v", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+    endDate = endDate.AddDate(0, 0, -1) // 调整为今天
 
-    // 创建测试数据
-    testGoals := []models.CarbonGoal{
+    // 创建测试数据：在不同时间点记录碳排放
+    testEmissions := []models.CarbonIntake{
         {
-            UserID:   user.ID,
-            Date:     startDate,
-            Emission: 10.5,
+            UserID:        user.ID,
+            Date:          startDate,
+            MealType:      models.Breakfast,
+            Emission:      5.0,
         },
         {
-            UserID:   user.ID,
-            Date:     endDate.AddDate(0, 0, -1), // 今天
-            Emission: 12.5,
+            UserID:        user.ID,
+            Date:          endDate,
+            MealType:      models.Dinner,
+            Emission:      10.0,
         },
     }
 
-    for _, goal := range testGoals {
-        db.Create(&goal)
+    for _, emission := range testEmissions {
+        db.Create(&emission)
     }
 
-    router.GET("/carbon/goals", func(c *gin.Context) {
+    router.GET("/carbon/intakes", func(c *gin.Context) {
         c.Set("user_id", user.ID)
-        nc.GetCarbonGoals(c)
+        nc.GetCarbonIntakes(c)
     })
 
     w := httptest.NewRecorder()
-    req, _ := http.NewRequest(http.MethodGet, "/carbon/goals", nil)
+    req, _ := http.NewRequest(http.MethodGet, "/carbon/intakes", nil)
     router.ServeHTTP(w, req)
 
     assert.Equal(t, http.StatusOK, w.Code)
 
-    var response map[string]interface{}
+    var response []models.CarbonIntake
     err := json.Unmarshal(w.Body.Bytes(), &response)
     assert.NoError(t, err)
+    assert.Equal(t, 28, len(response)) // 7天 x 4餐
 
-    data, ok := response["data"].([]interface{})
-	log.Printf("data: %v", data)
-    assert.True(t, ok)
-    assert.Equal(t, 8, len(data)) // 确保返回8天的数据
+    // 验证第一天早餐的数据
+    firstDayBreakfast := response[0]
+    assert.Equal(t, float64(5.0), firstDayBreakfast.Emission)
+    assert.Equal(t, models.Breakfast, firstDayBreakfast.MealType)
 
-    // 验证第一天和最后一天的数据
-    firstDay := data[0].(map[string]interface{})
-    assert.Equal(t, 10.5, firstDay["emission"])
-    
-    lastDay := data[6].(map[string]interface{}) // 今天
-    assert.Equal(t, 12.5, lastDay["emission"])
+    // 验证最后一天晚餐的数据
+    lastDayDinner := response[26] // 第7天的晚餐索引：(7-1)*4 + 2 = 26
+    assert.Equal(t, float64(10.0), lastDayDinner.Emission)
+    assert.Equal(t, models.Dinner, lastDayDinner.MealType)
 }
+
 
 // 添加新的测试函数，专门测试更新功能
 func TestUpdateNutritionGoal(t *testing.T) {
@@ -499,7 +554,7 @@ func TestUpdateNutritionGoal(t *testing.T) {
 	})
 
 	// 准备更新请求
-	updateRequest := []controllers.NutritionGoalRequest{
+	updateRequest := []NutritionGoalRequest{
 		{
 			Date:          today,
 			Calories:      2500,
@@ -553,7 +608,7 @@ func TestUpdateCarbonGoal(t *testing.T) {
 	})
 
 	// 准备更新请求
-	updateRequest := []controllers.CarbonGoalRequest{
+	updateRequest := []CarbonGoalRequest{
 		{
 			Date:     today,
 			Emission: 12.5,
@@ -606,13 +661,13 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
 
     tests := []struct {
         name           string
-        requestBody    controllers.SharedNutritionCarbonIntakeRequest
+        requestBody    SharedNutritionCarbonIntakeRequest
         expectedStatus int
         expectedError  string
     }{
         {
             name: "单人分摊-成功",
-            requestBody: controllers.SharedNutritionCarbonIntakeRequest{
+            requestBody: SharedNutritionCarbonIntakeRequest{
                 Date:          time.Now(),
                 MealType:      models.Breakfast,
                 Calories:      1000,
@@ -621,7 +676,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
                 Carbohydrates: 120,
                 Sodium:        1000,
                 Emission:      5.0,
-                UserShares: []controllers.UserShare{
+                UserShares: []UserShare{
                     {UserID: user1.ID, Ratio: 1.0},
                 },
             },
@@ -629,7 +684,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
         },
         {
             name: "部分家庭成员分摊-成功",
-            requestBody: controllers.SharedNutritionCarbonIntakeRequest{
+            requestBody: SharedNutritionCarbonIntakeRequest{
                 Date:          time.Now(),
                 MealType:      models.Lunch,
                 Calories:      1000,
@@ -638,7 +693,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
                 Carbohydrates: 120,
                 Sodium:        1000,
                 Emission:      5.0,
-                UserShares: []controllers.UserShare{
+                UserShares: []UserShare{
                     {UserID: user1.ID, Ratio: 0.6},
                     {UserID: user2.ID, Ratio: 0.4},
                 },
@@ -647,7 +702,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
         },
         {
             name: "全部家庭成员分摊-成功",
-            requestBody: controllers.SharedNutritionCarbonIntakeRequest{
+            requestBody: SharedNutritionCarbonIntakeRequest{
                 Date:          time.Now(),
                 MealType:      models.Dinner,
                 Calories:      1500,
@@ -656,7 +711,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
                 Carbohydrates: 180,
                 Sodium:        1500,
                 Emission:      7.5,
-                UserShares: []controllers.UserShare{
+                UserShares: []UserShare{
                     {UserID: user1.ID, Ratio: 0.4},
                     {UserID: user2.ID, Ratio: 0.3},
                     {UserID: user3.ID, Ratio: 0.3},
@@ -666,7 +721,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
         },
         {
             name: "包含其他家庭成员-失败",
-            requestBody: controllers.SharedNutritionCarbonIntakeRequest{
+            requestBody: SharedNutritionCarbonIntakeRequest{
                 Date:          time.Now(),
                 MealType:      models.Dinner,
                 Calories:      1500,
@@ -675,7 +730,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
                 Carbohydrates: 180,
                 Sodium:        1500,
                 Emission:      7.5,
-                UserShares: []controllers.UserShare{
+                UserShares: []UserShare{
                     {UserID: user1.ID, Ratio: 0.5},
                     {UserID: user4.ID, Ratio: 0.5},
                 },
@@ -685,7 +740,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
         },
         {
             name: "比例总和不等于1-失败",
-            requestBody: controllers.SharedNutritionCarbonIntakeRequest{
+            requestBody: SharedNutritionCarbonIntakeRequest{
                 Date:          time.Now(),
                 MealType:      models.Dinner,
                 Calories:      1500,
@@ -694,7 +749,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
                 Carbohydrates: 180,
                 Sodium:        1500,
                 Emission:      7.5,
-                UserShares: []controllers.UserShare{
+                UserShares: []UserShare{
                     {UserID: user1.ID, Ratio: 0.3},
                     {UserID: user2.ID, Ratio: 0.3},
                 },
@@ -704,7 +759,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
         },
         {
             name: "比例值大于1-失败",
-            requestBody: controllers.SharedNutritionCarbonIntakeRequest{
+            requestBody: SharedNutritionCarbonIntakeRequest{
                 Date:          time.Now(),
                 MealType:      models.Dinner,
                 Calories:      1500,
@@ -713,7 +768,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
                 Carbohydrates: 180,
                 Sodium:        1500,
                 Emission:      7.5,
-                UserShares: []controllers.UserShare{
+                UserShares: []UserShare{
                     {UserID: user1.ID, Ratio: 1.2},
                 },
             },
@@ -722,7 +777,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
         },
         {
             name: "负数比例值-失败",
-            requestBody: controllers.SharedNutritionCarbonIntakeRequest{
+            requestBody: SharedNutritionCarbonIntakeRequest{
                 Date:          time.Now(),
                 MealType:      models.Dinner,
                 Calories:      1500,
@@ -731,7 +786,7 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
                 Carbohydrates: 180,
                 Sodium:        1500,
                 Emission:      7.5,
-                UserShares: []controllers.UserShare{
+                UserShares: []UserShare{
                     {UserID: user1.ID, Ratio: -0.5},
                 },
             },
@@ -784,3 +839,131 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
         })
     }
 }
+
+func TestNutritionCarbonUnauthorizedAccess(t *testing.T) {
+    db := setupNutritionCarbonTestDB(t)
+    router, nc := setupNutritionCarbonTestRouter(db)
+
+    // 测试所有需要授权的端点
+    tests := []struct {
+        name       string
+        method     string
+        path       string
+        body       map[string]interface{}
+    }{
+        {
+            name:   "未授权设置营养目标",
+            method: http.MethodPost,
+            path:   "/nutrition/goals",
+            body: map[string]interface{}{
+                "date":          time.Now(),
+                "calories":      2000,
+                "protein":       60,
+                "fat":          70,
+                "carbohydrates": 250,
+                "sodium":        2000,
+            },
+        },
+        {
+            name:   "未授权获取营养目标",
+            method: http.MethodGet,
+            path:   "/nutrition/goals",
+            body:   nil,
+        },
+        {
+            name:   "未授权获取实际营养摄入",
+            method: http.MethodGet,
+            path:   "/nutrition/intakes",
+            body:   nil,
+        },
+        {
+            name:   "未授权设置碳排放目标",
+            method: http.MethodPost,
+            path:   "/carbon/goals",
+            body: map[string]interface{}{
+                "date":     time.Now(),
+                "emission": 10.5,
+            },
+        },
+        {
+            name:   "未授权获取碳排放目标",
+            method: http.MethodGet,
+            path:   "/carbon/goals",
+            body:   nil,
+        },
+        {
+            name:   "未授权获取实际碳排放",
+            method: http.MethodGet,
+            path:   "/carbon/intakes",
+            body:   nil,
+        },
+        {
+            name:   "未授权设置共享营养碳排放",
+            method: http.MethodPost,
+            path:   "/shared/nutrition-carbon",
+            body: map[string]interface{}{
+                "date":          time.Now(),
+                "meal_type":     "breakfast",
+                "calories":      1000,
+                "protein":       30,
+                "fat":          40,
+                "carbohydrates": 120,
+                "sodium":        1000,
+                "emission":      5.0,
+                "user_shares": []map[string]interface{}{
+                    {"user_id": 1, "ratio": 1.0},
+                },
+            },
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // 设置路由处理函数
+            switch tt.path {
+            case "/nutrition/goals":
+                switch tt.method {
+                case http.MethodPost:
+                    router.POST(tt.path, nc.SetNutritionGoals)
+                case http.MethodGet:
+                    router.GET(tt.path, nc.GetNutritionGoals)
+                }
+            case "/nutrition/intakes":
+                router.GET(tt.path, nc.GetActualNutrition)
+            case "/carbon/goals":
+                switch tt.method {
+                case http.MethodPost:
+                    router.POST(tt.path, nc.SetCarbonGoals)
+                case http.MethodGet:
+                    router.GET(tt.path, nc.GetCarbonGoals)
+                }
+            case "/carbon/intakes":
+                router.GET(tt.path, nc.GetCarbonIntakes)
+            case "/shared/nutrition-carbon":
+                router.POST(tt.path, nc.SetSharedNutritionCarbonIntake)
+            }
+
+            // 创建请求
+            var req *http.Request
+            if tt.body != nil {
+                jsonBody, _ := json.Marshal(tt.body)
+                req, _ = http.NewRequest(tt.method, tt.path, bytes.NewBuffer(jsonBody))
+                req.Header.Set("Content-Type", "application/json")
+            } else {
+                req, _ = http.NewRequest(tt.method, tt.path, nil)
+            }
+
+            // 发送请求并记录响应
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            // 验证响应
+            assert.Equal(t, http.StatusUnauthorized, w.Code)
+            
+            var response map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &response)
+            assert.NoError(t, err)
+            assert.Equal(t, "Unauthorized", response["error"])
+        })
+    }
+}	

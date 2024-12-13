@@ -1,4 +1,4 @@
-package tests
+package controllers
 
 import (
 	"net/http"
@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/controllers"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/sqlite"
@@ -46,10 +45,10 @@ func setupRecommendTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func setupRecommendTestRouter(db *gorm.DB) (*gin.Engine, *controllers.RecommendController) {
+func setupRecommendTestRouter(db *gorm.DB) (*gin.Engine, *RecommendController) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	rc := &controllers.RecommendController{DB: db}
+	rc := &RecommendController{DB: db}
 
 	return router, rc
 }
@@ -192,3 +191,7 @@ func TestSetUserSelectedFoods(t *testing.T) {
         }
     })
 }
+
+
+
+

@@ -1,5 +1,4 @@
-// tests/food_api_test.go
-package tests
+package controllers
 
 import (
     "encoding/json"
@@ -15,7 +14,6 @@ import (
     "gorm.io/gorm"
 
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
-    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/routes"
 )
 
 // 测试数据库配置
@@ -87,6 +85,7 @@ func setupTestDB() (*gorm.DB, error) {
             Carbohydrates: 14,
             Sodium:       1,
             Price:        2.5,
+            ImageUrl:     "https://example.com/apple.jpg",
         },
         {
             ZhFoodName:    "香蕉",
@@ -98,6 +97,7 @@ func setupTestDB() (*gorm.DB, error) {
             Carbohydrates: 23,
             Sodium:       1,
             Price:        3.0,
+            ImageUrl:     "https://example.com/banana.jpg",
         },
     }
 
@@ -116,15 +116,25 @@ func setupTestRouter(db *gorm.DB) *gin.Engine {
     router := gin.New()
     router.Use(gin.Recovery())
 
-    // 添加测试用的认证中间件
-    router.Use(func(c *gin.Context) {
-        // 模拟认证中间件，设置测试用户ID
-        c.Set("user_id", uint(1))
-        c.Next()
-    })
+    foodController := NewFoodController(db)
 
     // 注册路由
-    routes.RegisterFoodRoutes(router, db)
+    foodGroup := router.Group("/foods")
+    {
+        // 需要认证的路由
+        authGroup := foodGroup.Group("")
+        // 使用测试用的认证中间件
+        authGroup.Use(func(c *gin.Context) {
+            // 模拟认证中间件，直接设置用户ID
+            c.Set("user_id", uint(1))
+            c.Next()
+        })
+        {   
+            authGroup.GET("/names", foodController.GetFoodNames)
+            authGroup.POST("/calculate", foodController.CalculateNutritionAndEmission)
+        }
+    }
+    
 
     return router
 }
@@ -149,7 +159,7 @@ func TestFoodNamesAPI(t *testing.T) {
             language:     "zh",
             expectedCode:  200,
             checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-                var response []models.FoodNameResponse
+                var response []models.FoodInfoResponse
                 err := json.Unmarshal(w.Body.Bytes(), &response)
                 assert.Nil(t, err)
                 
@@ -160,12 +170,47 @@ func TestFoodNamesAPI(t *testing.T) {
                 firstFood := response[0]
                 assert.NotZero(t, firstFood.ID)
                 assert.NotEmpty(t, firstFood.Name)
+                assert.NotEmpty(t, firstFood.ImageUrl)
                 
                 // 验证所有条目都有完整的数据
                 for _, food := range response {
                     assert.NotZero(t, food.ID)
                     assert.NotEmpty(t, food.Name)
+                    assert.NotEmpty(t, food.ImageUrl)
                 }
+            },
+        },
+        {
+            name:          "获取英文名称列表成功",
+            language:     "en",
+            expectedCode:  200,
+            checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
+                var response []models.FoodInfoResponse
+                err := json.Unmarshal(w.Body.Bytes(), &response)
+                assert.Nil(t, err)
+                
+                // 验证返回列表不为空
+                assert.NotEmpty(t, response)
+                
+                // 验证第一个食物的数据完整性
+                firstFood := response[0]
+                assert.NotZero(t, firstFood.ID)
+                assert.NotEmpty(t, firstFood.Name)
+                assert.NotEmpty(t, firstFood.ImageUrl)
+                
+                // 验证返回的是英文名称
+                assert.Contains(t, []string{"Apple", "Banana"}, firstFood.Name)
+            },
+        },
+        {
+            name:          "无效的语言参数",
+            language:     "fr", // 使用不支持的语言
+            expectedCode:  400,
+            checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
+                var response map[string]string
+                err := json.Unmarshal(w.Body.Bytes(), &response)
+                assert.Nil(t, err)
+                assert.Contains(t, response["error"], "Invalid language parameter")
             },
         },
     }
@@ -174,6 +219,12 @@ func TestFoodNamesAPI(t *testing.T) {
         t.Run(tt.name, func(t *testing.T) {
             w := httptest.NewRecorder()
             req, _ := http.NewRequest("GET", "/foods/names?lang="+tt.language, nil)
+            // 添加模拟的认证信息
+            req.Header.Set("Authorization", "Bearer test_token")
+            // 添加用户信息到上下文
+            ctx := &gin.Context{Request: req}
+            ctx.Set("user_id", uint(1))  // 使用测试用户ID
+            
             router.ServeHTTP(w, req)
 
             assert.Equal(t, tt.expectedCode, w.Code)
@@ -221,7 +272,7 @@ func TestCalculateFoodNutritionAndEmissionAPI(t *testing.T) {
                 assert.Nil(t, err)
                 assert.Len(t, response, 2)
 
-                // 验证返回的数据结构完整性
+                // 验证返���的数据结构完整性
                 firstResult := response[0]
                 assert.NotZero(t, firstResult.ID)
                 assert.NotZero(t, firstResult.Emission)
