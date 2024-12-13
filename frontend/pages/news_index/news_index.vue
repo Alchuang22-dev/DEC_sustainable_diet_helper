@@ -3,30 +3,8 @@
     <!-- Header Section -->
     <image src="/static/images/index/background_img.jpg" class="background-image"></image>
     <view class="header">
-      <button
-        @click="setSection('全部')"
-        :class="{ active: selectedSection === '全部' }"
-      >
-        全部
-      </button>
-      <button
-        @click="setSection('环保科普')"
-        :class="{ active: selectedSection === '环保科普' }"
-      >
-        环保科普
-      </button>
-      <button
-        @click="setSection('环保要闻')"
-        :class="{ active: selectedSection === '环保要闻' }"
-      >
-        环保要闻
-      </button>
-      <button
-        @click="setSection('环保专栏')"
-        :class="{ active: selectedSection === '环保专栏' }"
-      >
-        环保专栏
-      </button>
+	  <input class="search-box" v-model="searchText" @input="onSearchInput" :placeholder="placeholderText" />
+	  <button @click="onSearch" class = "search-button"> {{$t('text_search')}} </button>
 	  <button
 		v-if = "isLoggedIn"
 	    @click="createNews()"
@@ -68,16 +46,20 @@ import { useNewsStore } from '@/stores/news_list';
 import { useI18n } from 'vue-i18n';
 import { onShow, onPullDownRefresh } from '@dcloudio/uni-app';
 import { storeToRefs } from 'pinia';
-import { useUserStore } from '@/stores/user'; // 引入用户存储
+import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
 
 const newsStore = useNewsStore();
 const userStore = useUserStore(); // 使用用户存储
 
 const activeIndex = ref(null);
-const { uid, getUserID } = storeToRefs(userStore); // 从存储中解构
-const token = computed(() => userStore.user.token);
-const avatarSrc = ref('');
-const isLoggedIn = ref(false);
+// 计算属性从 Pinia store 获取用户状态
+const isLoggedIn = computed(() => userStore.user.isLoggedIn);
+const uid = computed(() => userStore.user.nickName);
+const avatarSrc = computed(() =>
+    userStore.user.avatarUrl
+        ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
+        : '/static/images/index/background_img.jpg'
+);
 
 // 从 Store 获取数据和方法
 const { filteredNewsItems, selectedSection, isRefreshing } = storeToRefs(newsStore);
@@ -110,9 +92,11 @@ function releaseFeedback() {
 }
 
 // 页面更新方法
-function refreshPage() {
-  refreshNews();
-}
+//function refreshPage() {
+//  console.log('正在刷新页面...');
+//  fetchNews();
+//  refreshNews();
+//}
 
 //跳转至新建图文页面
 function createNews(){
@@ -123,6 +107,7 @@ function createNews(){
 
 // 异步函数处理下拉刷新
 const handlePullDownRefresh = async () => {
+  console.log('正在处理下拉刷新...');
   try {
     await newsStore.refreshNews();  // 等待 refreshNews 完成
     uni.stopPullDownRefresh();      // 完成后停止下拉刷新动画
@@ -131,15 +116,6 @@ const handlePullDownRefresh = async () => {
     uni.stopPullDownRefresh();      // 即使出错也停止刷新
   }
 };
-
-function checkLoginStatus() {
-  console.log("in check");
-  const query = token.value;  // 获取存储的用户信息
-  console.log(query);
-  if(query.value != ''){
-	  isLoggedIn.value = true;
-  }
- };
 
 // 使用 uni.onPullDownRefresh() 将处理函数绑定到下拉刷新事件
 onPullDownRefresh(handlePullDownRefresh);
@@ -167,8 +143,7 @@ onShow(() => {
       text: t('my_index')
     })
   console.log("in onShow");
-  // 在页面显示时调用检查登录状态
-  checkLoginStatus();
+  fetchNews();
 });
 </script>
 
@@ -216,7 +191,26 @@ body {
 /* 防止按钮换行，确保每个按钮都保持在一行 */
 .header button {
   border: none;
-  background-color: transparent;
+  margin-left: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.3s;
+  white-space: nowrap; /* 防止按钮文本换行 */
+  padding: 5px 15px;
+  flex-shrink: 0; /* 防止按钮被压缩 */
+}
+
+.search-box {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.search-button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
   font-size: 16px;
   cursor: pointer;
   transition: color 0.3s;
