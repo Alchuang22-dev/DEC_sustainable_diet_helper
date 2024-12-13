@@ -64,14 +64,14 @@
         <image src="@/pages/static/food.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_food_preferences')}}</text>
       </view>
-      <view
-          v-if="isLoggedIn"
-          class="menu-item"
-          @click="navigateTo('myFamily')"
-      >
-        <image src="@/pages/static/family.svg" class="icon_svg"></image>
-        <text class="menu-text">{{$t('menu_my_family')}}</text>
-      </view>
+<!--      <view-->
+<!--          v-if="isLoggedIn"-->
+<!--          class="menu-item"-->
+<!--          @click="navigateTo('myFamily')"-->
+<!--      >-->
+<!--        <image src="@/pages/static/family.svg" class="icon_svg"></image>-->
+<!--        <text class="menu-text">{{$t('menu_my_family')}}</text>-->
+<!--      </view>-->
       <view
           v-if="isLoggedIn"
           class="menu-item"
@@ -87,14 +87,6 @@
       >
         <image src="@/pages/static/mywork.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_creations')}}</text>
-      </view>
-      <view
-          v-if="isLoggedIn"
-          class="menu-item"
-          @click="navigateTo('historyData')"
-      >
-        <image src="@/pages/static/historicaldata.svg" class="icon_svg"></image>
-        <text class="menu-text">{{$t('menu_history_data')}}</text>
       </view>
       <view class="menu-item" @click="navigateTo('appSettings')">
         <image src="@/pages/static/setting.svg" class="icon_svg"></image>

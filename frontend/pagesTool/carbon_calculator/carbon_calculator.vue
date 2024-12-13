@@ -31,14 +31,12 @@
               <text class="info-item">{{ $t('price') }}: {{ food.price || '5元' }}</text>
               <text class="info-item">{{ $t(`transport_${food.transportMethod}`) }}</text>
               <text class="info-item">{{ $t(`source_${food.foodSource}`) }}</text>
-<!--              <view class="action-buttons">-->
                 <button class="edit-btn" @click.stop="handleEdit(index)">
                   <uni-icons type="compose" size="18"></uni-icons>
                 </button>
                 <button class="delete-btn" @click.stop="handleDelete(index)">
                   <uni-icons type="trash" size="18"></uni-icons>
                 </button>
-<!--              </view>-->
             </view>
           </view>
         </uni-collapse-item>
@@ -76,24 +74,25 @@
         :opts="barOpts"
         :chartData="chartNutritionData"
       />
-      <button class="save-button" @click="saveEmissionData">{{ $t('save') }}</button>
+      <button class="save-button" @click="handleSaveOptions">{{ $t('save') }}</button>
     </view>
 
   </view>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, reactive } from 'vue';
 import { useI18n } from 'vue-i18n'; // Import useI18n
 import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
+import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data'; // 引入营养碳排放store
 
 // 使用国际化
 const { t, locale } = useI18n();
 
 // 使用 Pinia Store
 const foodStore = useFoodListStore();
+const carbonNutritionStore = useCarbonAndNutritionStore();
 
-// 解构需要使用的状态和方法
 const {
   foodList,
   deleteFood,
@@ -103,20 +102,15 @@ const {
   fetchAvailableFoods,
   availableFoods,
   getFoodName,
-  calculateNutritionAndEmission // 导入新的计算函数
+  calculateNutritionAndEmission
 } = foodStore;
 
-// 定义辅助函数，将数字四舍五入到一位小数
+// 将数字四舍五入到一位小数
 const roundToOneDecimal = (num) => Number(num.toFixed(1));
-
-// 碳排放数据，仅包含CO2
-const emission = ref({
-  CO2: 0,
-});
 
 const showResult = ref(false);
 
-// 碳排放环形图数据和配置
+// 碳排放环形图数据
 const chartEmissionData = ref({
   series: [{
     name: t('co2_emission'),
@@ -124,7 +118,7 @@ const chartEmissionData = ref({
   }]
 });
 
-// 营养计算条形图数据和配置
+// 营养条形图数据
 const chartNutritionData = ref({
   categories: [t('energy_unit'), t('protein_unit'), t('fat_unit'), t('carbohydrates_unit'), t('sodium_unit')],
   series: [{
@@ -155,7 +149,7 @@ const ringOpts = ref({
     color: "#666666"
   },
   subtitle: {
-    name: "", // 中心显示总排放量
+    name: "",
     fontSize: 25,
     color: "#4CAF50"
   },
@@ -184,7 +178,7 @@ const barOpts = ref({
     disableGrid: false,
     min: 0,
     axisLine: false,
-    max: 4000 // Adjusted max value for better visualization
+    max: 4000
   },
   yAxis: {},
   extra: {
@@ -207,12 +201,9 @@ const barOpts = ref({
 const displayFoodList = computed(() => {
   return foodList.map(food => {
     const availableFood = availableFoods.find(f => f.id === food.id);
-    console.log(availableFood);
     const displayName = availableFood
       ? (locale.value === 'zh-Hans' ? availableFood.name_zh : availableFood.name_en)
       : food.name || t('default_food_name');
-    console.log(displayName);
-    console.log(locale.value);
     return {
       ...food,
       displayName
@@ -269,7 +260,6 @@ const navigateToAddFood = () => {
 // 计算碳排放和营养数据
 const calculateData = async () => {
   try {
-    // 调用 Pinia Store 中的计算函数
     await calculateNutritionAndEmission();
 
     // 计算总碳排放量
@@ -278,7 +268,7 @@ const calculateData = async () => {
       totalCO2 += item.emission;
       return {
         name: getFoodName(item.id) || t('default_food_name'),
-        value: roundToOneDecimal(item.emission) // 四舍五入到一位小数
+        value: roundToOneDecimal(item.emission)
       };
     });
     chartEmissionData.value.series[0].data = emissionData;
@@ -311,51 +301,21 @@ const calculateData = async () => {
       roundToOneDecimal(totalNutrition.sodium)
     ];
 
-    // TODO: 从后端获取用户目标值，现在省去
+    // 使用今天的目标值，而不是假数据
+    const today = new Date();
+    const dateString = today.toISOString().split('T')[0];
+    const dateData = carbonNutritionStore.getDataByDate(dateString);
+
+    // dateData中包含今日的target值
     chartNutritionData.value.series[1].data = [
-      roundToOneDecimal(totalNutrition.calories + 100),
-      roundToOneDecimal(totalNutrition.protein + 100),
-      roundToOneDecimal(totalNutrition.fat + 100),
-      roundToOneDecimal(totalNutrition.carbohydrates + 100),
-      roundToOneDecimal(totalNutrition.sodium + 100)
+      roundToOneDecimal(dateData.nutrients.target.calories),
+      roundToOneDecimal(dateData.nutrients.target.protein),
+      roundToOneDecimal(dateData.nutrients.target.fat),
+      roundToOneDecimal(dateData.nutrients.target.carbohydrates),
+      roundToOneDecimal(dateData.nutrients.target.sodium)
     ];
 
-    // 显示结果
     showResult.value = true;
-
-    // 初始化并绘制环形图
-    uni.createSelectorQuery().select('#carbonEmissionChart').fields({
-      node: true,
-      size: true
-    }, (res) => {
-      const canvas = res.node;
-      const ctx = canvas.getContext('2d');
-      const chart = new qCharts({
-        canvas: ctx,
-        type: 'ring',
-        data: chartEmissionData.value,
-        options: ringOpts.value
-      });
-      chart.draw();
-    }).exec();
-
-    // 初始化并绘制条形图
-    uni.createSelectorQuery().select('#nutritionChart').fields({
-      node: true,
-      size: true
-    }, (res) => {
-      const canvas = res.node;
-      const ctx = canvas.getContext('2d');
-      const chart = new qCharts({
-        canvas: ctx,
-        type: 'bar',
-        data: chartNutritionData.value,
-        options: barOpts.value
-      });
-      chart.draw();
-    }).exec();
-
-    // 显示成功提示
     uni.showToast({
       title: t('calculation_success'),
       icon: 'success',
@@ -371,76 +331,23 @@ const calculateData = async () => {
   }
 };
 
-// 保存碳排放数据到后端
-const saveEmissionData = () => {
-  uni.request({
-    url: 'http://122.51.231.155:8080/foods/saveEmissionData', // 修改为实际的后端保存接口URL
-    method: 'POST',
-    data: {
-      foodList: foodList.map(food => ({
-        id: Number(food.id),
-        name: food.name, // 始终为英文名称
-        weight: parseFloat(food.weight),
-        price: parseFloat(food.price),
-        transportMethod: food.transportMethod,
-        foodSource: food.foodSource,
-        image: food.image,
-        co2_emission: roundToOneDecimal(food.emission), // 保留一位小数
-        calories: roundToOneDecimal(food.calories),
-        protein: roundToOneDecimal(food.protein),
-        fat: roundToOneDecimal(food.fat),
-        carbs: roundToOneDecimal(food.carbohydrates),
-        sodium: roundToOneDecimal(food.sodium)
-      }))
-    },
-    header: {
-      'Content-Type': 'application/json'
-    },
-    success: (res) => {
-      if (res.statusCode === 200) {
-        uni.showToast({
-          title: t('save_success'),
-          icon: 'success',
-          duration: 2000,
-        });
-      } else {
-        console.error('保存失败:', res.data.error);
-        uni.showToast({
-          title: t('save_failed'),
-          icon: 'none',
-          duration: 2000,
-        });
-      }
-    },
-    fail: (err) => {
-      console.error('保存失败', err);
-      uni.showToast({
-        title: t('save_failed'),
-        icon: 'none',
-        duration: 2000,
-      });
-    }
+// 点击保存按钮后，不直接保存到后端，而是进入选择界面
+const handleSaveOptions = () => {
+  const calculatedData = {
+    carbonEmission: chartEmissionData.value,
+    nutrition: chartNutritionData.value
+  };
+
+  // 使用 JSON 字符串传递数据
+  uni.navigateTo({
+    url: `/pagesTool/save_options/save_options?data=${encodeURIComponent(JSON.stringify(calculatedData))}`
   });
 };
 
-// 动画卡片
-const animateCard = (index) => {
-  const food = foodList[index];
-  if (!food) return;
-
-  food.isAnimating = true;
-
-  setTimeout(() => {
-    food.isAnimating = false;
-  }, 300);
-};
-
-// 页面加载时执行
 onMounted(() => {
   if (!foodStore.loaded) {
     loadFoodList();
   }
-  // 调用获取食物列表的函数
   fetchAvailableFoods();
   handleLoad();
 });

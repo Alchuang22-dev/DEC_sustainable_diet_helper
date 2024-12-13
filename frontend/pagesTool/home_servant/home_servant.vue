@@ -129,7 +129,8 @@
             <text class="member-name">{{ `${member.nickname} (${member.role === 'admin' ? $t('admin') : $t('member')})` }}</text>
           </view>
         </view>
-        <button class="manage-members-button" @click="manageMembers">{{ t('manage_members') }}</button>
+        <!-- 仅管理员可见的“管理成员”按钮 -->
+        <button v-if="isCurrentUserAdmin" class="manage-members-button" @click="manageMembers">{{ t('manage_members') }}</button>
       </view>
 
       <!-- 底部操作按钮部分 -->
@@ -485,7 +486,7 @@ const deleteDish = async (dishId) => {
 
 // 判断是否可以删除菜品（提议者或管理员）
 const canDeleteDish = (dish) => {
-  return dish.proposer === userStore.user.nickName || isCurrentUserAdmin.value;
+  return dish.proposer === userStore.user.nickName;
 };
 
 // 页面显示时
