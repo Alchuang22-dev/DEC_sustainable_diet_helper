@@ -433,5 +433,13 @@
 	"flour": "flour",
 	"honey": "honey",
 	"mango": "mango",
-	"rice": "rice"
+
+	"shared_calculation_for_family": "Shared Calculation for Family",
+	"total_ratio": "Total Ratio",
+	"confirm_submission": "Confirm Submission",
+	"total_ratio_cannot_exceed_one": "Total ratio cannot exceed 1",
+	"total_ratio_less_than_one": "Total ratio is less than 1, some ratio might be unallocated",
+	"submission_success": "Submission successful",
+	"submission_failed": "Submission failed",
+	"join_family_first": "Please join a family first"
 }

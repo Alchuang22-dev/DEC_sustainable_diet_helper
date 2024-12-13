@@ -447,6 +447,15 @@
 	"source_farm": "农场来源",
 	"source_factory": "工厂来源",
 	"source_market": "市场来源",
-	"calculation_success": "计算成功"
+	"calculation_success": "计算成功",
+
+    "shared_calculation_for_family": "为家人共同计算",
+    "total_ratio": "比例总和",
+    "confirm_submission": "确认提交",
+    "total_ratio_cannot_exceed_one": "比例总和不能超过1",
+    "total_ratio_less_than_one": "比例总和小于1，可能有未分配的比例",
+    "submission_success": "提交成功",
+    "submission_failed": "提交失败",
+	"join_family_first": "请先加入家庭"
 
 }
