@@ -71,6 +71,8 @@
 				"path": "web_detail/web_detail"
 			}, {
 				"path": "create_news/create_news"
+			}, {
+				"path": "edit_draft/edit_draft"
 			}]
 		},
 		{
