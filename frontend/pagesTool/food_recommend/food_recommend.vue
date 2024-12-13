@@ -199,7 +199,8 @@ const generateRecipe = async () => {
           "Content-Type": "application/json", 
         },
         data: {
-          "selected_ingredients": selectedIngredients
+          "selected_ingredients": selectedIngredients,
+		  "disliked_ingredients": dislikedIngredients,
         }
       });
 
