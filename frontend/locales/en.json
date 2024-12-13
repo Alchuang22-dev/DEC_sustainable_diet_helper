@@ -123,6 +123,7 @@
 	"fat": "Fat",
 	"carbohydrates": "Carbohydrates",
 	"sodium": "Sodium",
+	"calories_unit": "Energy (kcal)",
 	"energy_unit": "Energy (kcal)",
 	"protein_unit": "Protein (g)",
 	"fat_unit": "Fat (g)",
@@ -133,7 +134,7 @@
 	"breakfast": "Breakfast",
 	"lunch": "Lunch",
 	"dinner": "Dinner",
-	"others": "Others",
+	"other": "Others",
 	"total": "Total",
 
 	"more_than_recommended": "More Than Recommended",

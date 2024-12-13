@@ -12,10 +12,6 @@
       <view class="divider">
         <text class="divider-text">{{ $t('settings_display') }}</text>
       </view>
-      <view class="list-item" @click="navigateTo('Fonts')">
-        <text>{{ $t('settings_font_size') }}</text>
-        <text class="arrow">></text>
-      </view>
       <view class="list-item" @click="navigateTo('language')">
         <text>{{ $t('settings_language') }}</text>
         <text class="arrow">></text>

@@ -123,6 +123,7 @@
 	"fat": "脂肪",
 	"carbohydrates": "碳水化合物",
 	"sodium": "钠",
+	"calories_unit": "能量 (kcal)",
 	"energy_unit": "能量 (kcal)",
 	"protein_unit": "蛋白质 (g)",
 	"fat_unit": "脂肪 (g)",
@@ -133,7 +134,7 @@
 	"breakfast": "早餐",
 	"lunch": "午餐",
 	"dinner": "晚餐",
-	"others": "其他",
+	"other": "其他",
 	"total": "总量",
 
 	"nutrition_calendar": "营养日历",
@@ -433,6 +434,19 @@
 	"flour": "面粉",
 	"honey": "蜂蜜",
 	"mango": "芒果",
-	"rice": "大米"
+	"rice": "大米",
+
+	"select_save_method": "请选择保存方式",
+	"select_meal_type": "请选择餐食类型",
+	"save_for_self": "只为自己计算",
+	"save_for_family": "为家人共同计算",
+	"transport_bike": "自行车运输",
+	"transport_car": "汽车运输",
+	"transport_truck": "卡车运输",
+	"transport_airplane": "飞机运输",
+	"source_farm": "农场来源",
+	"source_factory": "工厂来源",
+	"source_market": "市场来源",
+	"calculation_success": "计算成功"
 
 }
