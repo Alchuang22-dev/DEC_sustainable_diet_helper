@@ -89,6 +89,9 @@ const viewArticle = (index) => {
 // 编辑文章
 const editArticle = (index) => {
   console.log('编辑文章:', articles.value[index])
+  uni.navigateTo({
+  	url: "/pagesNews/edit_draft/edit_draft",
+  })
   // 跳转到编辑页面
 }
 
