@@ -64,6 +64,7 @@ func importFoodsData(db *gorm.DB, filename string) error {
         carbs, err4 := stringToFloat64(record[6])
         sodium, err5 := stringToFloat64(record[7])
         price, err6 := stringToFloat64(record[8])
+        
 
         if err != nil || err1 != nil || err2 != nil || err3 != nil || 
            err4 != nil || err5 != nil || err6 != nil {
@@ -83,6 +84,7 @@ func importFoodsData(db *gorm.DB, filename string) error {
             Carbohydrates: carbs * 10,
             Sodium:        sodium * 10,
             Price:         price,
+            ImageUrl:      record[9],
         }
 
         // 保存到数据库
@@ -98,49 +100,6 @@ func importFoodsData(db *gorm.DB, filename string) error {
     return nil
 }
 
-// // 自定义CSV行解析函数 (保持不变)
-// func parseCSVLine(line string) []string {
-//     var fields []string
-//     var currentField strings.Builder
-//     inQuotes := false
-//     inBrackets := 0
-//     inBraces := 0
-
-//     for _, ch := range line {
-//         switch ch {
-//         case '[':
-//             inBrackets++
-//             currentField.WriteRune(ch)
-//         case ']':
-//             inBrackets--
-//             currentField.WriteRune(ch)
-//         case '{':
-//             inBraces++
-//             currentField.WriteRune(ch)
-//         case '}':
-//             inBraces--
-//             currentField.WriteRune(ch)
-//         case '"':
-//             inQuotes = !inQuotes
-//             currentField.WriteRune(ch)
-//         case ',':
-//             if inQuotes || inBrackets > 0 || inBraces > 0 {
-//                 currentField.WriteRune(ch)
-//             } else {
-//                 fields = append(fields, currentField.String())
-//                 currentField.Reset()
-//             }
-//         default:
-//             currentField.WriteRune(ch)
-//         }
-//     }
-
-//     if currentField.Len() > 0 {
-//         fields = append(fields, currentField.String())
-//     }
-
-//     return fields
-// }
 
 // importRecipesData 导入食谱数据
 func importRecipesData(db *gorm.DB, filename string) error {
@@ -259,7 +218,7 @@ func main() {
     // 导入食物数据
     log.Println("Starting food data import...")
 
-    if err := importFoodsData(db, "../../data/food_dataset/foods_dataset.csv"); err != nil {
+    if err := importFoodsData(db, "../../data/food_dataset/foods_dataset_url.csv"); err != nil {
         log.Fatal("Error importing foods data:", err)
     }
 

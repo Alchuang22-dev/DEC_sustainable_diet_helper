@@ -16,6 +16,7 @@ type Food struct {
     Carbohydrates float64 `json:"carbohydrates" gorm:"column:carbohydrates"`
     Sodium        float64 `json:"sodium" gorm:"column:sodium"`
     Price         float64 `json:"price" gorm:"column:price"`
+    ImageUrl      string  `json:"image_url" gorm:"column:image_url"`
     Recipes       []Recipe `json:"recipes" gorm:"many2many:food_recipes;"`
 }
 
@@ -35,7 +36,14 @@ func GetFoodByID(db *gorm.DB, id uint) (*Food, error) {
     err := db.First(&food, id).Error
     return &food, err
 }
-
+// 通过食物名称获取食物ID
+func FindFoodIDByName(db *gorm.DB, name string) (uint, error) {
+    var food Food
+    if err := db.Where("zh_food_name = ? OR en_food_name = ?", name, name).First(&food).Error; err != nil {
+        return 0, err
+    }
+    return food.ID, nil
+}
 // GetAllFoods 获取所有食物
 func GetAllFoods(db *gorm.DB) ([]Food, error) {
     var foods []Food
@@ -54,22 +62,23 @@ func (f *Food) DeleteFood(db *gorm.DB) error {
 }
 
 // FoodNameResponse 定义返回的食物名称结构
-type FoodNameResponse struct {
+type FoodInfoResponse struct {
     ID   uint   `json:"id"`
     Name string `json:"name"`
+    ImageUrl string `json:"image_url"`
 }
 
 // GetAllFoodNames 获取所有食物名称
-func GetAllFoodNames(db *gorm.DB, language string) ([]FoodNameResponse, error) {
-    var results []FoodNameResponse
+func GetAllFoodNames(db *gorm.DB, language string) ([]FoodInfoResponse, error) {
+    var results []FoodInfoResponse
     query := db.Model(&Food{})
     
     switch language {
     case "zh":
-        err := query.Select("id, zh_food_name as name").Find(&results).Error
+        err := query.Select("id, zh_food_name as name, image_url").Find(&results).Error
         return results, err
     case "en":
-        err := query.Select("id, en_food_name as name").Find(&results).Error
+        err := query.Select("id, en_food_name as name, image_url").Find(&results).Error
         return results, err
     default:
         return nil, fmt.Errorf("unsupported language: %s", language)
@@ -141,14 +150,6 @@ func CalculateFoodNutritionAndEmission(db *gorm.DB, items []FoodCalculateItem) (
 
     return results, nil
 }
-func FindFoodIDByName(db *gorm.DB, name string) (uint, error) {
-    var food Food
-    if err := db.Where("zh_food_name = ? OR en_food_name = ?", name, name).First(&food).Error; err != nil {
-        return 0, err
-    }
-    return food.ID, nil
-}
-
 type Ingredient struct {
     ID   uint   `json:"id" gorm:"primaryKey"`
     Name string `json:"name"`
