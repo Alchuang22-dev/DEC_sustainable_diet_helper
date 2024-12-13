@@ -11,7 +11,6 @@
 		</view>
 
 		<!-- 碳排放信息 -->
-    <!--碳排放信息 -->
 		<view class="carbon-info">
 			<view class="carbon-progress">
 				<text class="carbon-description">{{$t('carbon_description')}}</text>
@@ -19,6 +18,7 @@
 			</view>
 			<view class="charts">
 
+				<!-- 今日碳排放环形图 -->
 				<view class="chart today">
 					<text class="chart-title">{{$t('carbon_today')}}</text>
 					<view class="today-charts">
@@ -26,13 +26,15 @@
 							:chartData="chartTodayData" />
 					</view>
 				</view>
+
+				<!-- 历史碳排放曲线图 -->
 				<view class="chart history">
 					<text class="chart-title">{{$t('carbon_history')}}</text>
 					<qiun-data-charts :canvas2d="true" canvas-id="carbonHistoryChart" type="line"
 						:chartData="chartHistoryData" />
 				</view>
 
-				<!-- 新增今日营养情况图表 -->
+				<!-- 今日营养情况图表（柱状图） -->
 				<view class="chart nutrition">
 					<text class="chart-title">{{$t('nutrition_today')}}</text>
 					<view class="nutrition-charts">
@@ -87,251 +89,320 @@
 </template>
 
 <script setup>
-	import {
-		ref,
-		onMounted,
-		watch,
-	} from 'vue'
-	import {
-		useI18n
-	} from 'vue-i18n'
-	import {
-		useCarbonAndNutritionStore
-	} from '@/stores/carbon_and_nutrition_data.js'
-	import {
-		onShow
-	} from '@dcloudio/uni-app';
+import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data.js'
+import { onShow } from '@dcloudio/uni-app';
 
-	// 初始化 i18n
-	const {
-		t,
-		locale
-	} = useI18n()
+const { t } = useI18n()
+const showMore = ref(false)
+const days = ref(9)
 
-	onShow(() => {
-    uni.setNavigationBarTitle({
-      title: t('index')
-    })
-    uni.setTabBarItem({
-      index: 0,
-      text: t('index')
-    })
-    uni.setTabBarItem({
-      index: 1,
-      text: t('tools_index')
-    })
-    uni.setTabBarItem({
-      index: 2,
-      text: t('news_index')
-    })
-    uni.setTabBarItem({
-      index: 3,
-      text: t('my_index')
-    })
-  })
+// 获取 Pinia 存储
+const carbonNutritionStore = useCarbonAndNutritionStore()
 
-	// 控制查看更多内容的显示
-	const showMore = ref(false)
-	const days = ref(9) // 可以根据实际情况动态更新
+onShow(async () => {
+	uni.setNavigationBarTitle({
+		title: t('index')
+	})
+	uni.setTabBarItem({
+		index: 0,
+		text: t('index')
+	})
+	uni.setTabBarItem({
+		index: 1,
+		text: t('tools_index')
+	})
+	uni.setTabBarItem({
+		index: 2,
+		text: t('news_index')
+	})
+	uni.setTabBarItem({
+		index: 3,
+		text: t('my_index')
+	})
+})
 
-	const toggleMoreContent = () => {
-		showMore.value = !showMore.value
+// 图表数据
+const chartHistoryData = ref({
+	categories: [],
+	series: [
+		{ name: t('target_value'), data: [] },
+		{ name: t('actual_value'), data: [] }
+	]
+})
+
+const chartNutritionData = ref({
+	categories: [t('energy_unit'), t('protein_unit'), t('fat_unit'), t('carbohydrates_unit'), t('sodium_unit')],
+	series: [
+		{ name: t('intake'), data: [] },
+		{ name: t('target_value'), data: [] }
+	]
+})
+
+const chartTodayData = ref({ series: [{ data: [] }] })
+
+const nutritionOpts = {
+	color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE"],
+	padding: [15, 15, 0, 5],
+	enableScroll: false,
+	xAxis: { disableGrid: false, axisLine: true },
+	yAxis: {},
+	extra: {
+		bar: {
+			type: "group",
+			width: 30,
+			categoryGap: 2
+		}
+	}
+}
+
+const ringOpts = {
+	rotate: false,
+	rotateLock: false,
+	color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE", "#3CA272", "#FC8452", "#9A60B4", "#ea7ccc"],
+	animation: { duration: 0 },
+	padding: [5, 5, 5, 5],
+	dataLabel: true,
+	enableScroll: false,
+	legend: { show: true, position: "right", lineHeight: 25 },
+	title: {
+		name: t('total'),
+		fontSize: 15,
+		color: "#666666"
+	},
+	subtitle: {
+		name: "",
+		fontSize: 25,
+		color: "#4CAF50"
+	},
+	extra: {
+		ring: {
+			ringWidth: 20,
+			activeOpacity: 0.5,
+			activeRadius: 10,
+			offsetAngle: 0,
+			labelWidth: 15,
+			border: false,
+			borderWidth: 3,
+			borderColor: "#FFFFFF"
+		}
+	}
+}
+
+// 根据日期从 store 数据中计算每日数据
+const getDataByDate = (dateString) => {
+	// 从 store 中查找对应日期的营养目标/碳排放目标
+	const nutritionGoal = carbonNutritionStore.state.nutritionGoals.find(g => g.date.startsWith(dateString))
+	const carbonGoal = carbonNutritionStore.state.carbonGoals.find(g => g.date.startsWith(dateString))
+
+	// 汇总该日期四餐的实际摄入
+	const dailyNutritionIntakes = carbonNutritionStore.state.nutritionIntakes.filter(i => i.date.startsWith(dateString))
+	const dailyCarbonIntakes = carbonNutritionStore.state.carbonIntakes.filter(i => i.date.startsWith(dateString))
+
+	// 按餐分类实际摄入，预定义四种餐类型
+	const meals = { breakfast: {}, lunch: {}, dinner: {}, other: {} }
+
+	// 初始化营养实际总值
+	const totalNutrients = { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
+	let totalCarbonEmission = 0
+
+	for (const intake of dailyNutritionIntakes) {
+		const mealType = intake.meal_type || 'other'
+
+		// 初始化 nutrients 对象
+		if (!meals[mealType].nutrients) {
+			meals[mealType].nutrients = { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
+		}
+
+		// 累加营养摄入
+		meals[mealType].nutrients.calories += intake.calories || 0
+		meals[mealType].nutrients.protein += intake.protein || 0
+		meals[mealType].nutrients.fat += intake.fat || 0
+		meals[mealType].nutrients.carbohydrates += intake.carbohydrates || 0
+		meals[mealType].nutrients.sodium += intake.sodium || 0
+
+		// 累计总营养
+		totalNutrients.calories += intake.calories || 0
+		totalNutrients.protein += intake.protein || 0
+		totalNutrients.fat += intake.fat || 0
+		totalNutrients.carbohydrates += intake.carbohydrates || 0
+		totalNutrients.sodium += intake.sodium || 0
 	}
 
-	// 获取 Pinia 存储
-	const carbonNutritionStore = useCarbonAndNutritionStore()
+	for (let cIntake of dailyCarbonIntakes) {
+		let mealType = cIntake.meal_type || 'other'
 
-	// 历史碳排放数据，初始为空
-	const chartHistoryData = ref({
-		categories: [],
-		series: [{
-				name: t('target_value'),
-				data: []
-			},
-			{
-				name: t('actual_value'),
-				data: []
-			}
-		]
-	});
-
-	// 在组件挂载时生成从七天前到今天的日期
-	onMounted(() => {
-		const categories = [];
-		const targetData = [];
-		const actualData = [];
-		for (let i = 7; i > 0; i--) {
-			const date = new Date();
-			date.setDate(date.getDate() - i);
-			const month = date.getMonth() + 1; // 月份从0开始
-			const day = date.getDate();
-			const dateString = date.toISOString().split('T')[0];
-			categories.push(`${month}/${day}`);
-
-			const dailyData = carbonNutritionStore.getDataByDate(dateString);
-
-			if (dailyData) {
-				targetData.push(dailyData.carbonEmission.target || 0);
-				actualData.push(dailyData.carbonEmission.actual || 0);
-			} else {
-				targetData.push(0);
-				actualData.push(0);
-			}
+		// 初始化 carbonEmission 对象
+		if (!meals[mealType].carbonEmission) {
+			meals[mealType].carbonEmission = 0
 		}
-		chartHistoryData.value.categories = categories;
-		chartHistoryData.value.series[0].data = targetData;
-		chartHistoryData.value.series[1].data = actualData;
-	});
 
-	// 今日营养数据的条形图
-	const chartNutritionData = ref({
-		categories: [t('energy_unit'), t('protein_unit'), t('fat_unit'), t('carbohydrates_unit'), t(
-			'sodium_unit')],
-		series: [{
-				name: t('intake'),
-				data: []
-			},
-			{
-				name: t('target_value'),
-				data: []
-			}
-		]
-	});
+		// 累加碳排放量
+		meals[mealType].carbonEmission += cIntake.emission || 0
+		totalCarbonEmission += cIntake.emission || 0
+	}
 
-	// 营养条形图的配置选项
-	const nutritionOpts = {
-		color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE"],
-		padding: [15, 15, 0, 5],
-		enableScroll: false,
-		legend: {},
-		xAxis: {
-			disableGrid: false,
-			axisLine: true,
+	return {
+		nutrients: {
+			actual: totalNutrients,
+			target: nutritionGoal ? {
+				calories: nutritionGoal.calories,
+				protein: nutritionGoal.protein,
+				fat: nutritionGoal.fat,
+				carbohydrates: nutritionGoal.carbohydrates,
+				sodium: nutritionGoal.sodium
+			} : { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
 		},
-		yAxis: {},
-		extra: {
-			bar: {
-				type: "group",
-				width: 30,
-				meterBorde: 1,
-				meterFillColor: "#FFFFFF",
-				activeBgColor: "#000000",
-				activeBgOpacity: 0.08,
-				categoryGap: 2
-			}
-		}
-	};
-
-	// 环形图数据
-	const chartTodayData = ref({
-		series: [{
-			data: []
-		}]
-	});
-
-	// 环形图的配置选项
-	const ringOpts = {
-		rotate: false,
-		rotateLock: false,
-		color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE", "#3CA272", "#FC8452", "#9A60B4", "#ea7ccc"],
-		animation: {
-			duration: 0, // 设置为0可以避免动画延迟
+		carbonEmission: {
+			actual: totalCarbonEmission,
+			target: carbonGoal ? carbonGoal.emission : 0
 		},
-		padding: [5, 5, 5, 5],
-		dataLabel: true,
-		enableScroll: false,
-		legend: {
-			show: true,
-			position: "right",
-			lineHeight: 25
-		},
-		title: {
-			name: t('total'),
-			fontSize: 15,
-			color: "#666666"
-		},
-		subtitle: {
-			name: "",
-			fontSize: 25,
-			color: "#4CAF50"
-		},
-		extra: {
-			ring: {
-				ringWidth: 20,
-				activeOpacity: 0.5,
-				activeRadius: 10,
-				offsetAngle: 0,
-				labelWidth: 15,
-				border: false,
-				borderWidth: 3,
-				borderColor: "#FFFFFF"
-			}
-		}
-	};
+		meals
+	}
+}
+onShow(async () => {
+	console.log('onMounted')
+	// 获取数据
+	await carbonNutritionStore.getNutritionGoals()
+	await carbonNutritionStore.getCarbonGoals()
+	await carbonNutritionStore.getNutritionIntakes()
+	await carbonNutritionStore.getCarbonIntakes()
 
-	// 更新今日图表
-	onMounted(() => {
-		const today = new Date();
-		const dateString = today.toISOString().split('T')[0];
-		const todayData = carbonNutritionStore.getDataByDate(dateString);
+	// 更新今日数据
+	const today = new Date()
+	const dateString = today.toISOString().split('T')[0]
+	const todayData = getDataByDate(dateString)
 
-		if (todayData) {
-			// 更新环形图数据
-			const mealTypes = ['breakfast', 'lunch', 'dinner', 'others'];
-			const mealData = [];
-			let totalCarbonEmission = 0;
-			mealTypes.forEach(mealType => {
-				const meal = todayData.meals[mealType];
-				mealData.push({
-					name: t(mealType),
-					value: meal.carbonEmission || 0
-				});
-				totalCarbonEmission += meal.carbonEmission || 0;
-			});
-			chartTodayData.value.series[0].data = mealData;
+	if (todayData) {
+		// 更新今日碳排放环形图
+		const mealTypes = ['breakfast', 'lunch', 'dinner', 'other']
+		const mealData = []
+		let totalCarbonEmission = 0
+		mealTypes.forEach(mealType => {
+			const emission = todayData.meals[mealType].carbonEmission || 0
+			mealData.push({
+				name: t(mealType),
+				value: emission
+			})
+			totalCarbonEmission += emission
+		})
+		chartTodayData.value.series[0].data = mealData
+		ringOpts.subtitle.name = `${totalCarbonEmission.toFixed(1)}Kg`
 
-			// 更新环形图副标题
-			ringOpts.subtitle.name = `${totalCarbonEmission.toFixed(1)}Kg`;
+		// 更新今日营养柱状图
+		const nutrients = ['calories', 'protein', 'fat', 'carbohydrates', 'sodium']
+		const intakeData = nutrients.map(n => todayData.nutrients.actual[n] || 0)
+		const targetData = nutrients.map(n => todayData.nutrients.target[n] || 0)
+		chartNutritionData.value.series[0].data = intakeData
+		chartNutritionData.value.series[1].data = targetData
+	}
 
-			// 更新营养条形图数据
-			const nutrients = ['energy', 'protein', 'fat', 'carbohydrates', 'sodium'];
-			const intakeData = [];
-			const targetData = [];
-			nutrients.forEach(nutrient => {
-				intakeData.push(todayData.nutrients.actual[nutrient] || 0);
-				targetData.push(todayData.nutrients.target[nutrient] || 0);
-			});
-			chartNutritionData.value.series[0].data = intakeData;
-			chartNutritionData.value.series[1].data = targetData;
-		} else {
-			// 如果没有数据，设置为零
-			chartTodayData.value.series[0].data = [];
-			ringOpts.subtitle.name = `0Kg`;
-			chartNutritionData.value.series[0].data = [0, 0, 0, 0, 0];
-			chartNutritionData.value.series[1].data = [0, 0, 0, 0, 0];
-		}
-	});
+	// 更新历史碳排放曲线
+	// 最近7天的数据（6天前到今天）
+	const categories = []
+	const targetData = []
+	const actualData = []
+	for (let i = 6; i >= 0; i--) {
+		const d = new Date()
+		d.setDate(d.getDate() - i)
+		const ds = d.toISOString().split('T')[0]
+		const month = d.getMonth() + 1
+		const day = d.getDate()
+		categories.push(`${month}/${day}`)
 
-	// 页面跳转方法
-	const navigateTo = (page) => {
-		if (page === 'recommend') {
-			uni.navigateTo({
-				url: "/pagesTool/food_recommend/food_recommend",
-			});
-		} else if (page === 'nutrition') {
-			uni.navigateTo({
-				url: "/pagesTool/nutrition_calculator/nutrition_calculator",
-			});
-		} else if (page === 'family') {
-			uni.navigateTo({
-				url: "/pagesTool/home_servant/home_servant",
-			});
-		} else {
-			uni.navigateTo({
-				url: "/pagesTool/carbon_calculator/carbon_calculator",
-			});
-		}
-	};
+		const dailyData = getDataByDate(ds)
+		targetData.push(dailyData ? dailyData.carbonEmission.target : 0)
+		actualData.push(dailyData ? dailyData.carbonEmission.actual : 0)
+	}
+	chartHistoryData.value.categories = categories
+	chartHistoryData.value.series[0].data = targetData
+	chartHistoryData.value.series[1].data = actualData
+})
+
+// onMounted(async () => {
+// 	console.log('onMounted')
+// 	// 获取数据
+// 	await carbonNutritionStore.getNutritionGoals()
+// 	await carbonNutritionStore.getCarbonGoals()
+// 	await carbonNutritionStore.getNutritionIntakes()
+// 	await carbonNutritionStore.getCarbonIntakes()
+//
+// 	// 更新今日数据
+// 	const today = new Date()
+// 	const dateString = today.toISOString().split('T')[0]
+// 	const todayData = getDataByDate(dateString)
+//
+// 	if (todayData) {
+// 		// 更新今日碳排放环形图
+// 		const mealTypes = ['breakfast', 'lunch', 'dinner', 'other']
+// 		const mealData = []
+// 		let totalCarbonEmission = 0
+// 		mealTypes.forEach(mealType => {
+// 			const emission = todayData.meals[mealType].carbonEmission || 0
+// 			mealData.push({
+// 				name: t(mealType),
+// 				value: emission
+// 			})
+// 			totalCarbonEmission += emission
+// 		})
+// 		chartTodayData.value.series[0].data = mealData
+// 		ringOpts.subtitle.name = `${totalCarbonEmission.toFixed(1)}Kg`
+//
+// 		// 更新今日营养柱状图
+// 		const nutrients = ['calories', 'protein', 'fat', 'carbohydrates', 'sodium']
+// 		const intakeData = nutrients.map(n => todayData.nutrients.actual[n] || 0)
+// 		const targetData = nutrients.map(n => todayData.nutrients.target[n] || 0)
+// 		chartNutritionData.value.series[0].data = intakeData
+// 		chartNutritionData.value.series[1].data = targetData
+// 	}
+//
+// 	// 更新历史碳排放曲线
+// 	// 最近7天的数据（6天前到今天）
+// 	const categories = []
+// 	const targetData = []
+// 	const actualData = []
+// 	for (let i = 6; i >= 0; i--) {
+// 		const d = new Date()
+// 		d.setDate(d.getDate() - i)
+// 		const ds = d.toISOString().split('T')[0]
+// 		const month = d.getMonth() + 1
+// 		const day = d.getDate()
+// 		categories.push(`${month}/${day}`)
+//
+// 		const dailyData = getDataByDate(ds)
+// 		targetData.push(dailyData ? dailyData.carbonEmission.target : 0)
+// 		actualData.push(dailyData ? dailyData.carbonEmission.actual : 0)
+// 	}
+// 	chartHistoryData.value.categories = categories
+// 	chartHistoryData.value.series[0].data = targetData
+// 	chartHistoryData.value.series[1].data = actualData
+// })
+
+const toggleMoreContent = () => {
+	showMore.value = !showMore.value
+}
+
+// 页面跳转方法
+const navigateTo = (page) => {
+	if (page === 'recommend') {
+		uni.navigateTo({
+			url: "/pagesTool/food_recommend/food_recommend",
+		});
+	} else if (page === 'nutrition') {
+		uni.navigateTo({
+			url: "/pagesTool/nutrition_calendar/nutrition_calendar",
+		});
+	} else if (page === 'family') {
+		uni.navigateTo({
+			url: "/pagesTool/home_servant/home_servant",
+		});
+	} else {
+		uni.navigateTo({
+			url: "/pagesTool/carbon_calculator/carbon_calculator",
+		});
+	}
+};
 </script>
 
 <style scoped>
@@ -434,26 +505,31 @@
 
 	/* 图表容器的通用样式 */
 	.chart {
-		background-color: rgba(255, 255, 255, 0.9); /* 半透明白色背景 */
+		background-color: rgba(255, 255, 255, 0.9);
+		/* 半透明白色背景 */
 		padding: 20rpx;
 		border-radius: 15rpx;
 		box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.1);
 		margin-bottom: 40rpx;
-		width: 90%; /* 调整宽度以适应不同屏幕 */
+		width: 90%;
+		/* 调整宽度以适应不同屏幕 */
 		transition: transform 0.3s, box-shadow 0.3s;
 	}
 
 	/* 单独为不同类型的图表添加背景 */
 	.chart.today {
-		background-color: rgba(24, 144, 255, 0.1); /* 蓝色调 */
+		background-color: rgba(24, 144, 255, 0.1);
+		/* 蓝色调 */
 	}
 
 	.chart.history {
-		background-color: rgba(255, 193, 7, 0.1); /* 黄色调 */
+		background-color: rgba(255, 193, 7, 0.1);
+		/* 黄色调 */
 	}
 
 	.chart.nutrition {
-		background-color: rgba(76, 175, 80, 0.1); /* 绿色调 */
+		background-color: rgba(76, 175, 80, 0.1);
+		/* 绿色调 */
 	}
 
 	/* 图表容器悬停效果 */
@@ -463,12 +539,12 @@
 	}
 
 	.chart-title {
-			text-align: center;
-			margin-bottom: 15rpx;
-			font-size: 28rpx;
-			color: var(--primary-color);
-			font-weight: bold;
-		}
+		text-align: center;
+		margin-bottom: 15rpx;
+		font-size: 28rpx;
+		color: var(--primary-color);
+		font-weight: bold;
+	}
 
 	.today-charts,
 	.nutrition-charts {
@@ -503,30 +579,31 @@
 		gap: 20rpx;
 	}
 
-/* 实用工具 */
-.tool {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background-color: rgba(255, 255, 255, 0.9);
-    padding: 15rpx;
-    border-radius: 10rpx;
-    box-shadow: 0 2rpx 5rpx var(--shadow-color);
-    cursor: pointer;
-    transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s;
-    animation: fadeInUp 1s ease;
-}
+	/* 实用工具 */
+	.tool {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		background-color: rgba(255, 255, 255, 0.9);
+		padding: 15rpx;
+		border-radius: 10rpx;
+		box-shadow: 0 2rpx 5rpx var(--shadow-color);
+		cursor: pointer;
+		transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s;
+		animation: fadeInUp 1s ease;
+	}
 
-.tool:hover {
-    transform: translateY(-5rpx) scale(1.05);
-    box-shadow: 0 4rpx 10rpx var(--shadow-color);
-    background-color: rgba(255, 255, 255, 1); /* 提升背景不透明度 */
-}
+	.tool:hover {
+		transform: translateY(-5rpx) scale(1.05);
+		box-shadow: 0 4rpx 10rpx var(--shadow-color);
+		background-color: rgba(255, 255, 255, 1);
+		/* 提升背景不透明度 */
+	}
 
-.tool:active {
-    transform: translateY(0) scale(1);
-    box-shadow: 0 2rpx 5rpx var(--shadow-color);
-}
+	.tool:active {
+		transform: translateY(0) scale(1);
+		box-shadow: 0 2rpx 5rpx var(--shadow-color);
+	}
 
 	.tool-icon {
 		width: 120rpx;
