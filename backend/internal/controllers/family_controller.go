@@ -137,39 +137,9 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
         })
         return
     } else if user.Family != nil { // 用户已在某个家庭中
-        today := time.Now().Truncate(24 * time.Hour)
-
         // 准备管理员和成员的信息
         admins := make([]gin.H, len(user.Family.Admins))
         for i, admin := range user.Family.Admins {
-            todayCarbonGoal := 0
-            todatNutritionIntake := 0
-            todayCarbonGoal := 0
-            todayCarbonIntake := 0
-
-            for carbonGoal := range admin.CarbonGoals {
-                if carbonGoal.Date == today {
-                    todayCarbonGoal = carbonGoal.Emission
-                    break
-                }
-            }
-            for carbonIntake := range admin.CarbonIntakes {
-                if carbonIntake.Date == today {
-                    todatNutritionIntake += carbonIntake.Emission
-                }
-            }
-            for nutritionGoal := range admin.NutritionGoals {
-                if nutritionGoal.Date == today {
-                    todayNutritionGoal = nutritionGoal.Emission
-                    break
-                }
-            }
-            for nutritionGoal := range admin.NutritionGoals {
-                if nutritionGoal.Date == today {
-                    todayNutritionGoal = nutritionGoal.Emission
-                    break
-                }
-            }
 
             admins[i] = gin.H{
                 "id":         admin.ID,
@@ -1201,8 +1171,4 @@ func (fc *FamilyController) DeleteDesiredDish(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, gin.H{"message": "Desired dish deleted successfully"})
-}
-
-// TODO 营养/碳排放 家庭接口
-func (fc *FamilyController) GetFamily(c *gin.Context) {
 }
