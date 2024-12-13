@@ -93,22 +93,31 @@ const fetchRecommendedDishes = async () => {
 	
 	console.log(response);
     // 处理成功响应
-    if (response.statusCode === 200 && response.data.recommended_ingredients) {
-      const recommendedIngredients = response.data.recommended_ingredients
-      // 将前6个推荐食材放入dishes
-      dishes.value = recommendedIngredients.slice(0, 6).map((ingredient) => ({
-		id: ingredient.id,
-        name: t(ingredient.name),
-        image: `https://via.placeholder.com/300?text=${ingredient.name}`, // 这里可以根据食材生成图片URL
-        liked: false,
-      }))
-      // 将其余食材放入availableNewDishes
-      availableNewDishes.value = recommendedIngredients.slice(6).map((ingredient) => ({
-		id: ingredient.id,
-        name: t(ingredient.name),
-        image: `https://via.placeholder.com/300?text=${ingredient.name}`,
-        liked: false,
-      }))
+    if (response.statusCode === 200) {
+		console.log('请求菜谱成功');
+		    const recommendedIngredients = response.data.recommended_ingredients;
+		
+		    // 检查前6个推荐食材是否为空
+		    const firstSixIngredients = recommendedIngredients.slice(0, 6);
+		    if (firstSixIngredients.length === 0) {
+		        console.error('前6个推荐食材为空');
+		        regetRecipe();  // 如果为空，调用 regetRecipe 方法
+		    } else {
+		        // 将前6个推荐食材放入dishes
+		        dishes.value = firstSixIngredients.map((ingredient) => ({
+		            id: ingredient.id,
+		            name: t(ingredient.name),
+		            image: ingredient.image_url, // 这里可以根据食材生成图片URL
+		            liked: false,
+		        }));
+		
+		        // 将其余食材放入availableNewDishes
+		        availableNewDishes.value = recommendedIngredients.slice(6).map((ingredient) => ({
+		            id: ingredient.id,
+		            name: t(ingredient.name),
+		            image: ingredient.image_url,
+		            liked: false,
+		        }));}
     } else {
       console.error('获取食材推荐失败:', response[1].data);
 	  regetRecipe();
@@ -145,14 +154,14 @@ const regetRecipe = async () => {
       dishes.value = recommendedIngredients.slice(0, 6).map((ingredient) => ({
         id: ingredient.id,
         name: t(ingredient.name),
-        image: `https://via.placeholder.com/300?text=${encodeURIComponent(ingredient.name)}`,
+        image: ingredient.image_url,
         liked: false,
       }));
       // 将剩余食材放入availableNewDishes
       availableNewDishes.value = recommendedIngredients.slice(6).map((ingredient) => ({
         id: ingredient.id,
         name: t(ingredient.name),
-        image: `https://via.placeholder.com/300?text=${encodeURIComponent(ingredient.name)}`,
+        image: ingredient.image_url,
         liked: false,
       }));
     } else {

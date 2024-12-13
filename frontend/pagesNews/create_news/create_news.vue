@@ -118,7 +118,7 @@ const authorAvatar = computed(() =>
         ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
         : '/static/images/index/background_img.jpg'
 );
-
+const token = computed(() => userStore.user.token);
 const { t } = useI18n()
 
 const title = ref('') // 文章标题
@@ -172,21 +172,149 @@ const cancelPublish = () => {
   showModal.value = false
 }
 
+//上传图片
+const uploadImage = (filePath) => {
+	console.log(token.value);
+  return new Promise((resolve, reject) => {
+    uni.uploadFile({
+      url: `${BASE_URL}/news/upload_image`, // 上传图片的 API 地址
+      method: 'POST',
+      header: {
+        "Authorization": `Bearer ${token.value}`, // 替换为实际的 Token 变量
+        "Content-Type": "application/json", // 设置请求类型
+      },
+      filePath: filePath,
+      name: 'image', // form-data 中字段名
+      success: (res) => {
+        console.log('上传图片返回结果:', res); // 打印响应内容用于调试
+        try {
+          const data = JSON.parse(res.data); // 解析返回的 JSON 数据
+          if (data.message === 'Image uploaded successfully') {
+            resolve(data.path); // 返回图片相对路径
+			console.log(data.path);
+          } else {
+            reject(data.error); // 上传失败，返回错误信息
+          }
+        } catch (error) {
+          reject(`JSON 解析错误: ${error.message}`); // 解析失败时的错误提示
+        }
+      },
+      fail: (err) => {
+        reject(err); // 请求失败，返回错误信息
+      }
+    });
+  });
+};
+
+
 // 保存草稿
-const saveDraft = () => {
-  draftStore.saveDraft();
-  uni.showToast({
-    title: '草稿已保存',
-    icon: 'success',
-    duration: 2000,
-  })
-}
+const saveDraft = async () => {
+  // 生成草稿对象，包含标题、简介、组件内容等
+  const post = {
+    title: title.value, // 文章标题
+    description: description.value, // 文章简介
+    components: items.value.map((item, index) => {
+      if (item.type === 'text') {
+        return { id: index + 1, content: item.content, style: 'text' };
+      } else if (item.type === 'image') {
+        return { 
+          id: index + 1, 
+          content: item.content, 
+          style: 'image', 
+          description: item.imageDescription || '' 
+        };
+      }
+    })
+  };
+
+  // 准备请求数据
+  const data = {
+    title: post.title,
+    paragraphs: [], // 用于存放文本段落
+    images: [], // 用于存放图片链接
+    image_descriptions: [] // 用于存放图片描述
+  };
+
+  // 默认简介为第一个自然段
+  data.paragraphs.push({ text: description.value });
+  data.images.push(''); // 先添加一个空的图片路径
+  data.image_descriptions.push('');
+
+  // 上传所有图片并填充图片路径
+  const imagePaths = await Promise.all(
+    post.components.map((item) => {
+      if (item.style === 'image' && item.content) {
+        return uploadImage(item.content) // 上传图片并获取路径
+          .then((path) => {
+            data.images.push(path); // 保存上传后的图片路径
+            data.image_descriptions.push(item.imageDescription || ''); // 保存图片描述
+          })
+          .catch((error) => {
+            console.error(`图片上传失败: ${error}`);
+            data.images.push(''); // 图片上传失败时，插入空路径
+            data.image_descriptions.push('');
+          });
+      } else {
+        return Promise.resolve(); // 非图片项不处理
+      }
+    })
+  );
+
+  // 处理文本内容
+  post.components.forEach((item) => {
+    if (item.style === 'text') {
+      data.paragraphs.push({ text: item.content || '' });
+      data.images.push('');
+      data.image_descriptions.push('');
+    }
+  });
+
+  // 提交草稿数据到服务器
+  uni.request({
+    url: `${BASE_URL}/news/create_draft`,
+    method: 'POST',
+    header: {
+      'Authorization': `Bearer ${token.value}`,
+      'Content-Type': 'application/json',
+    },
+    data: {
+      title: data.title,
+      paragraphs: data.paragraphs,
+      image_descriptions: data.image_descriptions,
+      image_paths: data.images,
+    },
+    success: (res) => {
+      if (res.data.message === 'Draft created successfully.') {
+        uni.showToast({
+          title: '草稿已保存',
+          icon: 'success',
+          duration: 2000,
+        });
+      } else {
+        uni.showToast({
+          title: '保存草稿失败',
+          icon: 'none',
+          duration: 2000,
+        });
+        console.error('后端错误信息:', res.data.message);
+      }
+    },
+    fail: (err) => {
+      uni.showToast({
+        title: '请求失败',
+        icon: 'none',
+        duration: 2000,
+      });
+      console.error('请求失败', err);
+    }
+  });
+};
+
 
 // 处理图片上传
 const handleImageChange = (index) => {
-  console.log("正在更改图片")
+  console.log("正在更改图片");
 
-  // 调用 uni.chooseImage 来选择图片
   uni.chooseImage({
     count: 1, // 选择一张图片
     sourceType: ['album'], // 只从相册中选择
@@ -198,22 +326,31 @@ const handleImageChange = (index) => {
       uni.getImageInfo({
         src: imagePath,
         success: (info) => {
-          // 计算新的高度，保持图片的宽高比
           const aspectRatio = info.width / info.height;
           const newHeight = uni.getSystemInfoSync().windowWidth / aspectRatio;
-          items.value[index].imageHeight = newHeight; // 保存计算后的高度
-          items.value[index].itemHeight = newHeight + 80; // 增加描述框的高度空间
+          items.value[index].imageHeight = newHeight;
+          items.value[index].itemHeight = newHeight + 80;
         },
         fail: (err) => {
           console.error('获取图片信息失败', err);
         }
-      })
+      });
+
+      // 上传图片到服务器
+      uploadImage(imagePath).then((uploadedPath) => {
+        // 将上传返回的路径拼接成完整URL
+        const fullImageUrl = `${BASE_URL}/${uploadedPath}`;
+        items.value[index].content = fullImageUrl;
+      }).catch((error) => {
+        console.error('图片上传失败', error);
+      });
     },
     fail: (err) => {
       console.error('上传图片失败', err);
     }
-  })
-}
+  });
+};
+
 
 // Simulate fetching data from backend
 onMounted(() => {
