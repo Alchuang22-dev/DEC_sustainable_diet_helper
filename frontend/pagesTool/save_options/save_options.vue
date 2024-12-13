@@ -34,9 +34,10 @@
 	import {
 		useUserStore
 	} from "@/stores/user.js";
-	import {
-		useFamilyStore
-	} from "@/stores/family.js";
+  import {
+    FamilyStatus,
+    useFamilyStore
+  } from "@/stores/family.js";
 	import {
 		onLoad
 	} from "@dcloudio/uni-app";
@@ -47,6 +48,7 @@
 	} = useI18n();
 	const userStore = useUserStore();
 	const familyStore = useFamilyStore();
+  const familyStatus = computed(() => familyStore.family.status);
 
 	// 获取当前用户的 UID
 	const uid = computed(() => userStore.user.uid);
@@ -162,9 +164,18 @@
 
 	// 保存为家人计算
 	const saveForFamily = () => {
+    // 如果家庭状态不是已加入家庭，则提示用户加入家庭
+    if (familyStatus.value !== FamilyStatus.JOINED) {
+      uni.showToast({
+        title: t('join_family_first'),
+        icon: 'none',
+        duration: 2000
+      });
+      return;
+    }
 		uni.navigateTo({
 			url: `/pagesTool/family_share/family_share?data=${encodeURIComponent(JSON.stringify({
-			carbonEmission: carbonEmissionData,
+			carbonEmission: totalEmission.value,
 			nutrition: nutritionData,
 			mealType: mealTypesValue[selectedMealIndex.value] // 使用英文餐食类型
 		}))}`

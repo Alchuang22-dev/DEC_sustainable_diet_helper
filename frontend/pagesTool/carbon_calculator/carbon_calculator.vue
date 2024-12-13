@@ -61,7 +61,6 @@
       <text class="result-title">{{ $t('your_carbon_footprint') }}</text>
       <qiun-data-charts
         :canvas2d="true"
-        canvas-id="carbonEmissionChart"
         type="ring"
         :opts="ringOpts"
         :chartData="chartEmissionData"
@@ -69,7 +68,6 @@
       <text class="result-title">{{ $t('your_nutrition_intake') }}</text>
       <qiun-data-charts
         :canvas2d="true"
-        canvas-id="nutritionChart"
         type="bar"
         :opts="barOpts"
         :chartData="chartNutritionData"

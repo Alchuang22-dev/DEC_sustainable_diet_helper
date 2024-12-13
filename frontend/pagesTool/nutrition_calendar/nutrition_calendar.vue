@@ -31,7 +31,7 @@
           canvasId="nutritionChart"
       />
       <view class="chart-center-text">
-        <text class="center-title">{{ $t('nutrition_overview') }}</text>
+        <text class="center-title">{{ $t('nutrition\noverview') }}</text>
       </view>
     </view>
 
@@ -44,7 +44,7 @@
       >
         <view
             class="color-square"
-            :style="{ backgroundColor: item.over ? getRedShade(item.label) : item.color }"
+            :style="{ backgroundColor: item.over ? getRedShade(item.nutrient) : item.color }"
         ></view>
         <view class="nutrition-text">
           <text class="intake" :class="{ 'over': item.over }">
@@ -121,11 +121,12 @@
 </template>
 
 <script setup>
-import {ref, onMounted, watch} from 'vue'
-import {useI18n} from 'vue-i18n'
-import {useCarbonAndNutritionStore} from '@/stores/carbon_and_nutrition_data.js'
+import { ref, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data.js'
 
-const {t} = useI18n()
+// 国际化
+const { t } = useI18n()
 
 // 获取 Pinia 存储
 const carbonNutritionStore = useCarbonAndNutritionStore()
@@ -145,10 +146,10 @@ const otherNutrients = ref([])
 const activeMeal = ref('breakfast')
 
 // 图表数据和配置（五大营养arcbar图）
-const chartData = ref({series: []})
+const chartData = ref({ series: [] })
 const chartOpts = ref({
-  title: {name: "", fontSize: 35, color: "#1890ff"},
-  subtitle: {name: "", fontSize: 15, color: "#666666"},
+  title: { name: "", fontSize: 35, color: "#1890ff" },
+  subtitle: { name: "", fontSize: 15, color: "#666666" },
   extra: {
     arcbar: {
       type: "circle",
@@ -170,7 +171,7 @@ const generateDateTabs = () => {
     date.setDate(today.getDate() + i)
     const day = getWeekdayKey(date.getDay())
     const dateNumber = date.getDate()
-    const dateString = date.toISOString().split('T')[0]
+    const dateString = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }).replace(/\//g, '-').split('T')[0]
     tabs.push({
       day: t(day),
       date: dateNumber,
@@ -186,8 +187,47 @@ const getWeekdayKey = (dayIndex) => {
   return weekdays[dayIndex]
 }
 
+// 根据日期从 store 获取数据
 const getDataByDate = (dateString) => {
   return carbonNutritionStore.getDataByDate(dateString)
+}
+
+// 获取当前选中日期的数据
+const getDataForSelectedDate = () => {
+  if (currentDateIndex.value < 0 || currentDateIndex.value >= dateTabs.value.length) {
+    return {
+      nutrients: {
+        actual: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 },
+        target: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
+      },
+      meals: {
+        breakfast: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+        lunch: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+        dinner: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+        other: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } }
+      }
+    }
+  }
+
+  const selectedDate = dateTabs.value[currentDateIndex.value].dateString
+  const dateData = getDataByDate(selectedDate)
+
+  if (dateData) {
+    return dateData
+  } else {
+    return {
+      nutrients: {
+        actual: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 },
+        target: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
+      },
+      meals: {
+        breakfast: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+        lunch: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+        dinner: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+        other: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } }
+      }
+    }
+  }
 }
 
 // 更新五大营养的过量标志
@@ -195,10 +235,18 @@ const updateSummaryNutrition = () => {
   const dateData = getDataForSelectedDate()
 
   const nutrients = ['calories', 'protein', 'fat', 'carbohydrates', 'sodium']
-  summaryNutrition.value = nutrients.map(nutrient => {
+  const tempSummary = nutrients.map(nutrient => {
     const intake = dateData.nutrients.actual[nutrient] || 0
     const plan = dateData.nutrients.target[nutrient] || 0
-    const ratio = plan > 0 ? intake / plan : 0
+    let ratio = 0
+    if (plan > 0) {
+      ratio = intake / plan
+      if (ratio > 1) {
+        ratio = 1 // 确保比例不超过1
+      }
+    } else {
+      ratio = intake > 0 ? 1 : 0 // 如果计划为0且摄入大于0，设置为1，否则为0
+    }
     const over = plan > 0 && intake > plan
     const color = over ? getRedShade(nutrient) : getNutrientColor(nutrient)
     return {
@@ -211,6 +259,9 @@ const updateSummaryNutrition = () => {
       over: over
     }
   })
+
+  // 使用临时变量整体赋值
+  summaryNutrition.value = JSON.parse(JSON.stringify(tempSummary))
 
   // 更新每餐营养
   const m = dateData.meals
@@ -229,35 +280,19 @@ const mapMealNutrients = (mealN) => {
   }))
 }
 
-const getDataForSelectedDate = () => {
-  const selectedDate = dateTabs.value[currentDateIndex.value].dateString
-  const dateData = getDataByDate(selectedDate)
-
-  if (dateData) {
-    return dateData
-  } else {
-    return {
-      nutrients: {
-        actual: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0},
-        target: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}
-      },
-      meals: {
-        breakfast: {nutrients: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}},
-        lunch: {nutrients: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}},
-        dinner: {nutrients: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}},
-        other: {nutrients: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}}
-      }
-    }
-  }
-}
-
 // 更新图表数据（五大营养arcbar图）
 const updateChartData = () => {
-  // 根据 summaryNutrition 生成 5 个环
-  chartData.value.series = summaryNutrition.value.map(item => ({
-    data: item.ratio > 1 ? 1 : item.ratio, // 确保比例不超过1
-    color: item.over ? getRedShade(item.nutrient) : getNutrientColor(item.nutrient)
+  const tempSeries = summaryNutrition.value.map(item => ({
+    data: item.ratio, // 已在 summaryNutrition 中处理过比例
+    color: item.color
   }))
+
+  // 使用临时变量整体赋值
+  const tempChartData = {
+    series: tempSeries
+  }
+
+  chartData.value = JSON.parse(JSON.stringify(tempChartData))
 }
 
 // Helper to get红色不同深浅基于营养成分
@@ -303,6 +338,7 @@ const navigateToSetGoals = () => {
   })
 }
 
+// 初始化数据
 onMounted(async () => {
   generateDateTabs()
   await carbonNutritionStore.getNutritionGoals()
