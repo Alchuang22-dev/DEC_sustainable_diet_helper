@@ -28,7 +28,7 @@ func NewFoodController(db *gorm.DB) *FoodController {
 // @Accept json
 // @Produce json
 // @Param none
-// @Success 200 {array} models.FoodNameResponse
+// @Success 200 {array} models.FoodInfoResponse
 // @Router /foods/names [get]
 func (fc *FoodController) GetFoodNames(c *gin.Context) {
     language := c.Query("lang")
