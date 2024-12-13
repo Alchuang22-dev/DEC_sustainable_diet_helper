@@ -1,10 +1,14 @@
 package controllers
 
 import (
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"log"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/gin-gonic/gin"
@@ -21,26 +25,37 @@ func setupRecommendTestDB(t *testing.T) *gorm.DB {
 	// 自动迁移所需的表
     err = db.AutoMigrate(
         &models.User{},
-        &models.News{},
-        &models.Resource{},
-        &models.Paragraph{},
-        &models.Video{},
-        &models.Comment{},
         &models.Food{},
-        &models.Recipe{},
-        &models.Family{},
+        &models.UserIngredientHistory{},    
+        &models.UserRecipeHistory{},        
+        &models.UserIngredientPreference{}, 
+        &models.UserLastSelectedFoods{},    
+        &models.Recipe{}, 
         &models.FoodPreference{},
-        &models.NutritionGoal{},
-        &models.CarbonGoal{},
-        &models.NutritionIntake{},
-        &models.CarbonIntake{},
-        &models.RefreshToken{},
-        &models.FamilyDish{},
-		&models.UserLastSelectedFoods{},
     )
 	if err != nil {
 		t.Fatalf("迁移测试数据库失败: %v", err)
 	}
+        
+    // 添加测试食材数据
+    testFoods := []models.Food{
+        {
+            Model:      gorm.Model{ID: 1},
+            ZhFoodName: "测试食材1",
+            EnFoodName: "Test Food 1",
+        },
+        {
+            Model:      gorm.Model{ID: 2},
+            ZhFoodName: "测试食材2",
+            EnFoodName: "Test Food 2",
+        },
+    }
+    
+    for _, food := range testFoods {
+        if err := db.Create(&food).Error; err != nil {
+            t.Fatalf("创建测试食材失败: %v", err)
+        }
+    }
 
 	return db
 }
@@ -63,34 +78,7 @@ func setupRecommendTestUser(db *gorm.DB) *models.User {
 	return user
 }
 
-func setupRecommendTestFamily(db *gorm.DB) *models.Family {
-	family := &models.Family{
-		Name: "TestFamily",
-	}
-	db.Create(family)
-	return family
-}
-
-
-// 创建测试用户并关联到家庭
-func setupRecommendTestFamilyMember(db *gorm.DB, nickname string, familyID uint) *models.User {
-    user := &models.User{
-        Nickname: nickname,
-        OpenID:   "test_open_id_" + nickname,
-        FamilyID: &familyID,
-    }
-    db.Create(user)
-
-    // 建立家庭成员关系
-    var family models.Family
-    db.First(&family, familyID)
-    
-    // 使用 Association 建立多对多关系
-    db.Model(&family).Association("Members").Append(user)
-    
-    return user
-}
-
+// 测试设置用户选择的食材
 func TestSetUserSelectedFoods(t *testing.T) {
     // 设置测试数据库和路由
     db := setupRecommendTestDB(t)
@@ -98,26 +86,7 @@ func TestSetUserSelectedFoods(t *testing.T) {
     
     // 创建测试用户
     testUser := setupRecommendTestUser(db)
-    
-    // 创建一些测试食材
-    testFoods := []models.Food{
-        {
-            Model:      gorm.Model{ID: 1},
-            ZhFoodName: "测试食材1",
-            EnFoodName: "Test Food 1",
-        },
-        {
-            Model:      gorm.Model{ID: 2},
-            ZhFoodName: "测试食材2",
-            EnFoodName: "Test Food 2",
-        },
-    }
-    
-    for _, food := range testFoods {
-        if err := db.Create(&food).Error; err != nil {
-            t.Fatalf("创建测试食材失败: %v", err)
-        }
-    }
+
 
     // 设置路由 - 修改为与实际路由一致
     router.POST("/ingredients/set", func(c *gin.Context) {
@@ -192,6 +161,192 @@ func TestSetUserSelectedFoods(t *testing.T) {
     })
 }
 
+// 测试推荐食材
+func TestGetRecommendedFoods(t *testing.T) {
+    db := setupRecommendTestDB(t)
+    router, rc := setupRecommendTestRouter(db)
+    user := setupRecommendTestUser(db)
+
+    // Add middleware first
+    router.Use(func(c *gin.Context) {
+        // Get auth setup from header
+        if authSetup := c.GetHeader("auth_setup"); authSetup == "true" {
+            c.Set("user_id", user.ID)
+        }
+        c.Next()
+    })
+
+    // Then register the route
+    router.POST("/recommend/foods", rc.RecommendIngredients)
+
+    tests := []struct {
+        name           string
+        setupAuth      bool
+        requestBody    interface{}
+        expectedStatus int
+        checkResponse  func(*testing.T, *httptest.ResponseRecorder)
+    }{
+        {
+            name: "成功获取推荐食材",
+            setupAuth: true,
+            requestBody: gin.H{
+                "use_last_ingredients": false,
+                "liked_ingredients": []uint{},
+                "disliked_ingredients": []uint{},
+            },
+            expectedStatus: http.StatusOK,
+            checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
+                var response IngredientRecommendResponse
+                err := json.Unmarshal(w.Body.Bytes(), &response)
+                assert.NoError(t, err)
+                assert.NotEmpty(t, response.RecommendedIngredients)
+                log.Printf("response: %v", response)
+            },
+        },
+        {
+            name: "未授权访问",
+            setupAuth: false,
+            requestBody: gin.H{},
+            expectedStatus: http.StatusUnauthorized,
+            checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
+                var response map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &response)
+                assert.NoError(t, err)
+                assert.Equal(t, "用户未认证", response["error"])
+            },
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            body, _ := json.Marshal(tt.requestBody)
+            req, _ := http.NewRequest(http.MethodPost, "/recommend/foods", bytes.NewBuffer(body))
+            req.Header.Set("Content-Type", "application/json")
+            
+            // Set auth setup in header
+            if tt.setupAuth {
+                req.Header.Set("auth_setup", "true")
+            } else {
+                req.Header.Set("auth_setup", "false")
+            }
+            
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tt.expectedStatus, w.Code, "Status code mismatch")
+            if tt.checkResponse != nil {
+                tt.checkResponse(t, w)
+            }
+        })
+    }
+}
 
 
+// 测试推荐食谱
+func TestGetRecommendedRecipes(t *testing.T) {
+    db := setupRecommendTestDB(t)
+    router, rc := setupRecommendTestRouter(db)
+    user := setupRecommendTestUser(db)
 
+    // 创建测试食谱数据
+    recipe1 := models.Recipe{
+        Name: "Test Recipe 1",
+        URL: "test-url-1",
+        ImageURL: "test-image-1",
+        Ingredients: `{"ingredient1": 100, "ingredient2": 200}`,
+    }
+    recipe2 := models.Recipe{
+        Name: "Test Recipe 2",
+        URL: "test-url-2",
+        ImageURL: "test-image-2",
+        Ingredients: `{"ingredient1": 150, "ingredient2": 250}`,
+    }
+    db.Create(&recipe1)
+    db.Create(&recipe2)
+
+    // 添加食谱和食材的关联关系
+    err := db.Exec("INSERT INTO food_recipes (recipe_id, food_id) VALUES (?, ?)", recipe1.ID, 1).Error
+    assert.NoError(t, err)
+    err = db.Exec("INSERT INTO food_recipes (recipe_id, food_id) VALUES (?, ?)", recipe2.ID, 2).Error
+    assert.NoError(t, err)
+
+    // Add middleware first
+    router.Use(func(c *gin.Context) {
+        if authSetup := c.GetHeader("auth_setup"); authSetup == "true" {
+            c.Set("user_id", user.ID)
+        }
+        c.Next()
+    })
+
+    // Register the route
+    router.POST("/recommend/recipes", rc.RecommendRecipes)
+
+    tests := []struct {
+        name           string
+        setupAuth      bool
+        requestBody    interface{}
+        expectedStatus int
+        checkResponse  func(*testing.T, *httptest.ResponseRecorder)
+    }{
+        {
+            name: "成功获取推荐食谱",
+            setupAuth: true,
+            requestBody: gin.H{
+                "selected_ingredients": []uint{1, 2},
+                "disliked_ingredients": []uint{},
+            },
+            expectedStatus: http.StatusOK,
+            checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
+                var response RecipeRecommendResponse
+                err := json.Unmarshal(w.Body.Bytes(), &response)
+                assert.NoError(t, err)
+                assert.NotEmpty(t, response.RecommendedRecipes)
+                // 验证返回的食谱数据
+                for _, recipe := range response.RecommendedRecipes {
+                    assert.NotEmpty(t, recipe.Name)
+                    assert.NotEmpty(t, recipe.ImageURL)
+                    assert.NotZero(t, recipe.RecipeID)
+                    assert.NotEmpty(t, recipe.Ingredients)
+                }
+            },
+        },
+        {
+            name: "未授权访问",
+            setupAuth: false,
+            requestBody: gin.H{
+                "selected_ingredients": []uint{1},
+                "disliked_ingredients": []uint{},
+            },
+            expectedStatus: http.StatusUnauthorized,
+            checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
+                var response map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &response)
+                assert.NoError(t, err)
+                assert.Equal(t, "用户未认证", response["error"])
+            },
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            body, _ := json.Marshal(tt.requestBody)
+            req, _ := http.NewRequest(http.MethodPost, "/recommend/recipes", bytes.NewBuffer(body))
+            req.Header.Set("Content-Type", "application/json")
+            
+            // Set auth setup in header
+            if tt.setupAuth {
+                req.Header.Set("auth_setup", "true")
+            } else {
+                req.Header.Set("auth_setup", "false")
+            }
+            
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tt.expectedStatus, w.Code)
+            if tt.checkResponse != nil {
+                tt.checkResponse(t, w)
+            }
+        })
+    }
+}

@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// ======================结构体=========================
 type NutritionCarbonController struct {
     DB *gorm.DB
 }
@@ -49,11 +50,14 @@ type SharedNutritionCarbonIntakeRequest struct {
     UserShares    []UserShare `json:"user_shares" binding:"required,min=1"`
 }
 
+// ======================辅助函数=========================
 // 验证日期,需要保证起始是今天，且连续往后
 func validateDate(data []time.Time) (bool, error) {
     today := time.Now().Truncate(24 * time.Hour)
     for i, date := range data {
-        if date.Before(today) {
+        // 将日期转换为当天零点
+        dateStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+        if dateStart.Before(today) {
             return false, fmt.Errorf("日期不能早于今天")
         }
         if i > 0 && date.Sub(data[i-1]) != time.Hour * 24 {
@@ -63,6 +67,74 @@ func validateDate(data []time.Time) (bool, error) {
     return true, nil
 }
 
+// 计算时间范围
+func calculateTimeRange() (startDate, endDate time.Time) {
+    now := time.Now()
+    // 将当前时间调整为当天的零点
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+    
+    // 计算开始时间（6天前的零点）
+    startDate = today.AddDate(0, 0, -6)
+    // 计算结束时间（明天的零点）
+    endDate = today.AddDate(0, 0, 1)
+    
+    return startDate, endDate
+}
+
+// validateUserShares 验证用户分摊信息
+func (nc *NutritionCarbonController) validateUserShares(currentUserID uint, shares []UserShare) (bool, error) {
+    log.Printf("验证用户分摊信息")
+    // 获取当前用户家庭信息
+    var user models.User
+    if err := nc.DB.Preload("Family.Members").First(&user, currentUserID).Error; err != nil {
+        return false, fmt.Errorf("获取用户信息失败")
+    }
+    log.Printf("获取用户信息成功")
+
+    // 先验证每个比例值是否有效
+    for _, share := range shares {
+        if share.Ratio <= 0 || share.Ratio > 1 {
+            return false, fmt.Errorf("无效的请求数据")
+        }
+    }
+
+    // 单人分摊的情况
+    if len(shares) == 1 && shares[0].UserID == currentUserID {
+        if shares[0].Ratio != 1 {
+            return false, fmt.Errorf("用户分摊比例必须为1")
+        }
+        return true, nil
+    }
+    log.Printf("用户分摊比例为1")
+    if user.Family == nil {
+        return false, fmt.Errorf("用户不属于任何家庭")
+    }
+    log.Printf("用户属于某个家庭")
+    // 验证所有用户是否属于同一个家庭
+    familyMembers := make(map[uint]bool)
+    for _, member := range user.Family.Members {
+        familyMembers[member.ID] = true
+    }
+    log.Printf("验证所有用户是否属于同一个家庭成功")
+
+    // 再验证比例总和是否为1
+    var totalRatio float64
+    for _, share := range shares {
+        if !familyMembers[share.UserID] {
+            return false, fmt.Errorf("用户 %d 不属于同一个家庭", share.UserID)
+        }
+        totalRatio += share.Ratio
+    }
+    log.Printf("验证比例总和是否为1成功")
+    // 允许有0.00001的误差
+    if totalRatio < 0.99999 || totalRatio > 1.00001 {
+        return false, fmt.Errorf("分摊比例之和必须等于1")
+    }
+    log.Printf("验证分摊比例之和是否等于1成功")
+    return true, nil
+}
+
+// ======================Set Goals API=========================
 // 设置营养目标
 func (nc *NutritionCarbonController) SetNutritionGoals(c *gin.Context){
     log.Printf("设置营养目标")
@@ -97,7 +169,7 @@ func (nc *NutritionCarbonController) SetNutritionGoals(c *gin.Context){
     tx := nc.DB.Begin()
 
     // 删除一周前的目标
-    if err := tx.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7)).Delete(&models.NutritionGoal{}).Error; err != nil {
+    if err := tx.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.NutritionGoal{}).Error; err != nil {
         tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "删除一周前的目标失败"})
         return
@@ -185,7 +257,7 @@ func (nc *NutritionCarbonController) SetCarbonGoals(c *gin.Context) {
     tx := nc.DB.Begin()
 
     // 删除一周前的目标 
-    if err := tx.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7)).Delete(&models.CarbonGoal{}).Error; err != nil {
+    if err := tx.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.CarbonGoal{}).Error; err != nil {
         tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "删除一周前的目标失败"})
         return
@@ -232,20 +304,7 @@ func (nc *NutritionCarbonController) SetCarbonGoals(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{"message": "目标设置成功"})
 }   
 
-// 计算时间范围
-func calculateTimeRange() (startDate, endDate time.Time) {
-    now := time.Now()
-    // 将当前时间调整为当天的零点
-    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-    
-    // 计算开始时间（6天前的零点）
-    startDate = today.AddDate(0, 0, -6)
-    // 计算结束时间（明天的零点）
-    endDate = today.AddDate(0, 0, 1)
-    
-    return startDate, endDate
-}
-
+// ======================Get Goals API=========================
 // 获取营养目标
 func (nc *NutritionCarbonController) GetNutritionGoals(c *gin.Context) {
     log.Printf("获取营养目标")  
@@ -257,7 +316,7 @@ func (nc *NutritionCarbonController) GetNutritionGoals(c *gin.Context) {
     log.Printf("userID: %v", userID)
 
     // 删除一周前的目标
-    if err := nc.DB.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7)).Delete(&models.NutritionGoal{}).Error; err != nil {
+    if err := nc.DB.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.NutritionGoal{}).Error; err != nil {
         log.Printf("删除一周前的目标失败: %v", err)
         c.JSON(http.StatusInternalServerError, gin.H{"error": "删除一周前的目标失败"})
         return
@@ -287,7 +346,7 @@ func (nc *NutritionCarbonController) GetNutritionGoals(c *gin.Context) {
     // 查询存在的目标数据
     var existingGoals []models.NutritionGoal
     if err := nc.DB.Where("user_id = ? AND date BETWEEN ? AND ?", 
-        userID, startDate, endDate).
+        userID, startDate.Format("2006-01-02"), endDate.Format("2006-01-02")).
         Order("date").
         Find(&existingGoals).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "获取营养目标失败"})
@@ -316,7 +375,7 @@ func (nc *NutritionCarbonController) GetCarbonGoals(c *gin.Context) {
     log.Printf("userID: %v", userID)
 
     // 删除一周前的目标
-    if err := nc.DB.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7)).Delete(&models.CarbonGoal{}).Error; err != nil {
+    if err := nc.DB.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.CarbonGoal{}).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "删除一周前的目标失败"})
         return
     }
@@ -341,7 +400,7 @@ func (nc *NutritionCarbonController) GetCarbonGoals(c *gin.Context) {
     // 查询存在的目标数据
     var existingGoals []models.CarbonGoal
     if err := nc.DB.Where("user_id = ? AND date BETWEEN ? AND ?", 
-        userID, startDate, endDate).
+        userID, startDate.Format("2006-01-02"), endDate.Format("2006-01-02")).
         Order("date").
         Find(&existingGoals).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "获取碳排放目标失败"})
@@ -359,6 +418,7 @@ func (nc *NutritionCarbonController) GetCarbonGoals(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{"data": goals})
 }
 
+// ======================Get Actual API=========================
 // 获取实际营养摄入
 func (nc *NutritionCarbonController) GetActualNutrition(c *gin.Context) {
     userID, err := c.Get("user_id")
@@ -368,7 +428,7 @@ func (nc *NutritionCarbonController) GetActualNutrition(c *gin.Context) {
     }
     log.Printf("userID: %v", userID)
     // 删除7天前的摄入记录
-    if err := nc.DB.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7)).Delete(&models.NutritionIntake{}).Error; err != nil {
+    if err := nc.DB.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.NutritionIntake{}).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "删除7天前的摄入记录失败"})
         return
     }
@@ -400,9 +460,12 @@ func (nc *NutritionCarbonController) GetActualNutrition(c *gin.Context) {
     log.Printf("初始化每天每餐的默认值成功")
     // 查询实际摄入记录
     var actualIntakes []models.NutritionIntake
-    if err := nc.DB.Where("user_id = ? AND date >= ? AND date <= ?", userID, startDate, endDate).
-        Order("date, meal_type").
-        Find(&actualIntakes).Error; err != nil {
+    if err := nc.DB.Where("user_id = ? AND date >= ? AND date < ?", 
+        userID, 
+        startDate.Format("2006-01-02"), // Use date only comparison
+        endDate.AddDate(0, 0, 1).Format("2006-01-02"), // Include full day
+    ).Order("date, meal_type").
+    Find(&actualIntakes).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "获取营养摄入记录失败"})
         return
     }
@@ -447,7 +510,7 @@ func (nc *NutritionCarbonController) GetCarbonIntakes(c *gin.Context) {
     }
     log.Printf("userID: %v", userID)
     // 删除7天前的碳排放记录
-    if err := nc.DB.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7)).Delete(&models.CarbonIntake{}).Error; err != nil {
+    if err := nc.DB.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.CarbonIntake{}).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "删除7天前的碳排放记录失败"})
         return
     }
@@ -475,18 +538,19 @@ func (nc *NutritionCarbonController) GetCarbonIntakes(c *gin.Context) {
     log.Printf("初始化每天每餐的默认值成功")
     // 查询实际碳排放记录
     var actualIntakes []models.CarbonIntake
-    if err := nc.DB.Where("user_id = ? AND date >= ? AND date <= ?", userID, startDate, endDate).
-        Order("date, meal_type").
-        Find(&actualIntakes).Error; err != nil {
+    if err := nc.DB.Where("user_id = ? AND date >= ? AND date < ?", 
+        userID, 
+        startDate.Format("2006-01-02"), // Use date only comparison
+        endDate.AddDate(0, 0, 1).Format("2006-01-02"), // Include full day
+    ).Order("date, meal_type").
+    Find(&actualIntakes).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "获取碳排放记录失败"})
         return
     }
-    log.Printf("查询实际碳排放记录成功")
     // 累加实际摄入值到对应的默认记录中
     for _, actual := range actualIntakes {
         dayDiff := actual.Date.Sub(startDate).Hours() / 24
         dayIndex := int(dayDiff)
-        
         var mealIndex int
         switch actual.MealType {
         case models.Breakfast:
@@ -508,59 +572,7 @@ func (nc *NutritionCarbonController) GetCarbonIntakes(c *gin.Context) {
     c.JSON(http.StatusOK, defaultIntakes)
 }
 
-// validateUserShares 验证用户分摊信息
-func (nc *NutritionCarbonController) validateUserShares(currentUserID uint, shares []UserShare) (bool, error) {
-    log.Printf("验证用户分摊信息")
-    // 获取当前用户家庭信息
-    var user models.User
-    if err := nc.DB.Preload("Family.Members").First(&user, currentUserID).Error; err != nil {
-        return false, fmt.Errorf("获取用户信息失败")
-    }
-    log.Printf("获取用户信息成功")
-
-    // 先验证每个比例值是否有效
-    for _, share := range shares {
-        if share.Ratio <= 0 || share.Ratio > 1 {
-            return false, fmt.Errorf("无效的请求数据")
-        }
-    }
-
-    // 单人分摊的情况
-    if len(shares) == 1 && shares[0].UserID == currentUserID {
-        if shares[0].Ratio != 1 {
-            return false, fmt.Errorf("用户分摊比例必须为1")
-        }
-        return true, nil
-    }
-    log.Printf("用户分摊比例为1")
-    if user.Family == nil {
-        return false, fmt.Errorf("用户不属于任何家庭")
-    }
-    log.Printf("用户属于某个家庭")
-    // 验证所有用户是否属于同一个家庭
-    familyMembers := make(map[uint]bool)
-    for _, member := range user.Family.Members {
-        familyMembers[member.ID] = true
-    }
-    log.Printf("验证所有用户是否属于同一个家庭成功")
-
-    // 再验证比例总和是否为1
-    var totalRatio float64
-    for _, share := range shares {
-        if !familyMembers[share.UserID] {
-            return false, fmt.Errorf("用户 %d 不属于同一个家庭", share.UserID)
-        }
-        totalRatio += share.Ratio
-    }
-    log.Printf("验证比例总和是否为1成功")
-    // 允许有0.00001的误差
-    if totalRatio < 0.99999 || totalRatio > 1.00001 {
-        return false, fmt.Errorf("分摊比例之和必须等于1")
-    }
-    log.Printf("验证分摊比例之和是否等于1成功")
-    return true, nil
-}
-
+// ======================Set Shared API=========================
 // SetSharedNutritionCarbonIntake 设置共享营养碳排放
 func (nc *NutritionCarbonController) SetSharedNutritionCarbonIntake(c *gin.Context) {
     log.Printf("设置共享营养碳排放")
