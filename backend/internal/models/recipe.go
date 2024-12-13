@@ -4,6 +4,7 @@ import (
 	"gorm.io/gorm"
 	"encoding/json"
 	"fmt"
+	"log"
 )
 
 // Recipe 食谱模型
@@ -87,13 +88,16 @@ func GetRecipeIDsByFoodID(db *gorm.DB, foodID uint) ([]uint, error) {
         Error
     
     if err != nil {
+		log.Printf("查询食谱ID失败: %v", err)
         return nil, fmt.Errorf("查询食谱ID失败: %v", err)
     }
     
     // 添加空结果检查
     if len(recipeIDs) == 0 {
+		log.Printf("未找到包含食材ID %d 的食谱", foodID)
         return nil, fmt.Errorf("未找到包含食材ID %d 的食谱", foodID)
     }
+	log.Printf("查询食谱ID成功: %v", recipeIDs)
     
     return recipeIDs, nil
 }

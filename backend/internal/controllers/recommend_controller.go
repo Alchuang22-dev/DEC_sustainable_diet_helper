@@ -508,8 +508,8 @@ func (ic *RecommendController) RecommendRecipes(c *gin.Context) {
 
         recipeIDs, err := models.GetRecipeIDsByFoodID(ic.DB, ingredientID)
         if err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get recipe IDs"})
-            return
+            log.Printf("获取包含食材%v的食谱失败: %v", ingredientID, err)
+            continue
         }
         log.Printf("获取包含食材%v的食谱成功", ingredientID)
 
