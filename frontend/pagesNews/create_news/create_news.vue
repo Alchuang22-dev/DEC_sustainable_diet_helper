@@ -111,6 +111,7 @@ const draftStore = useDraftStore();
 const userStore = useUserStore();
 
 const BASE_URL = 'http://122.51.231.155:8080';
+const BASE_URL_SH = 'http://122.51.231.155';
 
 const authorNickname = computed(() => userStore.user.nickName);
 const authorAvatar = computed(() =>
@@ -240,35 +241,22 @@ const saveDraft = async () => {
   data.images.push(''); // 先添加一个空的图片路径
   data.image_descriptions.push('');
 
-  // 上传所有图片并填充图片路径
-  const imagePaths = await Promise.all(
-    post.components.map((item) => {
-      if (item.style === 'image' && item.content) {
-        return uploadImage(item.content) // 上传图片并获取路径
-          .then((path) => {
-            data.images.push(path); // 保存上传后的图片路径
-            data.image_descriptions.push(item.imageDescription || ''); // 保存图片描述
-          })
-          .catch((error) => {
-            console.error(`图片上传失败: ${error}`);
-            data.images.push(''); // 图片上传失败时，插入空路径
-            data.image_descriptions.push('');
-          });
-      } else {
-        return Promise.resolve(); // 非图片项不处理
-      }
-    })
-  );
-
-  // 处理文本内容
-  post.components.forEach((item) => {
-    if (item.style === 'text') {
-      data.paragraphs.push(item.content || '' );
-      data.images.push('');
-      data.image_descriptions.push('');
-    }
-  });
-
+	// 上传所有图片并填充图片路径
+	const imagePaths = await Promise.all(
+	  post.components.map((item) => {
+		if (item.style === 'image' && item.content) {
+		  data.paragraphs.push(''); // 添加空段落
+		  console.log(item);
+		  data.images.push(item.content); // 保存上传后的图片路径
+		  data.image_descriptions.push(item.description || ''); // 保存图片描述
+		  console.log(item.description);
+		} else if (item.style === 'text') {
+		  data.paragraphs.push(item.content || ''); // 添加文字段落
+		  data.images.push(''); // 空白图片路径
+		  data.image_descriptions.push(''); // 空白图片描述
+		}
+	  })
+	);
   // 提交草稿数据到服务器
   uni.request({
     url: `${BASE_URL}/news/create_draft`,
@@ -339,10 +327,11 @@ const handleImageChange = (index) => {
       // 上传图片到服务器
       uploadImage(imagePath).then((uploadedPath) => {
         // 将上传返回的路径拼接成完整URL
-        const fullImageUrl = `${BASE_URL}/${uploadedPath}`;
+        const fullImageUrl = `${BASE_URL}/static/${uploadedPath}`;
+		console.log(fullImageUrl);
         items.value[index].content = fullImageUrl;
       }).catch((error) => {
-        console.error('图片上传失败', error);
+        console.error('图片上传服务器失败', error);
       });
     },
     fail: (err) => {
