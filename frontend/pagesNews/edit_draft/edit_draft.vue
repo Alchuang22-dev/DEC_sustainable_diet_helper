@@ -101,15 +101,20 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useDraftStore } from '@/stores/draft';
 import { useUserStore } from '@/stores/user'; // 引入 Pinia 用户存储
+import { onLoad } from '@dcloudio/uni-app'
 
 const draftStore = useDraftStore();
 const userStore = useUserStore();
 
 const BASE_URL = 'http://122.51.231.155:8080';
+
+const PageId = ref('');
+const title = ref('');  // 延迟初始化
+const description = ref('');  // 延迟初始化
 
 const authorNickname = computed(() => userStore.user.nickName);
 const authorAvatar = computed(() =>
@@ -117,26 +122,21 @@ const authorAvatar = computed(() =>
     ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
     : '/static/images/index/background_img.jpg'
 );
+const jwtToken = computed(() => userStore.user.token);
 
 const { t } = useI18n();
 
 // 草稿数据初始化
 const post = ref({
-  id: '1',
-  authoravatar: 'https://example.com/avatar.jpg',
-  authorname: 'John Doe',
-  authorid: '123',
-  savetime: '2024-12-13',
-  title: 'Sample Article Title',
-  description: 'This is a description of the article.',
-  components: [
-    { id: 1, content: 'This is a text component', style: 'text' },
-    { id: 2, content: 'https://cdn.pixabay.com/photo/2017/04/09/07/25/honey-pomelo-2215031_1280.jpg', style: 'image', description: 'This is an image' },
-  ],
+  components: [] 
 });
 
-const title = ref(post.value.title);
-const description = ref(post.value.description);
+watch(post, (newValue) => {
+  console.log('post 更新:', newValue);
+  // 在 post 更新后设置 title 和 description
+  title.value = newValue.title || '';
+  description.value = newValue.description || '';
+});
 
 // 根据post组件内容动态渲染
 const addText = () => {
@@ -198,7 +198,81 @@ const saveDraft = () => {
 const showModal = ref(false);
 const showfunctions = ref(true);
 const hidefunctions = ref(false);
+
+onLoad(async (options) => {
+  const articleId = options.id;
+  PageId.value = articleId;
+  console.log('接收到的文章 ID:', articleId);
+
+  // 根据 articleId 获取文章详情等操作
+  const details = await getArticleDetails(PageId.value, true);
+  console.log('获取的文章内容:', details);
+
+  // 更新 post 对象
+  post.value = {
+    id: details.id,
+    authoravatar: details.author.avatar_url,
+    authorname: details.author.nickname,
+    authorid: details.author.id,
+    savetime: details.savetime,
+    title: details.title,
+    description: details.paragraphs[0].text,
+    components: [] // 初始化组件数组
+  };
+
+  // 更新 title 和 description
+  title.value = post.value.title;
+  description.value = post.value.description;
+
+  // 遍历 paragraphs 和 images 填充 components
+  const totalItems = Math.max(details.paragraphs.length, details.images.length);
+  for (let index = 1; index < totalItems; index++) {
+    // 处理段落文本
+    if (details.paragraphs[index] && details.paragraphs[index].text) {
+      post.value.components.push({
+        id: index + 1, // 确保 id 从 1 开始
+        content: details.paragraphs[index].text,
+        style: 'text',
+      });
+    }
+
+    // 处理图片
+    if (details.images[index] && details.images[index].url) {
+      post.value.components.push({
+        id: index + 1, // 确保 id 从 1 开始
+        content: details.images[index].url,
+        style: 'image',
+        description: details.images[index].description || '', // 如果没有描述，则为空
+      });
+    }
+  }
+
+  console.log('更新后的组件内容:', post.value.components);
+});
+
+// Function to get news or draft details
+const getArticleDetails = async (id, isDraft = true) => {
+  const url = isDraft
+    ? `${BASE_URL}/news/details/draft/${id}`
+    : `${BASE_URL}/news/details/news/${id}`;
+  try {
+    const res = await uni.request({
+      url: url,
+      method: 'GET',
+      header: {
+        'Authorization': `Bearer ${jwtToken.value}`
+      }
+    });
+    console.log('获取详细信息');
+    console.log(res.data);
+    return res.data;
+  } catch (error) {
+    console.error('Error fetching article details', error);
+    return null;
+  }
+};
 </script>
+
 
 
 <style scoped>

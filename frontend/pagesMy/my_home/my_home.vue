@@ -129,6 +129,8 @@ const getArticleDetails = async (id, isDraft = false) => {
         'Authorization': `Bearer ${jwtToken.value}`
       }
     });
+	console.log('获取详细信息');
+	console.log(res.data);
     return res.data;
   } catch (error) {
     console.error('Error fetching article details', error);
@@ -180,19 +182,52 @@ const viewArticle = (index) => {
 
 // Edit article function
 const editArticle = (index) => {
-  console.log('编辑文章:', articles.value[index]);
+  const article = articles.value[index];
+  console.log('编辑文章:', article);
+
+  // 将文章的 ID 作为查询参数传递到新页面
   uni.navigateTo({
-    url: "/pagesNews/edit_draft/edit_draft",
+    url: `/pagesNews/edit_draft/edit_draft?id=${article.id}`,
   });
-  // 跳转到编辑页面
 };
 
 // Delete article function
-const deleteArticle = (index) => {
-  console.log('删除文章:', articles.value[index]);
-  // 执行删除操作
-  articles.value.splice(index, 1); // 从数据中删除
+// Delete article function
+const deleteArticle = async (index) => {
+  const article = articles.value[index];
+
+  if (article.status === '草稿') {
+    // 如果状态是草稿，发送删除请求
+    try {
+      const res = await uni.request({
+        url: `${BASE_URL.value}/news/drafts/${article.id}`,
+        method: 'DELETE',
+        header: {
+          'Authorization': `Bearer ${jwtToken.value}`
+        }
+      });
+
+      if (res.data && res.data.message === 'Draft deleted successfully.') {
+        console.log('草稿删除成功');
+        // 从数据中删除该文章
+        articles.value.splice(index, 1); 
+      } else {
+        console.error('删除失败:', res.data.message);
+      }
+    } catch (error) {
+      console.error('Error deleting draft article', error);
+    }
+  } else if (article.status === '已发布') {
+    // 如果状态是已发布，提示用户联系管理员
+    console.log('请联系管理员删除');
+    uni.showToast({
+      title: '请联系管理员删除',
+      icon: 'none',
+      duration: 2000
+    });
+  }
 };
+
 </script>
 
 <style scoped>
