@@ -1,12 +1,12 @@
 <template>
-	<image src="/static/images/index/background_img.jpg" class="background-image"></image>
-	<view class="header">
-	  <text class="title">{{$t('menu_creations')}}</text>
-	  <view class="header-actions">
-	    <button class="menu-icon"></button>
-	    <button class="camera-icon"></button>
-	  </view>
-	</view>
+  <image src="/static/images/index/background_img.jpg" class="background-image"></image>
+  <view class="header">
+    <text class="title">{{$t('menu_creations')}}</text>
+    <view class="header-actions">
+      <button class="menu-icon"></button>
+      <button class="camera-icon"></button>
+    </view>
+  </view>
   <view class="container">
     <!-- 图文卡片列表 -->
     <view class="card-list">
@@ -48,59 +48,151 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref, reactive, computed, watch } from 'vue';
+import { useNewsStore } from '@/stores/news_list';
 import { useI18n } from 'vue-i18n';
-//import uni from '@dcloudio/uni-app';
-import { useStore } from 'vuex'; // 引入 Vuex 的 useStore
+import { onShow, onPullDownRefresh } from '@dcloudio/uni-app';
+import { storeToRefs } from 'pinia';
+import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
 
-const { t, locale, messages } = useI18n();
+const newsStore = useNewsStore();
+const userStore = useUserStore(); // 使用用户存储
+
+const activeIndex = ref(null);
+// 计算属性从 Pinia store 获取用户状态
+const isLoggedIn = computed(() => userStore.user.isLoggedIn);
+const uid = computed(() => userStore.user.nickName);
+const avatarSrc = computed(() =>
+    userStore.user.avatarUrl
+        ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
+        : '/static/images/index/background_img.jpg'
+);
+
+// 从 Store 获取数据和方法
+const { filteredNewsItems, selectedSection, isRefreshing } = storeToRefs(newsStore);
+const { setSection, refreshNews, fetchNews } = newsStore;
+
+
+const BASE_URL = ref('http://122.51.231.155:8080');
 
 // 模拟数据
-const articles = ref([
-  {
-    title: '如何保持健康饮食',
-    description: '这是一篇关于健康饮食的文章。',
-    publishTime: '2024-12-06 12:30',
-    likes: 120,
-    favorites: 50,
-    shares: 30,
-    status: '已发布', // 文章状态
-    bgColor: 'rgba(0, 123, 255, 0.1)' // 背景颜色
-  },
-  {
-    title: '学习Vue3的基本概念',
-    description: '本文介绍了Vue3的一些基础概念。',
-    publishTime: '2024-12-05 10:00',
-    likes: 80,
-    favorites: 30,
-    shares: 20,
-    status: '草稿', // 文章状态
-    bgColor: 'rgba(255, 193, 7, 0.1)' // 背景颜色
-  },
-  // 更多文章数据...
-])
+const articles = ref([]);
+const { t, locale, messages } = useI18n();
+const jwtToken = computed(() => userStore.user.token);; // Replace with actual token
 
-// 查看文章
+// Function to get published news IDs
+const getPublishedNewsIds = async () => {
+  console.log('获取已发布');
+  try {
+    const res = await uni.request({
+      url: `${BASE_URL.value}/news/my_news`,
+      method: 'GET',
+      header: {
+        'Authorization': `Bearer ${jwtToken.value}`
+      }
+    });
+    return res.data.news_ids || [];
+  } catch (error) {
+    console.error('Error fetching published news IDs', error);
+    return [];
+  }
+};
+
+// Function to get draft news IDs
+const getDraftNewsIds = async () => {
+	console.log('获取草稿');
+  try {
+    const res = await uni.request({
+      url: `${BASE_URL.value}/news/my_drafts`,
+      method: 'GET',
+      header: {
+        'Authorization': `Bearer ${jwtToken.value}`
+      }
+    });
+    return res.data.draft_ids || [];
+  } catch (error) {
+    console.error('Error fetching draft news IDs', error);
+    return [];
+  }
+};
+
+// Function to get news or draft details
+const getArticleDetails = async (id, isDraft = false) => {
+  const url = isDraft
+    ? `${BASE_URL.value}/news/details/draft/${id}`
+    : `${BASE_URL.value}/news/details/news/${id}`;
+  try {
+    const res = await uni.request({
+      url: url,
+      method: 'GET',
+      header: {
+        'Authorization': `Bearer ${jwtToken.value}`
+      }
+    });
+    return res.data;
+  } catch (error) {
+    console.error('Error fetching article details', error);
+    return null;
+  }
+};
+
+// Function to fetch articles on page load
+const fetchArticles = async () => {
+  const publishedIds = await getPublishedNewsIds();
+  const draftIds = await getDraftNewsIds();
+
+  const allArticles = [];
+  for (const id of publishedIds) {
+    const details = await getArticleDetails(id);
+    if (details) {
+      allArticles.push({
+        ...details,
+        status: '已发布',
+        bgColor: 'rgba(0, 123, 255, 0.1)', // Published color
+      });
+    }
+  }
+
+  for (const id of draftIds) {
+    const details = await getArticleDetails(id, true);
+    if (details) {
+      allArticles.push({
+        ...details,
+        status: '草稿',
+        bgColor: 'rgba(255, 193, 7, 0.1)', // Draft color
+      });
+    }
+  }
+
+  articles.value = allArticles;
+};
+
+// Lifecycle hook to load articles
+onMounted(() => {
+  fetchArticles();
+});
+
+// View article function
 const viewArticle = (index) => {
-  console.log('查看文章:', articles.value[index])
+  console.log('查看文章:', articles.value[index]);
   // 跳转到文章详情页
-}
+};
 
-// 编辑文章
+// Edit article function
 const editArticle = (index) => {
-  console.log('编辑文章:', articles.value[index])
+  console.log('编辑文章:', articles.value[index]);
   uni.navigateTo({
-  	url: "/pagesNews/edit_draft/edit_draft",
-  })
+    url: "/pagesNews/edit_draft/edit_draft",
+  });
   // 跳转到编辑页面
-}
+};
 
-// 删除文章
+// Delete article function
 const deleteArticle = (index) => {
-  console.log('删除文章:', articles.value[index])
+  console.log('删除文章:', articles.value[index]);
   // 执行删除操作
-  articles.value.splice(index, 1) // 从数据中删除
-}
+  articles.value.splice(index, 1); // 从数据中删除
+};
 </script>
 
 <style scoped>

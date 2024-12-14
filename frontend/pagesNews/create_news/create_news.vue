@@ -236,7 +236,7 @@ const saveDraft = async () => {
   };
 
   // 默认简介为第一个自然段
-  data.paragraphs.push({ text: description.value });
+  data.paragraphs.push(description.value);
   data.images.push(''); // 先添加一个空的图片路径
   data.image_descriptions.push('');
 
@@ -263,7 +263,7 @@ const saveDraft = async () => {
   // 处理文本内容
   post.components.forEach((item) => {
     if (item.style === 'text') {
-      data.paragraphs.push({ text: item.content || '' });
+      data.paragraphs.push(item.content || '' );
       data.images.push('');
       data.image_descriptions.push('');
     }
