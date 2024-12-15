@@ -15,6 +15,7 @@ type Recipe struct {
 	ImageURL    string  `json:"image_url" gorm:"column:image_url"`      // 食谱图片URL
 	Ingredients string  `json:"ingredients" gorm:"column:ingredients"`   // 原料组成(JSON格式存储)
 	Foods       []Food  `json:"foods" gorm:"many2many:food_recipes;"`   // 关联的食物
+	Category    string  `json:"category" gorm:"column:category"`       // 食谱分类
 }
 
 // RecipeIngredient 用于JSON序列化和反序列化的结构体
