@@ -1,254 +1,442 @@
 <template>
   <view class="container">
-    <!-- Daily Nutrition Target Section -->
-    <view class="daily-nutrition-target">
-      <button class="toggle-button" @click="toggleTargetList">{{ $t('viewNutritionGoals') }}</button>
-      <view v-if="showTargetList" class="nutrition-item-list">
-        <view v-for="(target, index) in nutritionTargets" :key="index" class="nutrition-item">
-          <text>{{ target.name }}    {{ target.currentValue }}{{ target.unit }}/{{ target.targetValue }}{{ target.unit }}</text>
-          <button class="delete-target" @click="deleteTarget(index)">&times;</button>
+    <view class="goals-wrapper">
+      <!-- 碳目标输入框 -->
+      <view class="goal-section">
+        <text class="label">{{ t('carbon_goal_label') }}</text>
+        <input
+            class="input"
+            type="number"
+            v-model.trim="carbonGoalStr"
+            :placeholder="t('carbonGoalPlaceholder')"
+            :maxlength="10"
+        />
+      </view>
+
+      <!-- 分隔线 -->
+      <view class="divider"></view>
+
+      <!-- 五个营养目标输入框 -->
+      <view class="goals-grid">
+        <view class="goal-section">
+          <text class="label">{{ t('calories_unit') }}</text>
+          <input
+              class="input"
+              type="number"
+              v-model.trim="caloriesStr"
+              :placeholder="t('inputPlaceholder')"
+              :maxlength="10"
+          />
+        </view>
+        <view class="goal-section">
+          <text class="label">{{ t('protein_unit') }}</text>
+          <input
+              class="input"
+              type="number"
+              v-model.trim="proteinStr"
+              :placeholder="t('inputPlaceholder')"
+              :maxlength="10"
+          />
+        </view>
+        <view class="goal-section">
+          <text class="label">{{ t('fat_unit') }}</text>
+          <input
+              class="input"
+              type="number"
+              v-model.trim="fatStr"
+              :placeholder="t('inputPlaceholder')"
+              :maxlength="10"
+          />
+        </view>
+        <view class="goal-section">
+          <text class="label">{{ t('carbohydrates_unit') }}</text>
+          <input
+              class="input"
+              type="number"
+              v-model.trim="carbsStr"
+              :placeholder="t('inputPlaceholder')"
+              :maxlength="10"
+          />
+        </view>
+        <view class="goal-section">
+          <text class="label">{{ t('sodium_unit') }}</text>
+          <input
+              class="input"
+              type="number"
+              v-model.trim="sodiumStr"
+              :placeholder="t('inputPlaceholder')"
+              :maxlength="10"
+          />
         </view>
       </view>
-      <view class="target-input-container">
-        <!-- Picker for selecting target name -->
-        <picker mode="selector" :range="pickerOptions" :value="selectedIndex" @change="onTargetNameChange">
-          <view class="picker">{{ selectedTarget }}</view>
-        </picker>
-        <input v-model.number="targetValue" type="number" :placeholder="getTargetValuePlaceholder()" />
-        <!-- Picker for selecting unit -->
-        <picker mode="selector" :range="unitOptions" :value="unitIndex" @change="onUnitChange">
-          <view class="picker">{{ unit }}</view>
-        </picker>
+
+      <!-- 底部按钮 -->
+      <view class="button-container">
+        <button class="btn btn-today" @click="setGoalsForToday">
+          {{ t('set_for_today') }}
+        </button>
+        <button class="btn btn-week" @click="setGoalsForWeek">
+          {{ t('set_for_week') }}
+        </button>
       </view>
-      <view class="add-button-container">
-        <button @click="addOrUpdateTarget">{{ $t('addOrUpdateTarget') }}</button>
+
+      <!-- 营养建议说明 -->
+      <view class="nutrition-guidelines">
+        <text class="guidelines-title">营养摄入参考值</text>
+        <view class="guidelines-content">
+          <text class="guideline-item">成年男性（18-49岁）建议值：</text>
+          <text class="guideline-details">· 热量：2250-2400千卡/天</text>
+          <text class="guideline-details">· 蛋白质：65-75克/天</text>
+          <text class="guideline-details">· 碳水化合物：320-370克/天</text>
+          <text class="guideline-details">· 脂肪：60-70克/天</text>
+          <text class="guideline-details">· 钠：2000毫克/天</text>
+
+          <text class="guideline-item">成年女性（18-49岁）建议值：</text>
+          <text class="guideline-details">· 热量：1800-2000千卡/天</text>
+          <text class="guideline-details">· 蛋白质：55-65克/天</text>
+          <text class="guideline-details">· 碳水化合物：250-300克/天</text>
+          <text class="guideline-details">· 脂肪：50-60克/天</text>
+          <text class="guideline-details">· 钠：2000毫克/天</text>
+        </view>
       </view>
+
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
+import {ref, onMounted, computed} from 'vue';
+import {useI18n} from 'vue-i18n';
 
-// i18n keys (to be loaded in your i18n configuration)
-const { t, locale } = useI18n();
+import {useCarbonAndNutritionStore} from '@/stores/carbon_and_nutrition_data';
+import {useUserStore} from '@/stores/user';
 
-const nutritionData = ref({
-  energy: 30.6,
-  protein: 20.4,
-  fat: 20.4,
-  carbohydrates: 20.4,
-  sodium: 2
+// 获取国际化函数
+const {t} = useI18n();
+
+// 获取 Pinia 存储
+const carbonAndNutritionStore = useCarbonAndNutritionStore();
+const userStore = useUserStore();
+
+// 从 store 中获取 token（如果需要手动使用）
+const token = computed(() => userStore.user.token);
+
+// 碳目标和五大营养目标的绑定值（以字符串形式做双向绑定，提交前再转成整数）
+const carbonGoalStr = ref('0');
+const caloriesStr = ref('0');
+const proteinStr = ref('0');
+const fatStr = ref('0');
+const carbsStr = ref('0');
+const sodiumStr = ref('0');
+
+// 日期格式化函数（与首页相同）
+const getFormattedDate = (date) => {
+  return date.toLocaleDateString('en-CA', {timeZone: 'Asia/Shanghai'}).replace(/\//g, '-').split('T')[0];
+};
+
+// onMounted 时，获取当日目标并填充
+onMounted(async () => {
+  try {
+    // 拉取已有的碳和营养目标
+    await carbonAndNutritionStore.getCarbonGoals();
+    await carbonAndNutritionStore.getNutritionGoals();
+
+    const today = new Date();
+    const dateString = getFormattedDate(today);
+
+    // 找到当天的碳目标
+    const carbonGoalObj = carbonAndNutritionStore.state.carbonGoals.find(item => {
+      return item.date.startsWith(dateString);
+    });
+    if (carbonGoalObj) {
+      carbonGoalStr.value = String(Math.round(carbonGoalObj.emission || 0));
+    } else {
+      carbonGoalStr.value = '0';
+    }
+
+    // 找到当天的营养目标
+    const nutritionGoalObj = carbonAndNutritionStore.state.nutritionGoals.find(item => {
+      return item.date.startsWith(dateString);
+    });
+    if (nutritionGoalObj) {
+      caloriesStr.value = String(Math.round(nutritionGoalObj.calories || 0));
+      proteinStr.value = String(Math.round(nutritionGoalObj.protein || 0));
+      fatStr.value = String(Math.round(nutritionGoalObj.fat || 0));
+      carbsStr.value = String(Math.round(nutritionGoalObj.carbohydrates || 0));
+      sodiumStr.value = String(Math.round(nutritionGoalObj.sodium || 0));
+    } else {
+      caloriesStr.value = '0';
+      proteinStr.value = '0';
+      fatStr.value = '0';
+      carbsStr.value = '0';
+      sodiumStr.value = '0';
+    }
+
+  } catch (err) {
+    console.error(err);
+    uni.showToast({
+      title: t('fetchGoalsFail'),
+      icon: 'none'
+    });
+  }
 });
 
-const nutritionTargets = ref([
-  { name: '蛋白质', currentValue: 113, targetValue: 968, unit: 'g' },
-  { name: '碳水化合物', currentValue: 880, targetValue: 1120, unit: 'g' },
-  { name: '脂肪', currentValue: 16, targetValue: 32, unit: 'g' },
-]);
+/**
+ * 点击「为今天设置」
+ * 1. 检验输入是否合法（都应是整数且>=0）。
+ * 2. 构造仅当天的 goals 数组并调用 setNutritionGoals、setCarbonGoals。
+ */
+const setGoalsForToday = async () => {
+  if (!validateInputs()) return;
 
-const showTargetList = ref(false);
-const targetValue = ref(null);
-const unit = ref('g');
-const unitIndex = ref(0);
-const selectedIndex = ref(0); // Default index for the nutrition picker
-const selectedTarget = ref('蛋白质'); // Default target name
+  const today = new Date();
+  const dateString = getFormattedDate(today);
 
-// Define possible units based on the selected target
-const unitOptions = ref(['g', 'mg']); // Default units for most nutrients
-
-// Function to get language-specific names for nutrition targets
-const getPickerOptions = () => {
-  return [
-    t('protein'),
-    t('carbohydrates'),
-    t('fat'),
-    t('energy'),
-    t('sodium')
+  const carbonGoals = [
+    {
+      date: `${dateString}T00:00:00Z`,
+      emission: parseInt(carbonGoalStr.value, 10),
+    }
   ];
-};
+  const nutritionGoals = [
+    {
+      date: `${dateString}T00:00:00Z`,
+      calories: parseInt(caloriesStr.value, 10),
+      protein: parseInt(proteinStr.value, 10),
+      fat: parseInt(fatStr.value, 10),
+      carbohydrates: parseInt(carbsStr.value, 10),
+      sodium: parseInt(sodiumStr.value, 10)
+    }
+  ];
 
-const toggleTargetList = () => {
-  showTargetList.value = !showTargetList.value;
-};
-
-const addOrUpdateTarget = () => {
-  if (!selectedTarget.value || !targetValue.value) {
-    uni.showToast({ title: t('pleaseFillTargetNameAndValue'), icon: 'none' });
-    return;
+  try {
+    await carbonAndNutritionStore.setCarbonGoals(carbonGoals);
+    await carbonAndNutritionStore.setNutritionGoals(nutritionGoals);
+    uni.showToast({
+      title: t('setSuccess'),
+      icon: 'success'
+    });
+  } catch (err) {
+    console.error(err);
+    uni.showToast({title: t('setFail'), icon: 'none'});
   }
+};
 
-  const existingTarget = nutritionTargets.value.find(target => target.name === selectedTarget.value);
-  
-  if (existingTarget) {
-    // Update existing target
-    existingTarget.targetValue = targetValue.value;
-    existingTarget.unit = unit.value;
-  } else {
-    // Add new target
-    nutritionTargets.value.push({
-      name: selectedTarget.value,
-      currentValue: 0,
-      targetValue: targetValue.value,
-      unit: unit.value
+/**
+ * 点击「为一周设置」
+ * 1. 检验输入是否合法（都应是整数且>=0）。
+ * 2. 从今天开始，连续 7 天（今天 + 后面 6 天）都设置相同的目标。
+ */
+const setGoalsForWeek = async () => {
+  if (!validateInputs()) return;
+
+  const carbonGoals = [];
+  const nutritionGoals = [];
+
+  const today = new Date();
+
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    const dateString = getFormattedDate(date);
+
+    carbonGoals.push({
+      date: `${dateString}T00:00:00Z`,
+      emission: parseInt(carbonGoalStr.value, 10),
+    });
+    nutritionGoals.push({
+      date: `${dateString}T00:00:00Z`,
+      calories: parseInt(caloriesStr.value, 10),
+      protein: parseInt(proteinStr.value, 10),
+      fat: parseInt(fatStr.value, 10),
+      carbohydrates: parseInt(carbsStr.value, 10),
+      sodium: parseInt(sodiumStr.value, 10)
     });
   }
 
-  targetValue.value = null;
-  unit.value = 'g';
-  selectedIndex.value = 0; // Reset the index
-  selectedTarget.value = t('protein'); // Reset the selected target to default
-};
-
-const deleteTarget = (index) => {
-  nutritionTargets.value.splice(index, 1);
-};
-
-// Handle target name change and adjust the unit accordingly
-const onTargetNameChange = (e) => {
-  selectedIndex.value = e.detail.value; // Get the index of the selected target
-  selectedTarget.value = pickerOptions.value[selectedIndex.value]; // Update the selected target name
-  
-  // Adjust unit based on the selected target
-  if (selectedTarget.value === t('energy')) {
-    unit.value = 'kcal';  // Set unit to kcal for Energy
-    unitOptions.value = ['kcal']; // Only kcal available for Energy
-  } else {
-    unit.value = 'g';  // Default unit for other nutrients
-    unitOptions.value = ['g', 'mg']; // g and mg for other nutrients
+  try {
+    await carbonAndNutritionStore.setCarbonGoals(carbonGoals);
+    await carbonAndNutritionStore.setNutritionGoals(nutritionGoals);
+    uni.showToast({
+      title: t('setSuccess'),
+      icon: 'success'
+    });
+  } catch (err) {
+    console.error(err);
+    uni.showToast({title: t('setFail'), icon: 'none'});
   }
 };
 
-// Handle unit change
-const onUnitChange = (e) => {
-  const selectedUnitIndex = e.detail.value; // Get the selected unit index
-  unit.value = unitOptions.value[selectedUnitIndex]; // Update unit based on index
-  unitIndex.value = selectedUnitIndex; // Update the unit index
-};
-
-// Get dynamic placeholder for target value
-const getTargetValuePlaceholder = () => {
-  return selectedTarget.value === t('energy') ? 'kcal' : 'g';
-};
-
-// Create a reactive value for picker options
-const pickerOptions = ref(getPickerOptions());
-
-// Watch for language changes and update picker options
-watch(() => locale.value, () => {
-  pickerOptions.value = getPickerOptions(); // Update picker options when language changes
-});
-
-onMounted(() => {
-  // Initialize chart (using Chart.js)
-  const ctx = document.getElementById('nutritionChart').getContext('2d');
-  new Chart(ctx, {
-    type: 'pie',
-    data: {
-      labels: getPickerOptions(), // Using i18n keys for labels
-      datasets: [{
-        data: Object.values(nutritionData.value),
-        backgroundColor: ['#42a5f5', '#66bb6a', '#ffca28', '#ef5350', '#29b6f6'],
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'top',
-        }
-      }
+// 校验输入框是否都是有效整数
+function validateInputs() {
+  // 如果有非数字或负数或非整数
+  const items = [
+    carbonGoalStr.value,
+    caloriesStr.value,
+    proteinStr.value,
+    fatStr.value,
+    carbsStr.value,
+    sodiumStr.value
+  ];
+  for (const val of items) {
+    if (
+        val === '' ||
+        isNaN(Number(val)) ||
+        Number(val) < 0 ||
+        !Number.isInteger(Number(val))
+    ) {
+      uni.showToast({title: t('inputValidateFail'), icon: 'none'});
+      return false;
     }
-  });
-});
+  }
+  return true;
+}
 </script>
 
 <style scoped>
 .container {
-  font-family: 'Arial', sans-serif;
-  background-color: #f0f4f7;
-  color: #333;
-  padding: 0;
-}
-
-.daily-nutrition-target {
-  margin: 20px;
-  padding: 20px;
-  background-color: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.nutrition-item {
-  position: relative; /* 设置为relative，以便让delete按钮可以绝对定位 */
-  padding-right: 40px; /* 为右侧留出空间给删除按钮，避免遮挡文本 */
-  padding: 10px 0;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e0e0e0;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+  padding: 12px 8px;
 }
 
-.nutrition-item button.delete-target {
-  position: absolute; /* 设置按钮为绝对定位 */
-  top: 50%; /* 垂直居中 */
-  right: 10px; /* 将按钮放置在右侧 */
-  transform: translateY(-50%); /* 确保按钮垂直居中 */
-  font-size: 20px; /* 设置按钮字体大小 */
-  color: red; /* 红色字体 */
-  background-color: transparent; /* 按钮背景透明 */
-  border: none; /* 去除边框 */
-  cursor: pointer; /* 手指形状的光标 */
-}
-
-
-.toggle-button {
-  cursor: pointer;
+.goals-wrapper {
   background-color: #ffffff;
-  border: none;
-  font-size: 20px;
-  color: #4CAF50;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.target-input-container {
+.goal-section {
+  margin-bottom: 12px;
   display: flex;
-  margin-top: 20px;
-  align-items: center;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.target-input-container input {
-  padding: 10px;
-  border: 1px solid #e0e0e0;
-  border-radius: 5px;
-  font-size: 16px;
-  margin-right: 10px;
+.label {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.input {
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 13px;
+  background-color: #f9fafb;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  border-color: #60a5fa;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.1);
+}
+
+.divider {
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 12px 0;
+}
+
+.goals-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.button-container {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.btn {
   flex: 1;
-}
-
-.target-input-container picker {
-  margin-right: 10px;
-}
-
-.add-button-container {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.add-button-container button {
-  padding: 10px;
+  padding: 8px 12px;
   border: none;
-  border-radius: 5px;
-  background-color: #4CAF50;
-  color: #ffffff;
-  font-size: 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.picker {
-  padding: 10px;
-  border: 1px solid #e0e0e0;
-  border-radius: 5px;
+.btn-today {
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+
+.btn-today:hover {
+  background-color: #2563eb;
+}
+
+.btn-week {
+  background-color: #10b981;
+  color: #ffffff;
+}
+
+.btn-week:hover {
+  background-color: #059669;
+}
+
+/* 营养建议说明样式 */
+.nutrition-guidelines {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.guidelines-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.guidelines-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.guideline-item {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+.guideline-details {
+  font-size: 12px;
+  color: #6b7280;
+  padding-left: 8px;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 8px 6px;
+  }
+
+  .goals-wrapper {
+    padding: 10px 8px;
+  }
+
+  .button-container {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
 }
 </style>

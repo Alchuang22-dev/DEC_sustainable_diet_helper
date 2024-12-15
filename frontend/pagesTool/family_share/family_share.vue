@@ -1,35 +1,40 @@
 <template>
-	<view class="container">
-		<text class="title">{{ t('shared_calculation_for_family') }}</text>
-		<scroll-view scroll-y style="max-height:600rpx;">
-			<view v-for="member in allFamilyMembers" :key="member.id" class="member-row">
-				<image :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`" class="avatar"></image>
-				<text class="name">{{ member.nickname }}</text>
-				<input
-					class="ratio-input"
-					type="number"
-					v-model.number="memberRatio[member.id]"
-					placeholder="0.00"
-					step="0.01"
-					min="0"
-					max="1"
-					@input="validateRatio"
-				/>
-			</view>
-		</scroll-view>
-		<view class="total-ratio">
-			<text>{{ t('total_ratio') }}: {{ totalRatio.toFixed(2) }} / 1.00</text>
-		</view>
-		<button class="confirm-button" :disabled="!isValid" @click="submitData">
-			{{ t('confirm_submission') }}
-		</button>
-	</view>
+  <view class="container">
+    <text class="title">{{ t('shared_calculation_for_family') }}</text>
+    <scroll-view scroll-y class="member-list">
+      <view v-for="member in allFamilyMembers" :key="member.id" class="member-row">
+        <view class="member-info">
+          <image :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`" class="avatar"></image>
+          <text class="name">{{ member.nickname }}</text>
+        </view>
+        <view class="input-container">
+          <input
+              class="ratio-input"
+              type="number"
+              v-model.number="memberRatio[member.id]"
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              max="1"
+              @input="validateRatio"
+          />
+        </view>
+      </view>
+    </scroll-view>
+    <view class="footer">
+      <view class="total-ratio" :class="{ 'warning': totalRatio.value > 1 }">
+        <text>{{ t('total_ratio') }}: {{ totalRatio.toFixed(2) }} / 1.00</text>
+      </view>
+      <button class="confirm-button" :disabled="!isValid" @click="submitData">
+        {{ t('confirm_submission') }}
+      </button>
+    </view>
+  </view>
 </template>
 
 <script setup>
 import {
 	ref,
-	onMounted,
 	reactive,
 	computed,
 	watch
@@ -239,74 +244,128 @@ const submitData = () => {
 
 <style scoped>
 .container {
-  padding: 20rpx;
-  background: #f5f5f5;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  height: 100%;
+  min-height: 100vh;
+  background: #f8f9fa;
+  padding: 32rpx;
 }
 
 .title {
-  font-size: 36rpx;
+  font-size: 40rpx;
+  font-weight: 600;
   text-align: center;
-  margin-bottom: 20rpx;
-  color: #333;
+  margin-bottom: 32rpx;
+  color: #4CAF50FF;
+  padding: 16rpx;
+}
+
+.member-list {
+  flex: 1;
+  max-height: calc(100vh - 300rpx);
+  margin-bottom: 32rpx;
 }
 
 .member-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  background: #fff;
-  padding: 20rpx;
-  margin-bottom: 10rpx;
-  border-radius: 10rpx;
-  width: 100%;
+  background: white;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.member-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0; /* Prevents flex items from overflowing */
 }
 
 .avatar {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 40rpx;
-  margin-right: 20rpx;
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 44rpx;
+  margin-right: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
 }
 
 .name {
-  font-size: 28rpx;
+  font-size: 32rpx;
+  color: #2c3e50;
   flex: 1;
-  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 24rpx;
+}
+
+.input-container {
+  min-width: 160rpx; /* Ensures input area doesn't shrink too much */
 }
 
 .ratio-input {
-  width: 120rpx;
-  height: 60rpx;
-  background: #fff;
-  border: 1rpx solid #ccc;
-  border-radius: 5rpx;
-  text-align: right;
-  padding-right: 10rpx;
-  font-size: 24rpx;
-  color: #333;
+  width: 160rpx;
+  height: 72rpx;
+  background: #f8f9fa;
+  border: 2rpx solid #e9ecef;
+  border-radius: 12rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #2c3e50;
+  padding: 0 16rpx;
+  transition: border-color 0.3s ease;
+}
+
+.ratio-input:focus {
+  border-color: #4CAF50;
+  background: white;
+}
+
+.footer {
+  padding: 24rpx 0;
+  background: #f8f9fa;
+}
+
+.total-ratio {
+  text-align: center;
+  font-size: 32rpx;
+  color: #2c3e50;
+  margin-bottom: 24rpx;
+  padding: 16rpx;
+  background: white;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.total-ratio.warning {
+  color: #dc3545;
+  background: #fff5f5;
 }
 
 .confirm-button {
   width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
   background: #4CAF50;
-  color: #fff;
-  text-align: center;
-  font-size: 28rpx;
-  padding: 20rpx 0;
-  border-radius: 20rpx;
-  margin-top: 20rpx;
+  color: white;
+  font-size: 32rpx;
+  font-weight: 600;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(76, 175, 80, 0.2);
+  transition: all 0.3s ease;
+}
+
+.confirm-button:active {
+  transform: translateY(2rpx);
+  box-shadow: 0 2rpx 6rpx rgba(76, 175, 80, 0.2);
 }
 
 .confirm-button:disabled {
-  background: #ccc;
-}
-
-.total-ratio {
-  margin-top: 10rpx;
-  font-size: 24rpx;
-  color: #333;
+  background: #a5d6a7;
+  box-shadow: none;
+  opacity: 0.7;
 }
 </style>

@@ -1,80 +1,98 @@
 <!-- pagesTool/carbon_calculator/carbon_calculator.vue -->
 <template>
-  <view class="container" @load="handleLoad">
-    <!-- 全屏背景图片 -->
+  <view class="page-container" @load="handleLoad">
     <image src="../static/background_img.jpg" class="background-image"></image>
 
-    <!-- 头部标题 -->
-    <view class="header">
+    <view class="header-card">
       <text class="header-title">{{ $t('carbon_calculator') }}</text>
     </view>
 
-    <!-- 已添加的食物标题 -->
-    <text class="list-title">{{ $t('added_foods') }}</text>
+    <uni-section :title="t('added_foods')" type="line">
+      <view class="content-wrapper">
+        <scroll-view scroll-y="true" class="food-list">
+          <uni-collapse>
+            <uni-collapse-item v-for="(food, index) in displayFoodList"
+                               :key="food.id"
+                               :title="food.displayName || $t('default_food_name')"
+                               :thumb="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
+            >
+              <view class="food-details">
+                <image
+                    :src="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
+                    class="food-image"
+                    mode="aspectFill"
+                />
+                <view class="food-info">
+                  <view class="info-grid">
+                    <uni-tag :text="$t('weight') + ': ' + (food.weight || '1.2kg')" type="primary" size="small" />
+                    <uni-tag :text="$t('price') + ': ' + (food.price || '5元')" type="success" size="small" />
+                    <uni-tag :text="$t(`transport_${food.transportMethod}`)" type="warning" size="small" />
+                    <uni-tag :text="$t(`source_${food.foodSource}`)" type="info" size="small" />
+                  </view>
+                  <view class="action-row">
+                    <uni-icons type="compose" size="20" color="#2979ff" @click.stop="handleEdit(index)" />
+                    <uni-icons type="trash" size="20" color="#dd524d" @click.stop="handleDelete(index)" />
+                  </view>
+                </view>
+              </view>
+            </uni-collapse-item>
+          </uni-collapse>
+        </scroll-view>
 
-    <!-- 可滑动的食物列表 -->
-    <scroll-view scroll-y="true" class="food-list scroll-view">
-      <uni-collapse>
-        <uni-collapse-item v-for="(food, index) in displayFoodList"
-          :key="food.id"
-          :title="food.displayName || $t('default_food_name')"
-          :thumb="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
-        >
-          <view class="food-details">
-            <image
-              :src="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
-              class="food-image"
-              mode="aspectFill"
+        <view class="action-buttons">
+          <uni-row :gutter="10">
+            <uni-col :span="8">
+              <view class="action-button primary" @click="navigateToAddFood">
+                <!--                <uni-icons type="plus" size="18" color="#fff"/>-->
+                <text>{{ $t('add_food') }}</text>
+              </view>
+            </uni-col>
+            <uni-col :span="8">
+              <view class="action-button success" @click="saveData">
+                <!--                <uni-icons type="save" size="18" color="#fff"/>-->
+                <text>{{ $t('save_additions') }}</text>
+              </view>
+            </uni-col>
+            <uni-col :span="8">
+              <view class="action-button warning" @click="calculateData">
+                <!--                <uni-icons type="calculator" size="18" color="#fff"/>-->
+                <text>{{ $t('start_calculation') }}</text>
+              </view>
+            </uni-col>
+          </uni-row>
+        </view>
+      </view>
+    </uni-section>
+
+    <view class="result" v-if="showResult">
+      <uni-section :title="t('results')" type="line">
+        <view class="charts-container">
+          <view class="chart-wrapper">
+            <text class="chart-title">{{ $t('your_carbon_footprint') }}</text>
+            <qiun-data-charts
+                :canvas2d="true"
+                type="ring"
+                :opts="ringOpts"
+                :chartData="chartEmissionData"
             />
-            <view class="food-info">
-              <text class="info-item">{{ $t('weight') }}: {{ food.weight || '1.2kg' }}</text>
-              <text class="info-item">{{ $t('price') }}: {{ food.price || '5元' }}</text>
-              <text class="info-item">{{ $t(`transport_${food.transportMethod}`) }}</text>
-              <text class="info-item">{{ $t(`source_${food.foodSource}`) }}</text>
-                <button class="edit-btn" @click.stop="handleEdit(index)">
-                  <uni-icons type="compose" size="18"></uni-icons>
-                </button>
-                <button class="delete-btn" @click.stop="handleDelete(index)">
-                  <uni-icons type="trash" size="18"></uni-icons>
-                </button>
+          </view>
+          <view class="chart-wrapper">
+            <text class="chart-title">{{ $t('your_nutrition_intake') }}</text>
+            <qiun-data-charts
+                :canvas2d="true"
+                type="bar"
+                :opts="barOpts"
+                :chartData="chartNutritionData"
+            />
+          </view>
+          <view class="action-button-container">
+            <view class="action-button primary" @click="handleSaveOptions">
+              <text>{{ $t('save') }}</text>
             </view>
           </view>
-        </uni-collapse-item>
-      </uni-collapse>
-    </scroll-view>
-
-    <!-- 按钮区 -->
-    <view class="button-group">
-      <button class="primary-button small-button" @click="navigateToAddFood">
-        {{ $t('add_food') }}
-      </button>
-      <button class="secondary-button small-button" @click="saveData">
-        {{ $t('save_additions') }}
-      </button>
-      <button class="calculate-button small-button" @click="calculateData">
-        {{ $t('start_calculation') }}
-      </button>
+        </view>
+      </uni-section>
     </view>
-
-    <!-- 结果显示（环形图和条形图） -->
-    <view class="result" v-if="showResult">
-      <text class="result-title">{{ $t('your_carbon_footprint') }}</text>
-      <qiun-data-charts
-        :canvas2d="true"
-        type="ring"
-        :opts="ringOpts"
-        :chartData="chartEmissionData"
-      />
-      <text class="result-title">{{ $t('your_nutrition_intake') }}</text>
-      <qiun-data-charts
-        :canvas2d="true"
-        type="bar"
-        :opts="barOpts"
-        :chartData="chartNutritionData"
-      />
-      <button class="save-button" @click="handleSaveOptions">{{ $t('save') }}</button>
-    </view>
-
   </view>
 </template>
 
@@ -82,7 +100,9 @@
 import { ref, computed, onMounted, reactive } from 'vue';
 import { useI18n } from 'vue-i18n'; // Import useI18n
 import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
-import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data'; // 引入营养碳排放store
+import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data';
+import UniDataPickerView
+  from "../../uni_modules/uni-data-picker/components/uni-data-pickerview/uni-data-pickerview.vue"; // 引入营养碳排放store
 
 // 使用国际化
 const { t, locale } = useI18n();
@@ -120,11 +140,11 @@ const chartEmissionData = ref({
 const chartNutritionData = ref({
   categories: [t('energy_unit'), t('protein_unit'), t('fat_unit'), t('carbohydrates_unit'), t('sodium_unit')],
   series: [{
-    name: t('actual_value'),
+    name: t('intake_value'),
     data: [0, 0, 0, 0, 0]
   },
     {
-      name: t('target_value'),
+      name: t('target_value_today'),
       data: [0, 0, 0, 0, 0]
     }
   ]
@@ -173,16 +193,17 @@ const barOpts = ref({
   legend: {},
   xAxis: {
     boundaryGap: "justify",
-    disableGrid: false,
+    disableGrid: true,
     min: 0,
     axisLine: false,
-    max: 4000
+    max: 4000,
+    disabled: true
   },
   yAxis: {},
   extra: {
     bar: {
       type: "group",
-      width: 30,
+      // width: 30,
       meterBorde: 1,
       meterFillColor: "#FFFFFF",
       activeBgColor: "#000000",
@@ -200,8 +221,8 @@ const displayFoodList = computed(() => {
   return foodList.map(food => {
     const availableFood = availableFoods.find(f => f.id === food.id);
     const displayName = availableFood
-      ? (locale.value === 'zh-Hans' ? availableFood.name_zh : availableFood.name_en)
-      : food.name || t('default_food_name');
+        ? (locale.value === 'zh-Hans' ? availableFood.name_zh : availableFood.name_en)
+        : food.name || t('default_food_name');
     return {
       ...food,
       displayName
@@ -352,7 +373,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* 全局样式变量 */
+
 :root {
   --primary-color: #4CAF50;
   --secondary-color: #8BC34A;
@@ -363,18 +384,16 @@ onMounted(() => {
   --font-family: 'Arial', sans-serif;
 }
 
-/* 容器 */
-.container {
-  display: flex;
-  flex-direction: column;
+/* 页面容器 */
+.page-container {
   min-height: 100vh;
-  background-color: var(--background-color);
-  font-family: var(--font-family);
-  padding-bottom: 50rpx;
-  animation: fadeIn 1s ease-in-out;
+  padding: 20rpx;
+  box-sizing: border-box;
+  background-color: #f5f5f5;
+  position: relative;
 }
 
-/* 全屏背景图片 */
+/* 背景图片 */
 .background-image {
   position: fixed;
   top: 0;
@@ -386,35 +405,39 @@ onMounted(() => {
   opacity: 0.05;
 }
 
-/* 头部标题 */
-.header {
-  padding: 40rpx 20rpx 20rpx;
+/* 头部卡片 */
+.header-card {
+  margin-bottom: 40rpx;
+  padding: 0;
   text-align: center;
 }
 
 .header-title {
-  font-size: 48rpx;
+  font-size: 36rpx;
   color: var(--primary-color);
   font-weight: bold;
   animation: slideDown 1s ease-out;
 }
 
-/* 已添加的食物列表 */
+/* 内容区域 */
+.content-wrapper {
+  background-color: #ffffff;
+  border-radius: 15rpx;
+  padding: 10rpx;
+}
+
+/* 食物列表 */
 .food-list {
   max-height: 600rpx;
-  margin-right: 40rpx;
-  background-color: #ffffff;
-  border-radius: 20rpx;
-  box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.1);
+  margin-bottom: 20rpx;
 }
 
 .food-details {
   display: flex;
-  align-items: center;
-  padding: 20rpx;
   gap: 20rpx;
+  padding: 20rpx;
   background-color: #f8f8f8;
-  border-radius: 10rpx;
+  border-radius: 12rpx;
 }
 
 .food-image {
@@ -426,254 +449,178 @@ onMounted(() => {
 
 .food-info {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+}
+
+/* 信息网格 */
+.info-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10rpx;
 }
 
-.info-item {
-  font-size: 24rpx;
-  color: #666;
-  background-color: #fff;
-  padding: 8rpx 16rpx;
-  border-radius: 6rpx;
-  text-align: center;
-}
-
-.action-buttons {
+:deep(.uni-tag) {
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
-  flex-direction: column;
-  gap: 10rpx;
-  margin-left: auto;
+  justify-content: center;
+  margin: 0;
 }
 
-.edit-btn, .delete-btn {
+/* 操作行 */
+.action-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 30rpx;
+  padding-top: 10rpx;
+}
 
-  width: 260rpx;
-  height: 60rpx;
-  border: none;
-  padding: 8rpx 16rpx;
-  border-radius: 6rpx;
+/* 操作按钮组 */
+.action-buttons {
+  padding: 20rpx 0;
+}
+
+.action-button {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.edit-btn {
-  background-color: #4CAF50;
-  color: white;
-}
-
-.delete-btn {
-  background-color: #ff4444;
-  color: white;
-}
-
-.list-title {
-  margin-left: 10rpx;
-  font-size: 30rpx;
-  font-weight: bold;
-  color: var(--text-color);
-  margin-bottom: 20rpx;
-  text-align: center;
-}
-
-/* uni-card 相关样式 */
-.uni-card {
-  position: relative;
-}
-
-.button-container {
-  position: absolute;
-  top: 10px;  /* 可调整与顶部的距离 */
-  right: 10px;  /* 可调整与右边的距离 */
-  display: flex;
-  gap: 10px;  /* 按钮之间的间距 */
-}
-
-.delete-button{
-  padding: 0;
-  width: 10px;
-  height: 10px;
-  background: red;
-  border: none;
-  cursor: pointer;
-}
-
-.edit-button{
-  padding: 0;
-  width: 10px;
-  height: 10px;
-  background: green;
-  border: none;
-  cursor: pointer;
-}
-
-.delete-button:hover, .edit-button:hover {
-  opacity: 0.7;  /* 鼠标悬停时透明度 */
-}
-
-/* 按钮区 */
-.button-group {
-  display: flex;
-  justify-content: flex-start;
-  margin: 20rpx 20rpx;
-  gap: 20rpx;
-}
-
-.small-button {
-  padding: 15rpx 30rpx;
-  border-radius: 30rpx;
-  border: none;
-  font-size: 20rpx;
+  gap: 10rpx;
+  padding: 20rpx;
+  border-radius: 10rpx;
   color: #ffffff;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.primary-button {
-  background-color: var(--primary-color);
-}
-
-.primary-button:hover {
-  transform: translateY(-2rpx);
-  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.2);
-}
-
-.secondary-button {
-  background-color: var(--secondary-color);
-}
-
-.secondary-button:hover {
-  transform: translateY(-2rpx);
-  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.2);
-}
-
-/* 计算部分 */
-.calculate-section {
-  text-align: center;
-  margin: 10rpx 0;
-}
-
-.calculate-button {
-  border-radius: 30rpx;
-  background-color: var(--accent-color);
-  border: none;
-  color: #ffffff;
-  font-size: 20rpx;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.calculate-button:hover {
-  transform: translateY(-2rpx);
-  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.2);
-}
-
-/* 结果显示（环形图） */
-.result {
-  position: relative;
-  margin: 20rpx 20rpx;
-  padding: 20rpx 30rpx;
-  background-color: #ffffff;
-  border-radius: 20rpx;
-  box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.1);
-  font-size: 32rpx;
-  color: var(--text-color);
-  text-align: center;
-  animation: fadeIn 1s ease-in-out;
-}
-
-.result-title {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: var(--primary-color);
-  margin-bottom: 15rpx;
-}
-
-/* 保存按钮样式 */
-.save-button {
-  position: absolute;
-  bottom: 10rpx;
-  right: 10rpx;
-  padding: 10rpx 20rpx;
-  background-color: var(--primary-color);
-  color: #ffffff;
-  border: none;
-  border-radius: 20rpx;
   font-size: 24rpx;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  transition: all 0.3s ease;
 }
 
-.save-button:hover {
-  background-color: var(--secondary-color);
-  transform: translateY(-2rpx);
-  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.2);
+.action-button.primary {
+  background-color: #2979ff;
+}
+
+.action-button.success {
+  background-color: #4caf9d;
+}
+
+.action-button.warning {
+  background-color: #178d2a;
+}
+
+.action-button:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* uni-collapse 样式优化 */
+:deep(.uni-collapse) {
+  background-color: transparent;
+}
+
+:deep(.uni-collapse-item__title) {
+  background-color: #ffffff !important;
+  border-bottom: 1rpx solid #eee;
+}
+
+:deep(.uni-collapse-item__wrap) {
+  background-color: #ffffff;
+}
+
+/* 结果区域 */
+.result {
+  margin-top: 30rpx;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.charts-container {
+  padding: 20rpx;
+  background-color: #ffffff;
+  border-radius: 15rpx;
+}
+
+.chart-wrapper {
+  margin-bottom: 40rpx;
+}
+
+.chart-title {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.action-button-container {
+  display: flex;
+  justify-content: flex-end;
+  padding: 20rpx 0;
 }
 
 /* 动画 */
 @keyframes fadeIn {
   from {
     opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideDown {
-  from {
-    transform: translateY(-20rpx);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes popIn {
-  0% {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-
-  60% {
-    transform: scale(1.05);
-    opacity: 1;
-  }
-
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes fadeInUp {
-  from {
     transform: translateY(20rpx);
-    opacity: 0;
   }
-
   to {
-    transform: translateY(0);
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
-/* 点击动画效果 */
-@keyframes clickEffect {
-  0% {
-    transform: scale(1);
+/* 响应式适配 */
+@media screen and (max-width: 375px) {
+  .info-grid {
+    grid-template-columns: 1fr;
   }
 
-  50% {
-    transform: scale(1.05);
+  .action-button {
+    padding: 15rpx;
+    font-size: 22rpx;
   }
 
-  100% {
-    transform: scale(1);
+  .food-image {
+    width: 100rpx;
+    height: 100rpx;
   }
+}
+
+/* 滚动条美化 */
+.food-list::-webkit-scrollbar {
+  width: 6rpx;
+  background-color: transparent;
+}
+
+.food-list::-webkit-scrollbar-thumb {
+  background-color: #2979ff;
+  border-radius: 3rpx;
+}
+
+/* uni-row 间距调整 */
+:deep(.uni-row) {
+  margin: -5rpx;
+}
+
+:deep(.uni-col) {
+  padding: 5rpx;
+}
+
+/* 空状态样式 */
+.empty-state {
+  text-align: center;
+  padding: 40rpx 0;
+  color: #999;
+}
+
+/* 加载状态 */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20rpx 0;
+}
+
+/* uni-icons 点击区域优化 */
+:deep(.uni-icons) {
+  padding: 10rpx;
 }
 </style>
