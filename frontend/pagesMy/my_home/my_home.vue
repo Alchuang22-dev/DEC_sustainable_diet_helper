@@ -180,9 +180,16 @@ const viewArticle = (index) => {
   console.log('查看文章:', articles.value[index]);
   // 跳转到文章详情页
   // 将文章的 ID 作为查询参数传递到新页面
-  uni.navigateTo({
-    url: `/pagesNews/preview_draft/preview_draft?id=${article.id}`,
-  });
+  if(article.status === '草稿'){
+	  uni.navigateTo({
+		url: `/pagesNews/preview_draft/preview_draft?id=${article.id}`,
+	});
+  } else if(article.status === '已发布'){
+	  uni.navigateTo({
+	  	url: `/pagesNews/news_detail/news_detail?id=${article.id}`,
+	  });
+  }
+  
 };
 
 // Edit article function
