@@ -322,7 +322,9 @@ const calculateData = async () => {
 
     // 使用今天的目标值，而不是假数据
     const today = new Date();
-    const dateString = today.toISOString().split('T')[0];
+    const dateString = today.getFullYear() + '-'
+        + String(today.getMonth() + 1).padStart(2, '0') + '-'
+        + String(today.getDate()).padStart(2, '0');
     const dateData = carbonNutritionStore.getDataByDate(dateString);
 
     // dateData中包含今日的target值

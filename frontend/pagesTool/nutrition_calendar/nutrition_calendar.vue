@@ -181,18 +181,36 @@ const chartOpts = ref({
 const generateDateTabs = () => {
   const tabs = []
   const today = new Date()
+
   for (let i = -6; i <= 1; i++) {
     const date = new Date()
     date.setDate(today.getDate() + i)
+
+    // 获取星期几的简称（假设getWeekdayKey返回的是类似 'Mon', 'Tue' 的值）
     const day = getWeekdayKey(date.getDay())
     const dateNumber = date.getDate()
-    const dateString = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }).replace(/\//g, '-').split('T')[0]
+
+    // 格式化日期为 YYYY-MM-DD
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const dayOfMonth = String(date.getDate()).padStart(2, '0')
+    const dateString = `${year}-${month}-${dayOfMonth}`
+
+    // console.log('日期：', dateString)
+    // console.log('星期：', day)
+    // console.log('年份：', year)
+    // console.log('月份：', month)
+    // console.log('日期数字：', dateNumber)
+    // console.log('日期字符串：', dateString)
+
+    // 添加到tabs数组
     tabs.push({
       day: t(day),
       date: dateNumber,
       dateString: dateString
     })
   }
+
   dateTabs.value = tabs
 }
 

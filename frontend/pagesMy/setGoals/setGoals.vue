@@ -130,8 +130,10 @@ const carbsStr = ref('0');
 const sodiumStr = ref('0');
 
 // 日期格式化函数（与首页相同）
-const getFormattedDate = (date) => {
-  return date.toLocaleDateString('en-CA', {timeZone: 'Asia/Shanghai'}).replace(/\//g, '-').split('T')[0];
+const getFormattedDate = (today) => {
+  return today.getFullYear() + '-'
+      + String(today.getMonth() + 1).padStart(2, '0') + '-'
+      + String(today.getDate()).padStart(2, '0');
 };
 
 // onMounted 时，获取当日目标并填充
@@ -239,6 +241,7 @@ const setGoalsForWeek = async () => {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
     const dateString = getFormattedDate(date);
+    console.log('dateString:', dateString);
 
     carbonGoals.push({
       date: `${dateString}T00:00:00Z`,
