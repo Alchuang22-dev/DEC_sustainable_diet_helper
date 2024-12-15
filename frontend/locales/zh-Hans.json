@@ -123,6 +123,7 @@
 	"fat": "脂肪",
 	"carbohydrates": "碳水化合物",
 	"sodium": "钠",
+	"calories_unit": "能量 (kcal)",
 	"energy_unit": "能量 (kcal)",
 	"protein_unit": "蛋白质 (g)",
 	"fat_unit": "脂肪 (g)",
@@ -133,7 +134,7 @@
 	"breakfast": "早餐",
 	"lunch": "午餐",
 	"dinner": "晚餐",
-	"others": "其他",
+	"other": "其他",
 	"total": "总量",
 
 	"nutrition_calendar": "营养日历",
@@ -150,8 +151,12 @@
 	"friday": "星期五",
 	"saturday": "星期六",
 	"nutrition\noverview": "营养\n概览",
-	"set_nutrition_goals": "设置营养目标",
+	"set_nutrition_goals": "设置目标",
 	"meal_detail_records": "营养详细记录",
+	"nutrition_details": "营养详情",
+	"carbon_goal_label": "碳排放（Kg）",
+	"set_for_today": "设置今日",
+	"set_for_week": "设置一周",
 
 	//搜索页
 	"text_search": "搜索",
@@ -192,7 +197,7 @@
 	"save_additions": "保存添加",
 	"start_calculation": "开始计算",
 	"your_carbon_footprint": "您本次的碳足迹是：",
-	"your_nutrition_intake": "您的营养摄入：",
+	"your_nutrition_intake": "您本次的营养摄入：",
 	"save": "保存",
 	"recommend_menu": "推荐菜单",
 	"try_our_sustainable_menu": "试试我们的可持续推荐菜单！",
@@ -230,6 +235,9 @@
 	"default_food_name": "西红柿",
 	"weight": "重量",
 	"price": "价格",
+	"results": "结果",
+	"intake_value": "摄入量",
+	"target_value_today": "今日目标值",
 
 	"family_management": "家庭管理",
 	"create_family": "创建家庭",
@@ -280,6 +288,8 @@
 	"reject": "拒绝",
 	"dish_already_exists": "菜品已存在",
 	"confirm_delete": "确认删除",
+	"create_family_success": "创建成功",
+	"break_family_success": "解散成功",
 
 	//用户页
 	"profile_avatar_click": "点击头像",
@@ -433,6 +443,28 @@
 	"flour": "面粉",
 	"honey": "蜂蜜",
 	"mango": "芒果",
-	"rice": "大米"
+	"rice": "大米",
+
+	"select_save_method": "请选择保存方式",
+	"select_meal_type": "请选择餐食类型",
+	"save_for_self": "只为自己计算",
+	"save_for_family": "为家人共同计算",
+	"transport_bike": "自行车运输",
+	"transport_car": "汽车运输",
+	"transport_truck": "卡车运输",
+	"transport_airplane": "飞机运输",
+	"source_farm": "农场来源",
+	"source_factory": "工厂来源",
+	"source_market": "市场来源",
+	"calculation_success": "计算成功",
+
+    "shared_calculation_for_family": "为家人共同计算",
+    "total_ratio": "比例总和",
+    "confirm_submission": "确认提交",
+    "total_ratio_cannot_exceed_one": "比例总和不能超过1",
+    "total_ratio_less_than_one": "比例总和小于1，可能有未分配的比例",
+    "submission_success": "提交成功",
+    "submission_failed": "提交失败",
+	"join_family_first": "请先加入家庭"
 
 }

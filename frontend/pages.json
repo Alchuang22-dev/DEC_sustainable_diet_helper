@@ -172,7 +172,7 @@
 					}
 				},
 				{
-					"path": "nutrition_calculator/nutrition_calculator",
+					"path": "nutrition_calendar/nutrition_calendar",
 					"style": {
 						"navigationBarTitleText": "营养目标"
 					}
@@ -205,6 +205,20 @@
 					"path": "recipe/recipe",
 					"style": {
 						"navigationBarTitleText": "食谱详情"
+					}
+				},
+				{
+					"path" : "save_options/save_options",
+					"style" : 
+					{
+						"navigationBarTitleText" : "保存结果"
+					}
+				},
+				{
+					"path" : "family_share/family_share",
+					"style" : 
+					{
+						"navigationBarTitleText" : "家庭共享"
 					}
 				}
 			]

@@ -1,21 +1,20 @@
-// tests/food_api_test.go
-package tests
+package controllers
 
 import (
-    "encoding/json"
-    "net/http"
-    "net/http/httptest"
-    "testing"
-    "strings"
-    "fmt"
+	"encoding/json"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"testing"
 
-    "github.com/gin-gonic/gin"
-    "github.com/stretchr/testify/assert"
-    "gorm.io/driver/mysql"
-    "gorm.io/gorm"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 
-    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
-    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/routes"
+	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 )
 
 // 测试数据库配置
@@ -27,97 +26,106 @@ const (
     TestDBName     = "test_sustainable_diet"
 )
 
-// setupTestDB 设置测试数据库
-func setupTestDB() (*gorm.DB, error) {
-    dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-        TestDBUser, TestDBPassword, TestDBHost, TestDBPort, TestDBName)
-
-    db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+// setupFoodTestDB 设置测试数据库
+func setupFoodTestDB(t *testing.T) *gorm.DB {
+    // 使用 SQLite 内存数据库替代 MySQL
+    db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
     if err != nil {
-        return nil, fmt.Errorf("连接数据库失败: %v", err)
+        t.Fatalf("连接测试数据库失败: %v", err)
     }
 
-    // 先清空关联表，再清空主表
-    if err := db.Exec("DELETE FROM food_recipes").Error; err != nil {
-        return nil, fmt.Errorf("清空关联表失败: %v", err)
+    // 自动迁移所需的表
+    err = db.AutoMigrate(
+        &models.Food{},
+    )
+    if err != nil {
+        t.Fatalf("迁移测试数据库失败: %v", err)
     }
-
-    // 清空 foods 表
-    if err := db.Exec("DELETE FROM foods").Error; err != nil {
-        return nil, fmt.Errorf("清空食物表失败: %v", err)
-    }
-
-    // 重置自增ID
-    if err := db.Exec("ALTER TABLE foods AUTO_INCREMENT = 1").Error; err != nil {
-        return nil, fmt.Errorf("重置自增ID失败: %v", err)
-    }
-
-    // 插入测试数据
+    // 添加测试食材数据
     testFoods := []models.Food{
         {
+            Model:         gorm.Model{ID: 1},
             ZhFoodName:    "苹果",
             EnFoodName:    "Apple",
-            GHG:          0.43,
-            Calories:     52,
-            Protein:      0.3,
+            ImageUrl:      "http://example.com/apple.jpg",
+            Calories:      52,
+            Protein:       0.3,
             Fat:          0.2,
             Carbohydrates: 14,
-            Sodium:       1,
-            Price:        2.5,
+            Sodium:        1,
+            GHG:      0.43,
+            Price:      1.0,
         },
         {
+            Model:         gorm.Model{ID: 2},
             ZhFoodName:    "香蕉",
             EnFoodName:    "Banana",
-            GHG:          0.86,
-            Calories:     89,
-            Protein:      1.1,
+            ImageUrl:      "http://example.com/banana.jpg",
+            Calories:      89,
+            Protein:       1.1,
             Fat:          0.3,
             Carbohydrates: 23,
-            Sodium:       1,
-            Price:        3.0,
+            Sodium:        1,
+            GHG:      0.86,
+            Price:      1.0,
         },
     }
-
     for _, food := range testFoods {
         if err := db.Create(&food).Error; err != nil {
-            return nil, fmt.Errorf("插入测试数据失败: %v", err)
+            t.Fatalf("添加测试食材失败: %v", err)
         }
     }
 
-    return db, nil
+    return db
 }
 
-// setupTestRouter 设置测试路由
-func setupTestRouter(db *gorm.DB) *gin.Engine {
+// setupFoodTestRouter 设置测试路由
+func setupFoodTestRouter(db *gorm.DB) *gin.Engine {
     gin.SetMode(gin.TestMode)
     router := gin.New()
     router.Use(gin.Recovery())
 
+    foodController := NewFoodController(db)
+
     // 注册路由
-    routes.RegisterFoodRoutes(router, db)
+    foodGroup := router.Group("/foods")
+    {
+        // 需要认证的路由
+        authGroup := foodGroup.Group("")
+        // 使用测试用的认证中间件
+        authGroup.Use(func(c *gin.Context) {
+            // 模拟认证中间件，直接设置用户ID
+            c.Set("user_id", uint(1))
+            c.Next()
+        })
+        {   
+            authGroup.GET("/names", foodController.GetFoodNames)
+            authGroup.POST("/calculate", foodController.CalculateNutritionAndEmission)
+        }
+    }
+    
 
     return router
 }
 
 // TestFoodNamesAPI 测试获取食物名称列表的 API
 func TestFoodNamesAPI(t *testing.T) {
-    db, err := setupTestDB()
-    if err != nil {
-        t.Fatalf("设置测试数据库失败: %v", err)
-    }
+    db := setupFoodTestDB(t)
 
-    router := setupTestRouter(db)
+    router := setupFoodTestRouter(db)
 
     tests := []struct {
         name           string
+        language      string
         expectedCode   int
         checkResponse  func(*testing.T, *httptest.ResponseRecorder)
     }{
         {
             name:          "获取名称列表成功",
+            language:     "zh",
             expectedCode:  200,
             checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
-                var response []models.FoodNameResponse
+                var response []models.FoodInfoResponse
                 err := json.Unmarshal(w.Body.Bytes(), &response)
                 assert.Nil(t, err)
                 
@@ -128,12 +136,47 @@ func TestFoodNamesAPI(t *testing.T) {
                 firstFood := response[0]
                 assert.NotZero(t, firstFood.ID)
                 assert.NotEmpty(t, firstFood.Name)
+                assert.NotEmpty(t, firstFood.ImageUrl)
                 
                 // 验证所有条目都有完整的数据
                 for _, food := range response {
                     assert.NotZero(t, food.ID)
                     assert.NotEmpty(t, food.Name)
+                    assert.NotEmpty(t, food.ImageUrl)
                 }
+            },
+        },
+        {
+            name:          "获取英文名称列表成功",
+            language:     "en",
+            expectedCode:  200,
+            checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
+                var response []models.FoodInfoResponse
+                err := json.Unmarshal(w.Body.Bytes(), &response)
+                assert.Nil(t, err)
+                
+                // 验证返回列表不为空
+                assert.NotEmpty(t, response)
+                
+                // 验证第一个食物的数据完整性
+                firstFood := response[0]
+                assert.NotZero(t, firstFood.ID)
+                assert.NotEmpty(t, firstFood.Name)
+                assert.NotEmpty(t, firstFood.ImageUrl)
+                
+                // 验证返回的是英文名称
+                assert.Contains(t, []string{"Apple", "Banana"}, firstFood.Name)
+            },
+        },
+        {
+            name:          "无效的语言参数",
+            language:     "fr", // 使用不支持的语言
+            expectedCode:  400,
+            checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
+                var response map[string]string
+                err := json.Unmarshal(w.Body.Bytes(), &response)
+                assert.Nil(t, err)
+                assert.Contains(t, response["error"], "Invalid language parameter")
             },
         },
     }
@@ -141,7 +184,13 @@ func TestFoodNamesAPI(t *testing.T) {
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             w := httptest.NewRecorder()
-            req, _ := http.NewRequest("GET", "/foods/names", nil)
+            req, _ := http.NewRequest("GET", "/foods/names?lang="+tt.language, nil)
+            // 添加模拟的认证信息
+            req.Header.Set("Authorization", "Bearer test_token")
+            // 添加用户信息到上下文
+            ctx := &gin.Context{Request: req}
+            ctx.Set("user_id", uint(1))  // 使用测试用户ID
+            
             router.ServeHTTP(w, req)
 
             assert.Equal(t, tt.expectedCode, w.Code)
@@ -154,13 +203,10 @@ func TestFoodNamesAPI(t *testing.T) {
 
 // 测试函数
 func TestCalculateFoodNutritionAndEmissionAPI(t *testing.T) {
-    // 设置测试数据库
-    db, err := setupTestDB()
-    if err != nil {
-        t.Fatalf("设置测试数据库失败: %v", err)
-    }
-
-    router := setupTestRouter(db)
+    db := setupFoodTestDB(t)
+    gin.SetMode(gin.DebugMode)
+    log.SetOutput(os.Stdout)
+    router := setupFoodTestRouter(db)
 
     tests := []struct {
         name           string
@@ -186,6 +232,7 @@ func TestCalculateFoodNutritionAndEmissionAPI(t *testing.T) {
             checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
                 var response []models.FoodCalculateResult
                 err := json.Unmarshal(w.Body.Bytes(), &response)
+                t.Logf("response: %v", response)
                 assert.Nil(t, err)
                 assert.Len(t, response, 2)
 
@@ -199,10 +246,14 @@ func TestCalculateFoodNutritionAndEmissionAPI(t *testing.T) {
                 assert.NotZero(t, firstResult.Carbohydrates)
                 assert.NotZero(t, firstResult.Sodium)
 
-                // 使用 InDelta 验证具体数值（允许0.1的误差）
-                const delta = 0.1
-                assert.InDelta(t, 0.43, response[0].Emission, delta)
-                assert.InDelta(t, 26.0, response[0].Calories, delta)
+                // 使用 Equal 验证具体数值（因为现在是精确到1位小数）
+                // GHG * weight * price / basePrice = 0.43 * 0.5 * 5.0 / 1.0 = 1.1
+                assert.Equal(t, 1.1, response[0].Emission)
+                assert.Equal(t, 26.0, response[0].Calories)
+                assert.Equal(t, 0.2, response[0].Protein)
+                assert.Equal(t, 0.1, response[0].Fat)
+                assert.Equal(t, 7.0, response[0].Carbohydrates)
+                assert.Equal(t, 0.5, response[0].Sodium)
             },
         },
         {
@@ -268,17 +319,4 @@ func TestCalculateFoodNutritionAndEmissionAPI(t *testing.T) {
             }
         })
     }
-}
-
-// 清理测试数据
-// func cleanupTestDB(db *gorm.DB) error {
-//     return db.Exec("DELETE FROM foods").Error
-// }
-
-func TestMain(m *testing.M) {
-    // 在所有测试开始前的设置
-    gin.SetMode(gin.TestMode)
-    
-    // 运行测试
-    m.Run()
 }

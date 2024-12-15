@@ -1,6 +1,6 @@
 <template>
 	<head>
-	    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 	</head>
 	<view class="container">
 		<!-- 全屏背景图片 -->
@@ -66,34 +66,36 @@
 	import {
 		useI18n
 	} from 'vue-i18n'
-  import { onShow } from '@dcloudio/uni-app';
+	import {
+		onShow
+	} from '@dcloudio/uni-app';
 
 	// 初始化 i18n
 	const {
 		t,
 	} = useI18n()
 
-  onShow(() => {
-    uni.setNavigationBarTitle({
-      title: t('tools_index')
-    })
-    uni.setTabBarItem({
-      index: 0,
-      text: t('index')
-    })
-    uni.setTabBarItem({
-      index: 1,
-      text: t('tools_index')
-    })
-    uni.setTabBarItem({
-      index: 2,
-      text: t('news_index')
-    })
-    uni.setTabBarItem({
-      index: 3,
-      text: t('my_index')
-    })
-  });
+	onShow(() => {
+		uni.setNavigationBarTitle({
+			title: t('tools_index')
+		})
+		uni.setTabBarItem({
+			index: 0,
+			text: t('index')
+		})
+		uni.setTabBarItem({
+			index: 1,
+			text: t('tools_index')
+		})
+		uni.setTabBarItem({
+			index: 2,
+			text: t('news_index')
+		})
+		uni.setTabBarItem({
+			index: 3,
+			text: t('my_index')
+		})
+	});
 
 	// 页面跳转方法
 	const navigateTo = (page) => {
@@ -103,7 +105,7 @@
 			});
 		} else if (page === 'nutrition') {
 			uni.navigateTo({
-				url: "/pagesTool/nutrition_calculator/nutrition_calculator",
+				url: "/pagesTool/nutrition_calendar/nutrition_calendar",
 			});
 		} else if (page === 'family') {
 			uni.navigateTo({
@@ -132,9 +134,13 @@
 		--font-family: 'Roboto', sans-serif;
 	}
 
-	.title, .tools-title, .tool-name, .tool-info {
-	    font-family: var(--font-family);
+	.title,
+	.tools-title,
+	.tool-name,
+	.tool-info {
+		font-family: var(--font-family);
 	}
+
 	/* 容器 */
 	.container {
 		display: flex;
@@ -191,8 +197,10 @@
 		background-color: rgba(33, 255, 6, 0.15);
 		border-radius: 10rpx;
 		box-shadow: 0 2rpx 5rpx var(--shadow-color);
-		margin: 30rpx; /* 增加工具区域外边距 */
-		padding: 30rpx; /* 增加工具区域内边距 */
+		margin: 30rpx;
+		/* 增加工具区域外边距 */
+		padding: 30rpx;
+		/* 增加工具区域内边距 */
 		animation: fadeInUp 1s ease;
 		backdrop-filter: blur(10rpx);
 	}
@@ -216,8 +224,10 @@
 		align-items: center;
 		background-color: rgba(255, 255, 255, 0.9);
 		border-radius: 10rpx;
-		padding: 20rpx; /* 增加工具项内边距 */
-		margin-bottom: 20rpx; /* 保持工具项间距 */
+		padding: 20rpx;
+		/* 增加工具项内边距 */
+		margin-bottom: 20rpx;
+		/* 保持工具项间距 */
 		box-shadow: 0 2rpx 5rpx var(--shadow-color);
 		cursor: pointer;
 		transition: transform 0.3s, box-shadow 0.3s;
@@ -261,10 +271,10 @@
 		font-size: 22rpx;
 		color: #666;
 	}
-	
+
 	.tool:active {
-	    transform: scale(0.98);
-	    box-shadow: 0 2rpx 8rpx var(--shadow-color);
+		transform: scale(0.98);
+		box-shadow: 0 2rpx 8rpx var(--shadow-color);
 	}
 
 

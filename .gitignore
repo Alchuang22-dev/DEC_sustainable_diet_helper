@@ -5,6 +5,7 @@
 *.dll
 *.so
 *.dylib
+
 .idea/
 .DS_Store
 .hbuilderx/
@@ -21,8 +22,9 @@ frontend/.project
 frontend/.DS_Store
 frontend/.vscode
 frontend/.idea/
-
+coverage.out
 git_config.sh
 *.DS_Store
 
 depracated
+upload
