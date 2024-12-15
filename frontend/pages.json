@@ -73,6 +73,8 @@
 				"path": "create_news/create_news"
 			}, {
 				"path": "edit_draft/edit_draft"
+			}, {
+				"path": "preview_draft/preview_draft"
 			}]
 		},
 		{

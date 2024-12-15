@@ -1,131 +1,147 @@
 <template>
   <view class="container">
-    <!-- 全屏背景图片 -->
     <image src="/static/images/index/background_img.jpg" class="background-image"></image>
 
-    <!-- 合并后的顶部导航和日期选择器 -->
-    <view class="header">
-      <text class="title">{{ $t('nutrition_calendar') }}</text>
-      <scroll-view class="date-selector" scroll-x="true" scroll-with-animation="true">
-        <view class="date-buttons">
-          <button
-              v-for="(date, index) in dateTabs"
-              :key="date.dateString"
-              :class="['date-button', { 'selected': currentDateIndex === index }]"
-              @click="onDateChange(index)"
-          >
-            <text class="day">{{ date.day }}</text>
-            <text class="date">{{ date.date }}</text>
-          </button>
-        </view>
-      </scroll-view>
-    </view>
-
-    <!-- 多重环形图 -->
-    <view class="charts-box">
-      <qiun-data-charts
-          type="arcbar"
-          :opts="chartOpts"
-          :chartData="chartData"
-          :canvas2d="true"
-          canvasId="nutritionChart"
-      />
-      <view class="chart-center-text">
-        <text class="center-title">{{ $t('nutrition_overview') }}</text>
+    <!-- 日期导航部分 -->
+    <uni-section title="" padding>
+      <view class="header">
+        <text class="title">{{ $t('nutrition_calendar') }}</text>
+        <scroll-view
+            class="date-selector"
+            scroll-x="true"
+            scroll-with-animation="true"
+            :scroll-into-view="'date-' + currentDateIndex"
+            :scroll-left="scrollPosition"
+        >
+          <view class="date-buttons">
+            <view
+                :id="'date-' + index"
+                v-for="(date, index) in dateTabs"
+                :key="date.dateString"
+                :class="['date-button', { 'selected': currentDateIndex === index }]"
+                @click="onDateChange(index)"
+            >
+              <text class="day">{{ date.day }}</text>
+              <text class="date">{{ date.date }}</text>
+            </view>
+          </view>
+        </scroll-view>
       </view>
-    </view>
+    </uni-section>
 
-    <!-- 五大营养详细信息 -->
-    <view class="nutrition-details">
-      <view
-          class="nutrition-item"
-          v-for="item in summaryNutrition"
-          :key="item.label"
-      >
+    <!-- 营养环形图部分 -->
+    <uni-section title="" padding>
+      <view class="charts-box">
+        <qiun-data-charts
+            type="arcbar"
+            :opts="chartOpts"
+            :chartData="chartData"
+            :canvas2d="true"
+            canvasId="nutritionChart"
+        />
+        <view class="chart-center-text">
+          <text class="center-title">{{ $t('nutrition\noverview') }}</text>
+        </view>
+      </view>
+    </uni-section>
+
+    <!-- 营养摄入详情部分 -->
+    <uni-section :title="$t('nutrition_details')" padding>
+      <view class="nutrition-details">
         <view
-            class="color-square"
-            :style="{ backgroundColor: item.over ? getRedShade(item.label) : item.color }"
-        ></view>
-        <view class="nutrition-text">
-          <text class="intake" :class="{ 'over': item.over }">
-            {{ item.label }}:
-            <text :class="{ 'over': item.over }">{{ item.intake }}</text>
-            / {{ item.plan }}
-          </text>
+            class="nutrition-item"
+            v-for="item in summaryNutrition"
+            :key="item.label"
+        >
+          <view class="nutrition-card">
+            <view
+                class="color-square"
+                :style="{ backgroundColor: item.over ? getRedShade(item.nutrient) : item.color }"
+            ></view>
+            <view class="nutrition-text">
+              <text class="label">{{ item.label }}</text>
+              <text class="value" :class="{ 'over': item.over }">
+                {{ item.intake }} / {{ item.plan }}
+              </text>
+            </view>
+          </view>
         </view>
       </view>
-    </view>
+      <view class="set-goals-button-wrapper">
+        <button class="set-goals-button" @click="navigateToSetGoals">
+          {{ $t('set_nutrition_goals') }}
+        </button>
+      </view>
+    </uni-section>
 
-    <!-- 设置营养目标按钮 -->
-    <view class="set-goals-button-wrapper">
-      <button class="set-goals-button" @click="navigateToSetGoals">
-        {{ $t('set_nutrition_goals') }}
-      </button>
-    </view>
-
-    <!-- 饮食记录 -->
-    <view class="meal-records">
-      <uni-section :title="t('meal_detail_records')">
+    <!-- 膳食记录部分 -->
+    <uni-section :title="$t('meal_detail_records')" padding>
+      <view class="meal-records">
         <uni-collapse ref="collapse" v-model="activeMeal" @change="onMealChange">
-          <uni-collapse-item :title="t('breakfast')" name="breakfast">
-            <view class="content">
+          <uni-collapse-item :title="$t('breakfast')" name="breakfast">
+            <view class="meal-content">
               <view
                   v-for="nutrient in breakfastNutrients"
                   :key="nutrient.label"
                   class="nutrient-item"
               >
-                <text>{{ nutrient.label }}: {{ nutrient.intake }}</text>
+                <text class="nutrient-label">{{ nutrient.label }}:</text>
+                <text class="nutrient-value">{{ nutrient.intake }}</text>
               </view>
             </view>
           </uni-collapse-item>
 
-          <uni-collapse-item :title="t('lunch')" name="lunch">
-            <view class="content">
+          <uni-collapse-item :title="$t('lunch')" name="lunch">
+            <view class="meal-content">
               <view
                   v-for="nutrient in lunchNutrients"
                   :key="nutrient.label"
                   class="nutrient-item"
               >
-                <text>{{ nutrient.label }}: {{ nutrient.intake }}</text>
+                <text class="nutrient-label">{{ nutrient.label }}:</text>
+                <text class="nutrient-value">{{ nutrient.intake }}</text>
               </view>
             </view>
           </uni-collapse-item>
 
-          <uni-collapse-item :title="t('dinner')" name="dinner">
-            <view class="content">
+          <uni-collapse-item :title="$t('dinner')" name="dinner">
+            <view class="meal-content">
               <view
                   v-for="nutrient in dinnerNutrients"
                   :key="nutrient.label"
                   class="nutrient-item"
               >
-                <text>{{ nutrient.label }}: {{ nutrient.intake }}</text>
+                <text class="nutrient-label">{{ nutrient.label }}:</text>
+                <text class="nutrient-value">{{ nutrient.intake }}</text>
               </view>
             </view>
           </uni-collapse-item>
 
-          <uni-collapse-item :title="t('other')" name="other">
-            <view class="content">
+          <uni-collapse-item :title="$t('other')" name="other">
+            <view class="meal-content">
               <view
                   v-for="nutrient in otherNutrients"
                   :key="nutrient.label"
                   class="nutrient-item"
               >
-                <text>{{ nutrient.label }}: {{ nutrient.intake }}</text>
+                <text class="nutrient-label">{{ nutrient.label }}:</text>
+                <text class="nutrient-value">{{ nutrient.intake }}</text>
               </view>
             </view>
           </uni-collapse-item>
         </uni-collapse>
-      </uni-section>
-    </view>
+      </view>
+    </uni-section>
   </view>
 </template>
 
 <script setup>
-import {ref, onMounted, watch} from 'vue'
-import {useI18n} from 'vue-i18n'
-import {useCarbonAndNutritionStore} from '@/stores/carbon_and_nutrition_data.js'
+import { ref, onMounted, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data.js'
 
-const {t} = useI18n()
+// 国际化
+const { t } = useI18n()
 
 // 获取 Pinia 存储
 const carbonNutritionStore = useCarbonAndNutritionStore()
@@ -145,10 +161,10 @@ const otherNutrients = ref([])
 const activeMeal = ref('breakfast')
 
 // 图表数据和配置（五大营养arcbar图）
-const chartData = ref({series: []})
+const chartData = ref({ series: [] })
 const chartOpts = ref({
-  title: {name: "", fontSize: 35, color: "#1890ff"},
-  subtitle: {name: "", fontSize: 15, color: "#666666"},
+  title: { name: "", fontSize: 35, color: "#1890ff" },
+  subtitle: { name: "", fontSize: 15, color: "#666666" },
   extra: {
     arcbar: {
       type: "circle",
@@ -170,7 +186,7 @@ const generateDateTabs = () => {
     date.setDate(today.getDate() + i)
     const day = getWeekdayKey(date.getDay())
     const dateNumber = date.getDate()
-    const dateString = date.toISOString().split('T')[0]
+    const dateString = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }).replace(/\//g, '-').split('T')[0]
     tabs.push({
       day: t(day),
       date: dateNumber,
@@ -186,8 +202,47 @@ const getWeekdayKey = (dayIndex) => {
   return weekdays[dayIndex]
 }
 
+// 根据日期从 store 获取数据
 const getDataByDate = (dateString) => {
   return carbonNutritionStore.getDataByDate(dateString)
+}
+
+// 获取当前选中日期的数据
+const getDataForSelectedDate = () => {
+  if (currentDateIndex.value < 0 || currentDateIndex.value >= dateTabs.value.length) {
+    return {
+      nutrients: {
+        actual: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 },
+        target: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
+      },
+      meals: {
+        breakfast: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+        lunch: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+        dinner: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+        other: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } }
+      }
+    }
+  }
+
+  const selectedDate = dateTabs.value[currentDateIndex.value].dateString
+  const dateData = getDataByDate(selectedDate)
+
+  if (dateData) {
+    return dateData
+  } else {
+    return {
+      nutrients: {
+        actual: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 },
+        target: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
+      },
+      meals: {
+        breakfast: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+        lunch: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+        dinner: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+        other: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } }
+      }
+    }
+  }
 }
 
 // 更新五大营养的过量标志
@@ -195,10 +250,18 @@ const updateSummaryNutrition = () => {
   const dateData = getDataForSelectedDate()
 
   const nutrients = ['calories', 'protein', 'fat', 'carbohydrates', 'sodium']
-  summaryNutrition.value = nutrients.map(nutrient => {
+  const tempSummary = nutrients.map(nutrient => {
     const intake = dateData.nutrients.actual[nutrient] || 0
     const plan = dateData.nutrients.target[nutrient] || 0
-    const ratio = plan > 0 ? intake / plan : 0
+    let ratio = 0
+    if (plan > 0) {
+      ratio = intake / plan
+      if (ratio > 1) {
+        ratio = 1 // 确保比例不超过1
+      }
+    } else {
+      ratio = intake > 0 ? 1 : 0 // 如果计划为0且摄入大于0，设置为1，否则为0
+    }
     const over = plan > 0 && intake > plan
     const color = over ? getRedShade(nutrient) : getNutrientColor(nutrient)
     return {
@@ -211,6 +274,9 @@ const updateSummaryNutrition = () => {
       over: over
     }
   })
+
+  // 使用临时变量整体赋值
+  summaryNutrition.value = JSON.parse(JSON.stringify(tempSummary))
 
   // 更新每餐营养
   const m = dateData.meals
@@ -229,35 +295,19 @@ const mapMealNutrients = (mealN) => {
   }))
 }
 
-const getDataForSelectedDate = () => {
-  const selectedDate = dateTabs.value[currentDateIndex.value].dateString
-  const dateData = getDataByDate(selectedDate)
-
-  if (dateData) {
-    return dateData
-  } else {
-    return {
-      nutrients: {
-        actual: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0},
-        target: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}
-      },
-      meals: {
-        breakfast: {nutrients: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}},
-        lunch: {nutrients: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}},
-        dinner: {nutrients: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}},
-        other: {nutrients: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}}
-      }
-    }
-  }
-}
-
 // 更新图表数据（五大营养arcbar图）
 const updateChartData = () => {
-  // 根据 summaryNutrition 生成 5 个环
-  chartData.value.series = summaryNutrition.value.map(item => ({
-    data: item.ratio > 1 ? 1 : item.ratio, // 确保比例不超过1
-    color: item.over ? getRedShade(item.nutrient) : getNutrientColor(item.nutrient)
+  const tempSeries = summaryNutrition.value.map(item => ({
+    data: item.ratio, // 已在 summaryNutrition 中处理过比例
+    color: item.color
   }))
+
+  // 使用临时变量整体赋值
+  const tempChartData = {
+    series: tempSeries
+  }
+
+  chartData.value = JSON.parse(JSON.stringify(tempChartData))
 }
 
 // Helper to get红色不同深浅基于营养成分
@@ -284,6 +334,26 @@ const getNutrientColor = (nutrient) => {
   return colors[nutrient] || '#000000'
 }
 
+const scrollPosition = ref(0)
+
+// 在 onMounted 中添加初始滚动位置设置
+onMounted(async () => {
+  generateDateTabs()
+  await carbonNutritionStore.getNutritionGoals()
+  await carbonNutritionStore.getNutritionIntakes()
+
+  // 设置初始日期为今天
+  currentDateIndex.value = dateTabs.value.length - 2
+
+  // 设置初始滚动位置
+  nextTick(() => {
+    scrollPosition.value = 9999 // 一个足够大的值确保滚动到最右边
+  })
+
+  updateSummaryNutrition()
+  updateChartData()
+})
+
 // 日期改变
 const onDateChange = (index) => {
   currentDateIndex.value = index
@@ -303,6 +373,7 @@ const navigateToSetGoals = () => {
   })
 }
 
+// 初始化数据
 onMounted(async () => {
   generateDateTabs()
   await carbonNutritionStore.getNutritionGoals()
@@ -319,25 +390,12 @@ watch(summaryNutrition, () => {
 </script>
 
 <style scoped>
-:root {
-  --primary-color: #4CAF50;
-  --secondary-color: #2fc25b;
-  --background-color: #f5f5f5;
-  --section-background: rgba(144, 238, 144, 0.3);
-  --text-color: #333;
-  --shadow-color: rgba(0, 0, 0, 0.1);
-  --font-size-title: 32rpx;
-  --font-size-subtitle: 24rpx;
-}
-
 .container {
   display: flex;
   flex-direction: column;
-  background-color: var(--background-color);
   min-height: 100vh;
-  padding-bottom: 80rpx;
-  position: relative;
-  overflow: hidden;
+  background-color: #f8f9fa;
+  padding-bottom: 40rpx;
 }
 
 .background-image {
@@ -348,82 +406,83 @@ watch(summaryNutrition, () => {
   height: 100%;
   object-fit: cover;
   z-index: 0;
-  opacity: 0.1;
+  opacity: 0.08;
 }
 
 .header {
   padding: 20rpx;
-  background-color: var(--section-background);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  box-shadow: 0 2rpx 5rpx var(--shadow-color);
-  backdrop-filter: blur(10rpx);
-  border-radius: 10rpx;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1;
 }
 
 .title {
-  font-size: var(--font-size-title);
-  font-weight: bold;
-  color: var(--primary-color);
-  margin-bottom: 20rpx;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #4CAF50FF;
+  text-align: center;
+  margin-bottom: 24rpx;
 }
 
 .date-selector {
   width: 100%;
-  overflow-x: auto;
-  white-space: nowrap;
+  padding: 10rpx 0;
 }
 
 .date-buttons {
   display: flex;
-  flex-direction: row;
+  padding: 0 10rpx;
 }
 
 .date-button {
   flex: none;
-  width: 150rpx;
+  width: 140rpx;
   height: 120rpx;
-  padding: 10rpx;
-  margin: 0 5rpx;
-  border: none;
-  background-color: #f0f0f0;
-  border-radius: 20rpx;
-  cursor: pointer;
+  margin: 0 8rpx;
+  padding: 16rpx;
+  background-color: #f8f9fa;
+  border-radius: 12rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.3s, color 0.3s;
+  transition: all 0.3s ease;
 }
 
 .date-button.selected {
-  background-color: var(--primary-color);
+  background-color: #4CAF50;
+  transform: translateY(-2rpx);
+  box-shadow: 0 4rpx 12rpx rgba(76, 175, 80, 0.2);
+}
+
+.date-button.selected .day,
+.date-button.selected .date {
   color: #ffffff;
 }
 
 .day {
   font-size: 24rpx;
+  color: #666;
+  margin-bottom: 8rpx;
 }
 
 .date {
-  font-size: 28rpx;
+  font-size: 32rpx;
   font-weight: bold;
+  color: #2c3e50;
 }
 
 .charts-box {
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin: 20rpx 0;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
   position: relative;
-  width: 500rpx;
-  height: 500rpx;
-  margin: 40rpx auto;
-  background-color: var(--section-background);
-  border-radius: 10rpx;
-  box-shadow: 0 2rpx 5rpx var(--shadow-color);
-  backdrop-filter: blur(10rpx);
-  padding: 20rpx;
+  z-index: 1;
+  min-height: 500rpx;
 }
 
 .chart-center-text {
@@ -432,107 +491,208 @@ watch(summaryNutrition, () => {
   left: 50%;
   transform: translate(-50%, -50%);
   text-align: center;
+  z-index: 2;
 }
 
 .center-title {
   font-size: 36rpx;
   font-weight: bold;
-  color: var(--text-color);
+  color: #2c3e50;
+  white-space: pre-line;
+  text-align: center;
 }
 
 .nutrition-details {
+  background-color: #ffffff;
+  border-radius: 16rpx;
   padding: 20rpx;
-  background-color: var(--section-background);
-  border-radius: 10rpx;
-  margin: 20rpx;
-  box-shadow: 0 2rpx 5rpx var(--shadow-color);
-  display: flex;
-  flex-direction: column;
-  backdrop-filter: blur(10rpx);
+  margin: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .nutrition-item {
+  margin-bottom: 16rpx;
+}
+
+.nutrition-item:last-child {
+  margin-bottom: 0;
+}
+
+.nutrition-card {
   display: flex;
   align-items: center;
-  margin-bottom: 10rpx;
+  padding: 16rpx;
+  background-color: #f8f9fa;
+  border-radius: 12rpx;
+  transition: all 0.3s ease;
+}
+
+.nutrition-card:hover {
+  transform: translateX(4rpx);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
 }
 
 .color-square {
-  width: 30rpx;
-  height: 30rpx;
-  border-radius: 5rpx;
-  margin-right: 10rpx;
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 8rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
 }
 
 .nutrition-text {
-  font-size: 24rpx;
-  color: #555;
-  line-height: 36rpx;
-  margin-left: 20rpx;
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.nutrition-text.over {
-  color: red;
+.label {
+  font-size: 28rpx;
+  color: #2c3e50;
+  font-weight: 500;
 }
 
-.nutrition-text .intake {
-  font-size: 24rpx;
-  color: #555;
+.value {
+  font-size: 28rpx;
+  color: #4CAF50;
+  font-weight: 500;
 }
 
-.nutrition-text .intake.over {
-  color: red;
+.value.over {
+  color: #ff4d4f;
 }
 
 .set-goals-button-wrapper {
+  padding: 20rpx;
   display: flex;
   justify-content: center;
-  margin: 20rpx;
 }
 
 .set-goals-button {
-  background-color: var(--primary-color);
-  color: #fff;
+  width: 50%;
+  height: 88rpx;
+  background-color: #4CAF50;
+  color: #ffffff;
+  border-radius: 44rpx;
+  font-size: 32rpx;
+  font-weight: 500;
+  box-shadow: 0 4rpx 12rpx rgba(76, 175, 80, 0.2);
+  transition: all 0.3s ease;
   border: none;
-  border-radius: 30rpx;
-  padding: 15rpx 30rpx;
-  font-size: 28rpx;
-  font-weight: bold;
-  box-shadow: 0 2rpx 5rpx var(--shadow-color);
-  transition: background-color 0.3s, transform 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.set-goals-button:hover {
-  background-color: var(--secondary-color);
-  transform: translateY(-2rpx);
+.set-goals-button:active {
+  transform: translateY(2rpx);
+  box-shadow: 0 2rpx 6rpx rgba(76, 175, 80, 0.2);
+  background-color: #43a047;
 }
 
 .meal-records {
-  padding: 20rpx;
-  background-color: var(--section-background);
-  border-radius: 10rpx;
-  margin: 20rpx;
-  box-shadow: 0 2rpx 5rpx var(--shadow-color);
-  backdrop-filter: blur(10rpx);
+  background-color: #ffffff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
-.uni-section {
-  background-color: transparent;
-}
-
-.uni-collapse .content {
+.meal-content {
   padding: 20rpx;
-  background-color: rgba(255, 255, 255, 0.5);
-  border-radius: 10rpx;
-  margin-top: 10rpx;
-  box-shadow: 0 2rpx 5rpx var(--shadow-color);
-  line-height: 36rpx;
-  margin-left: 20rpx;
+  background-color: #f8f9fa;
+  border-radius: 8rpx;
 }
 
 .nutrient-item {
-  margin-bottom: 8rpx;
-  font-size: 24rpx;
-  color: #555;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.05);
+}
+
+.nutrient-item:last-child {
+  border-bottom: none;
+}
+
+.nutrient-label {
+  font-size: 28rpx;
+  color: #2c3e50;
+}
+
+.nutrient-value {
+  font-size: 28rpx;
+  color: #4CAF50;
+  font-weight: 500;
+}
+
+/* uni-section 样式优化 */
+:deep(.uni-section) {
+  padding: 0 20rpx;
+  margin-bottom: 20rpx;
+}
+
+:deep(.uni-section-header) {
+  padding: 20rpx 0;
+}
+
+:deep(.uni-section-header__content) {
+  color: #2c3e50;
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+/* uni-collapse 样式优化 */
+:deep(.uni-collapse-item) {
+  margin-bottom: 12rpx;
+}
+
+:deep(.uni-collapse-item__title) {
+  padding: 20rpx;
+  background-color: #ffffff;
+  border-radius: 12rpx;
+}
+
+:deep(.uni-collapse-item__title-text) {
+  font-size: 30rpx;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+:deep(.uni-collapse-item__wrap) {
+  background-color: transparent;
+}
+
+/* 滚动条样式优化 */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+/* 响应式适配 */
+@media screen and (max-width: 375px) {
+  .date-button {
+    width: 120rpx;
+    height: 100rpx;
+  }
+
+  .day {
+    font-size: 22rpx;
+  }
+
+  .date {
+    font-size: 28rpx;
+  }
+
+  .label,
+  .value,
+  .nutrient-label,
+  .nutrient-value {
+    font-size: 26rpx;
+  }
 }
 </style>

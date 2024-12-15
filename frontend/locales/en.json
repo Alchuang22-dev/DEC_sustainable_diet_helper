@@ -151,8 +151,12 @@
 	"friday": "Friday",
 	"saturday": "Saturday",
 	"nutrition\noverview": "Nutrition\nOverview",
-	"set_nutrition_goals": "Set Nutrition Goals",
+	"set_nutrition_goals": "Set Goals",
 	"meal_detail_records": "Meal Detail Records",
+	"nutrition_details": "Nutrition Details",
+	"carbon_goal_label": "Carbon Emission(Kg)",
+	"set_for_today": "Set for Today",
+	"set_for_week": "Set for Week",
 
 	//搜索页
 	"text_search": "Search",
@@ -231,6 +235,9 @@
 	"default_food_name": "Tomato",
 	"weight": "Weight",
 	"price": "Price",
+	"results": "Results",
+	"intake_value": "Intake Value",
+	"target_value_today": "Target Value Today",
 
 	"family_management": "Family Management",
 	"create_family": "Create Family",
@@ -280,6 +287,8 @@
 	"reject": "Reject",
 	"dish_already_exists": "Dish already exists",
 	"confirm_delete": "Confirm Delete",
+	"create_family_success": "Success",
+	"break_family_success": "Success",
 
 	//用户页
 	"profile_avatar_click": "Click Avatar",
@@ -433,5 +442,13 @@
 	"flour": "flour",
 	"honey": "honey",
 	"mango": "mango",
-	"rice": "rice"
+
+	"shared_calculation_for_family": "Shared Calculation for Family",
+	"total_ratio": "Total Ratio",
+	"confirm_submission": "Confirm Submission",
+	"total_ratio_cannot_exceed_one": "Total ratio cannot exceed 1",
+	"total_ratio_less_than_one": "Total ratio is less than 1, some ratio might be unallocated",
+	"submission_success": "Submission successful",
+	"submission_failed": "Submission failed",
+	"join_family_first": "Please join a family first"
 }
