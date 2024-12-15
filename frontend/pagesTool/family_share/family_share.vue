@@ -76,8 +76,6 @@ onShow(() => {
 // 获取当前用户的 UID 和 Token
 const token = computed(() => userStore.user.token);
 
-const selectedMealIndex = ref(0);
-
 // 传递给页面的数据
 const carbonEmissionData = ref(0);
 const nutritionData = reactive({});
@@ -99,18 +97,7 @@ onLoad((options) => {
 			console.error('解析传递的数据失败:', error);
 		}
 	}
-	// 设置默认的选中项（如果需要 Picker，可以保留）
-	selectedMealIndex.value = getDefaultMealType();
 });
-
-// 计算当前时间对应的餐食类型
-const getDefaultMealType = () => {
-	const hour = new Date().getHours();
-	if (hour >= 5 && hour < 11) return 0; // 早餐
-	if (hour >= 11 && hour < 15) return 1; // 午餐
-	if (hour >= 15 && hour < 20) return 2; // 晚餐
-	return 3; // 其他
-};
 
 // 计算总比例
 const totalRatio = computed(() => {
@@ -175,8 +162,11 @@ const submitData = () => {
 		ratio: parseFloat(memberRatio[id]) || 0
 	}));
 
+  const today = new Date();
 	const requestData = {
-		date: new Date().toISOString(),
+    date: today.getFullYear() + '-'
+        + String(today.getMonth() + 1).padStart(2, '0') + '-'
+        + String(today.getDate()).padStart(2, '0'),
 		meal_type: mealType.value,
 		calories: nutritionData[0] || 0,
 		protein: nutritionData[1] || 0,

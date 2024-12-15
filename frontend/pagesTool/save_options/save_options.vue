@@ -97,8 +97,11 @@ const getDefaultMealType = () => {
 
 // 保存为自己计算
 const saveForSelf = () => {
+  const today = new Date();
   const requestData = {
-    date: new Date().toISOString(),
+    date: today.getFullYear() + '-'
+        + String(today.getMonth() + 1).padStart(2, '0') + '-'
+        + String(today.getDate()).padStart(2, '0'),
     meal_type: mealTypesValue[selectedMealIndex.value],
     calories: nutritionData[0] || 0,
     protein: nutritionData[1] || 0,

@@ -275,7 +275,10 @@ onShow(async () => {
   // 更新今日数据
 
   const today = new Date()
-  const dateString = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }).replace(/\//g, '-').split('T')[0]
+  console.log('today', today)
+  const dateString = today.getFullYear() + '-'
+      + String(today.getMonth() + 1).padStart(2, '0') + '-'
+      + String(today.getDate()).padStart(2, '0');
   console.log('dateString', dateString)
   const todayData = getDataByDate(dateString)
   console.log('todayData', todayData)
@@ -330,11 +333,20 @@ onShow(async () => {
   for (let i = 6; i >= 0; i--) {
     const d = new Date()
     d.setDate(d.getDate() - i)
-    const ds = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' }).replace(/\//g, '-').split('T')[0]
-    const month = d.getMonth() + 1
-    const day = d.getDate()
+
+    // 获取日期字符串格式化为 YYYY-MM-DD
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0') // 月份是从0开始的，所以加1
+    const day = String(d.getDate()).padStart(2, '0') // 保证日期是两位数
+
+    // 构造 ds 为 YYYY-MM-DD 格式的字符串
+    const ds = `${year}-${month}-${day}`
+    console.log('date string (ds)', ds)
+
+    // 添加到categories
     categories.push(`${month}/${day}`)
 
+    // 根据 ds 获取数据
     const dailyData = getDataByDate(ds)
     targetData.push(dailyData ? dailyData.carbonEmission.target : 0)
     actualData.push(dailyData ? dailyData.carbonEmission.actual : 0)
