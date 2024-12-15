@@ -3,6 +3,7 @@ package models
 import (
     "gorm.io/gorm"
     "fmt"
+    "math"
 )
 
 type Food struct {
@@ -135,14 +136,13 @@ func CalculateFoodNutritionAndEmission(db *gorm.DB, items []FoodCalculateItem) (
         // 计算结果
         result := FoodCalculateResult{
             ID: item.ID,
-            // CO2Emission = (GHG * weight * item.price) / food.price
-            Emission: (food.GHG * item.Weight * item.Price) / food.Price,
-            // 其他营养成分直接按照重量比例计算
-            Calories:    food.Calories * item.Weight,
-            Protein:     food.Protein * item.Weight,
-            Fat:         food.Fat * item.Weight,
-            Carbohydrates:      food.Carbohydrates * item.Weight,
-            Sodium:      food.Sodium * item.Weight,
+            // 使用 math.Round 保留1位小数
+            Emission: math.Round((food.GHG*item.Weight*item.Price/food.Price)*10) / 10,
+            Calories: math.Round(food.Calories*item.Weight*10) / 10,
+            Protein: math.Round(food.Protein*item.Weight*10) / 10,
+            Fat: math.Round(food.Fat*item.Weight*10) / 10,
+            Carbohydrates: math.Round(food.Carbohydrates*item.Weight*10) / 10,
+            Sodium: math.Round(food.Sodium*item.Weight*10) / 10,
         }
 
         results = append(results, result)

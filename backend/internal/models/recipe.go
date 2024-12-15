@@ -4,6 +4,7 @@ import (
 	"gorm.io/gorm"
 	"encoding/json"
 	"fmt"
+	"log"
 )
 
 // Recipe 食谱模型
@@ -14,6 +15,7 @@ type Recipe struct {
 	ImageURL    string  `json:"image_url" gorm:"column:image_url"`      // 食谱图片URL
 	Ingredients string  `json:"ingredients" gorm:"column:ingredients"`   // 原料组成(JSON格式存储)
 	Foods       []Food  `json:"foods" gorm:"many2many:food_recipes;"`   // 关联的食物
+	Category    string  `json:"category" gorm:"column:category"`       // 食谱分类
 }
 
 // RecipeIngredient 用于JSON序列化和反序列化的结构体
@@ -87,13 +89,16 @@ func GetRecipeIDsByFoodID(db *gorm.DB, foodID uint) ([]uint, error) {
         Error
     
     if err != nil {
+		log.Printf("查询食谱ID失败: %v", err)
         return nil, fmt.Errorf("查询食谱ID失败: %v", err)
     }
     
     // 添加空结果检查
     if len(recipeIDs) == 0 {
+		log.Printf("未找到包含食材ID %d 的食谱", foodID)
         return nil, fmt.Errorf("未找到包含食材ID %d 的食谱", foodID)
     }
+	log.Printf("查询食谱ID成功: %v", recipeIDs)
     
     return recipeIDs, nil
 }

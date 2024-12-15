@@ -1,19 +1,20 @@
 package controllers
 
 import (
-    "encoding/json"
-    "net/http"
-    "net/http/httptest"
-    "testing"
-    "strings"
-    "fmt"
+	"encoding/json"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"testing"
 
-    "github.com/gin-gonic/gin"
-    "github.com/stretchr/testify/assert"
-    "gorm.io/driver/mysql"
-    "gorm.io/gorm"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 
-    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
+	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 )
 
 // 测试数据库配置
@@ -25,93 +26,61 @@ const (
     TestDBName     = "test_sustainable_diet"
 )
 
-// setupTestDB 设置测试数据库
-func setupTestDB() (*gorm.DB, error) {
-    dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-        TestDBUser, TestDBPassword, TestDBHost, TestDBPort, TestDBName)
-
-    db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+// setupFoodTestDB 设置测试数据库
+func setupFoodTestDB(t *testing.T) *gorm.DB {
+    // 使用 SQLite 内存数据库替代 MySQL
+    db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
     if err != nil {
-        return nil, fmt.Errorf("连接数据库失败: %v", err)
+        t.Fatalf("连接测试数据库失败: %v", err)
     }
 
-    // 在清空表之前，先自动创建表结构
-    if err := db.AutoMigrate(
-        &models.User{},
+    // 自动迁移所需的表
+    err = db.AutoMigrate(
         &models.Food{},
-    ); err != nil {
-        return nil, fmt.Errorf("自动迁移表结构失败: %v", err)
+    )
+    if err != nil {
+        t.Fatalf("迁移测试数据库失败: %v", err)
     }
-
-    // 先清空关联表，再清空主表
-    if err := db.Exec("DELETE FROM food_recipes").Error; err != nil {
-        return nil, fmt.Errorf("清空关联表失败: %v", err)
-    }
-
-    // 清空 foods 表
-    if err := db.Exec("DELETE FROM foods").Error; err != nil {
-        return nil, fmt.Errorf("清空食物表失败: %v", err)
-    }
-
-    // 清空 users 表
-    if err := db.Exec("DELETE FROM users").Error; err != nil {
-        return nil, fmt.Errorf("清空用户表失败: %v", err)
-    }
-
-    // 重置自增ID
-    if err := db.Exec("ALTER TABLE foods AUTO_INCREMENT = 1").Error; err != nil {
-        return nil, fmt.Errorf("重置自增ID失败: %v", err)
-    }
-
-    // 创建测试用户
-    testUser := &models.User{
-        ID:       1,
-        Nickname: "TestUser",
-        OpenID:   "test_open_id",
-    }
-    if err := db.Create(testUser).Error; err != nil {
-        return nil, fmt.Errorf("创建测试用户失败: %v", err)
-    }
-
-    // 插入测试食物数据
+    // 添加测试食材数据
     testFoods := []models.Food{
         {
+            Model:         gorm.Model{ID: 1},
             ZhFoodName:    "苹果",
             EnFoodName:    "Apple",
-            GHG:          0.43,
-            Calories:     52,
-            Protein:      0.3,
+            ImageUrl:      "http://example.com/apple.jpg",
+            Calories:      52,
+            Protein:       0.3,
             Fat:          0.2,
             Carbohydrates: 14,
-            Sodium:       1,
-            Price:        2.5,
-            ImageUrl:     "https://example.com/apple.jpg",
+            Sodium:        1,
+            GHG:      0.43,
+            Price:      1.0,
         },
         {
+            Model:         gorm.Model{ID: 2},
             ZhFoodName:    "香蕉",
             EnFoodName:    "Banana",
-            GHG:          0.86,
-            Calories:     89,
-            Protein:      1.1,
+            ImageUrl:      "http://example.com/banana.jpg",
+            Calories:      89,
+            Protein:       1.1,
             Fat:          0.3,
             Carbohydrates: 23,
-            Sodium:       1,
-            Price:        3.0,
-            ImageUrl:     "https://example.com/banana.jpg",
+            Sodium:        1,
+            GHG:      0.86,
+            Price:      1.0,
         },
     }
-
     for _, food := range testFoods {
         if err := db.Create(&food).Error; err != nil {
-            return nil, fmt.Errorf("插入测试数据失败: %v", err)
+            t.Fatalf("添加测试食材失败: %v", err)
         }
     }
 
-    return db, nil
+    return db
 }
 
-// setupTestRouter 设置测试路由
-func setupTestRouter(db *gorm.DB) *gin.Engine {
+// setupFoodTestRouter 设置测试路由
+func setupFoodTestRouter(db *gorm.DB) *gin.Engine {
     gin.SetMode(gin.TestMode)
     router := gin.New()
     router.Use(gin.Recovery())
@@ -141,12 +110,9 @@ func setupTestRouter(db *gorm.DB) *gin.Engine {
 
 // TestFoodNamesAPI 测试获取食物名称列表的 API
 func TestFoodNamesAPI(t *testing.T) {
-    db, err := setupTestDB()
-    if err != nil {
-        t.Fatalf("设置测试数据库失败: %v", err)
-    }
+    db := setupFoodTestDB(t)
 
-    router := setupTestRouter(db)
+    router := setupFoodTestRouter(db)
 
     tests := []struct {
         name           string
@@ -237,13 +203,10 @@ func TestFoodNamesAPI(t *testing.T) {
 
 // 测试函数
 func TestCalculateFoodNutritionAndEmissionAPI(t *testing.T) {
-    // 设置测试数据库
-    db, err := setupTestDB()
-    if err != nil {
-        t.Fatalf("设置测试数据库失败: %v", err)
-    }
-
-    router := setupTestRouter(db)
+    db := setupFoodTestDB(t)
+    gin.SetMode(gin.DebugMode)
+    log.SetOutput(os.Stdout)
+    router := setupFoodTestRouter(db)
 
     tests := []struct {
         name           string
@@ -269,10 +232,11 @@ func TestCalculateFoodNutritionAndEmissionAPI(t *testing.T) {
             checkResponse: func(t *testing.T, w *httptest.ResponseRecorder) {
                 var response []models.FoodCalculateResult
                 err := json.Unmarshal(w.Body.Bytes(), &response)
+                t.Logf("response: %v", response)
                 assert.Nil(t, err)
                 assert.Len(t, response, 2)
 
-                // 验证返���的数据结构完整性
+                // 验证返回的数据结构完整性
                 firstResult := response[0]
                 assert.NotZero(t, firstResult.ID)
                 assert.NotZero(t, firstResult.Emission)
@@ -282,10 +246,14 @@ func TestCalculateFoodNutritionAndEmissionAPI(t *testing.T) {
                 assert.NotZero(t, firstResult.Carbohydrates)
                 assert.NotZero(t, firstResult.Sodium)
 
-                // 使用 InDelta 验证具体数值（允许0.1的误差）
-                const delta = 0.1
-                assert.InDelta(t, 0.43, response[0].Emission, delta)
-                assert.InDelta(t, 26.0, response[0].Calories, delta)
+                // 使用 Equal 验证具体数值（因为现在是精确到1位小数）
+                // GHG * weight * price / basePrice = 0.43 * 0.5 * 5.0 / 1.0 = 1.1
+                assert.Equal(t, 1.1, response[0].Emission)
+                assert.Equal(t, 26.0, response[0].Calories)
+                assert.Equal(t, 0.2, response[0].Protein)
+                assert.Equal(t, 0.1, response[0].Fat)
+                assert.Equal(t, 7.0, response[0].Carbohydrates)
+                assert.Equal(t, 0.5, response[0].Sodium)
             },
         },
         {
