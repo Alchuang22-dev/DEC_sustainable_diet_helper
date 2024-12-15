@@ -53,15 +53,28 @@ type SharedNutritionCarbonIntakeRequest struct {
 // ======================辅助函数=========================
 // 验证日期,需要保证起始是今天，且连续往后
 func validateDate(data []time.Time) (bool, error) {
-    today := time.Now().Truncate(24 * time.Hour)
+    // 获取今天的日期（去除时间部分）
+    now := time.Now()
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+    
+    // 处理每个日期
     for i, date := range data {
-        // 将日期转换为当天零点
+        // 将输入日期转换为当天零点
         dateStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+        
+        // 验证日期不早于今天
         if dateStart.Before(today) {
             return false, fmt.Errorf("日期不能早于今天")
         }
-        if i > 0 && date.Sub(data[i-1]) != time.Hour * 24 {
-            return false, fmt.Errorf("日期不连续")
+        
+        // 验证日期连续性（仅当不是第一个日期时）
+        if i > 0 {
+            prevDate := time.Date(data[i-1].Year(), data[i-1].Month(), data[i-1].Day(), 0, 0, 0, 0, data[i-1].Location())
+            // 计算两个日期之间的天数差
+            daysDiff := dateStart.Sub(prevDate).Hours() / 24
+            if daysDiff != 1 {
+                return false, fmt.Errorf("日期不连续")
+            }
         }
     }
     return true, nil
@@ -93,19 +106,11 @@ func (nc *NutritionCarbonController) validateUserShares(currentUserID uint, shar
 
     // 先验证每个比例值是否有效
     for _, share := range shares {
-        if share.Ratio <= 0 || share.Ratio > 1 {
+        if share.Ratio < 0 || share.Ratio > 1 {
             return false, fmt.Errorf("无效的请求数据")
         }
     }
 
-    // 单人分摊的情况
-    if len(shares) == 1 && shares[0].UserID == currentUserID {
-        if shares[0].Ratio != 1 {
-            return false, fmt.Errorf("用户分摊比例必须为1")
-        }
-        return true, nil
-    }
-    log.Printf("用户分摊比例为1")
     if user.Family == nil {
         return false, fmt.Errorf("用户不属于任何家庭")
     }
@@ -117,7 +122,6 @@ func (nc *NutritionCarbonController) validateUserShares(currentUserID uint, shar
     }
     log.Printf("验证所有用户是否属于同一个家庭成功")
 
-    // 再验证比例总和是否为1
     var totalRatio float64
     for _, share := range shares {
         if !familyMembers[share.UserID] {
@@ -125,12 +129,11 @@ func (nc *NutritionCarbonController) validateUserShares(currentUserID uint, shar
         }
         totalRatio += share.Ratio
     }
-    log.Printf("验证比例总和是否为1成功")
-    // 允许有0.00001的误差
-    if totalRatio < 0.99999 || totalRatio > 1.00001 {
-        return false, fmt.Errorf("分摊比例之和必须等于1")
+    if totalRatio > 1 {
+        log.Printf("用户分摊比例之和大于1")
+        return false, fmt.Errorf("用户分摊比例之和不能大于1")
     }
-    log.Printf("验证分摊比例之和是否等于1成功")
+    log.Printf("验证用户分摊信息成功")
     return true, nil
 }
 
@@ -161,6 +164,7 @@ func (nc *NutritionCarbonController) SetNutritionGoals(c *gin.Context){
         dates = append(dates, goal.Date)
     }
     if ok, err := validateDate(dates); !ok {
+        log.Printf("日期验证失败: %v", err)
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
@@ -603,6 +607,9 @@ func (nc *NutritionCarbonController) SetSharedNutritionCarbonIntake(c *gin.Conte
     log.Printf("开启事务成功")
     // 为每个用户创建营养和碳摄入记录
     for _, share := range req.UserShares {
+        if share.Ratio == 0 {
+            continue
+        }
         nutritionIntake := models.NutritionIntake{
             UserID:        share.UserID,
             Date:         req.Date,

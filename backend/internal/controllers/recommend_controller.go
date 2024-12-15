@@ -13,6 +13,7 @@ import (
     "math/rand"
     "log"
     "path/filepath"
+    "strings"
 )
 
 type RecommendController struct {
@@ -156,7 +157,7 @@ func (ic *RecommendController) loadFoodPreferences(preferences []models.FoodPref
     // 处理positive foods
     for _, food := range allPosFood {
         var foodItem models.Food
-        if err := ic.DB.Table("foods").Where("en_food_name = ?", food).First(&foodItem).Error; err != nil {
+        if err := ic.DB.Table("foods").Where("en_food_name = ?", strings.ToLower(food)).First(&foodItem).Error; err != nil {
             continue
         }
         foodPos_id = append(foodPos_id, foodItem.ID)
@@ -166,7 +167,7 @@ func (ic *RecommendController) loadFoodPreferences(preferences []models.FoodPref
     // 处理 negative foods
     for _, food := range allNegFood {
         var foodItem models.Food
-        if err := ic.DB.Table("foods").Where("en_food_name = ?", food).First(&foodItem).Error; err != nil {
+        if err := ic.DB.Table("foods").Where("en_food_name = ?", strings.ToLower(food)).First(&foodItem).Error; err != nil {
             continue
         }
         foodNeg_id = append(foodNeg_id, foodItem.ID)

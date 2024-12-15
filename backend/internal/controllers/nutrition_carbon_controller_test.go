@@ -464,7 +464,7 @@ func TestGetActualNutrition(t *testing.T) {
     assert.Equal(t, float64(500), firstDayBreakfast.Calories)
     assert.Equal(t, models.Breakfast, firstDayBreakfast.MealType)
 
-    // 验证最后一天��餐的数据
+    // 验证最后一天晚餐的数据
     lastDayDinner := response[26] // 第7天的晚餐索引：(7-1)*4 + 2 = 26
     assert.Equal(t, float64(800), lastDayDinner.Calories)
     assert.Equal(t, models.Dinner, lastDayDinner.MealType)
@@ -534,7 +534,9 @@ func TestUpdateNutritionGoal(t *testing.T) {
 	router, nc := setupNutritionCarbonTestRouter(db)
 	user := createNutritionCarbonTestUser(db)
 
-	today := time.Now().Truncate(24 * time.Hour)
+	now := time.Now()
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
 
 	// 先创建一个初始目标
 	initialGoal := models.NutritionGoal{
@@ -587,52 +589,97 @@ func TestUpdateNutritionGoal(t *testing.T) {
 	assert.Equal(t, float64(2200), updatedGoal.Sodium)
 }
 
-func TestUpdateCarbonGoal(t *testing.T) {
-	db := setupNutritionCarbonTestDB(t)
-	router, nc := setupNutritionCarbonTestRouter(db)
-	user := createNutritionCarbonTestUser(db)
+// func TestUpdateCarbonGoal(t *testing.T) {
+// 	db := setupNutritionCarbonTestDB(t)
+// 	router, nc := setupNutritionCarbonTestRouter(db)
+// 	user := createNutritionCarbonTestUser(db)
 
-	today := time.Now().Truncate(24 * time.Hour)
+// 	today := time.Now().Truncate(24 * time.Hour)
 
-	// 先创建一个初始目标
-	initialGoal := models.CarbonGoal{
-		UserID:   user.ID,
-		Date:     today,
-		Emission: 10.5,
-	}
-	db.Create(&initialGoal)
+// 	// 先创建一个初始目标
+// 	initialGoal := models.CarbonGoal{
+// 		UserID:   user.ID,
+// 		Date:     today,
+// 		Emission: 10.5,
+// 	}
+// 	db.Create(&initialGoal)
 
-	router.POST("/carbon/goals", func(c *gin.Context) {
-		c.Set("user_id", user.ID)
-		nc.SetCarbonGoals(c)
-	})
+// 	router.POST("/carbon/goals", func(c *gin.Context) {
+// 		c.Set("user_id", user.ID)
+// 		nc.SetCarbonGoals(c)
+// 	})
 
-	// 准备更新请求
-	updateRequest := []CarbonGoalRequest{
-		{
-			Date:     today,
-			Emission: 12.5,
-		},
-	}
+// 	// 准备更新请求
+// 	updateRequest := []CarbonGoalRequest{
+// 		{
+// 			Date:     today,
+// 			Emission: 12.5,
+// 		},
+// 	}
 
-	// 发送更新请求
-	jsonBody, _ := json.Marshal(updateRequest)
-	req, _ := http.NewRequest(http.MethodPost, "/carbon/goals", bytes.NewBuffer(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
+// 	// 发送更新请求
+// 	jsonBody, _ := json.Marshal(updateRequest)
+// 	req, _ := http.NewRequest(http.MethodPost, "/carbon/goals", bytes.NewBuffer(jsonBody))
+// 	req.Header.Set("Content-Type", "application/json")
 	
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+// 	w := httptest.NewRecorder()
+// 	router.ServeHTTP(w, req)
 
-	// 验证更新响应
-	assert.Equal(t, http.StatusOK, w.Code)
+// 	// 验证更新响应
+// 	assert.Equal(t, http.StatusOK, w.Code)
 
-	// 验证数据库中的值已更新
-	var updatedGoal models.CarbonGoal
-	result := db.Where("user_id = ? AND date = ?", user.ID, today).First(&updatedGoal)
-	assert.NoError(t, result.Error)
-	assert.Equal(t, float64(12.5), updatedGoal.Emission)
-} 
+// 	// 验证数据库中的值已更新
+// 	var updatedGoal models.CarbonGoal
+// 	result := db.Where("user_id = ? AND date = ?", user.ID, today).First(&updatedGoal)
+// 	assert.NoError(t, result.Error)
+// 	assert.Equal(t, float64(12.5), updatedGoal.Emission)
+// } 
+func TestUpdateCarbonGoal(t *testing.T) {
+    db := setupNutritionCarbonTestDB(t)
+    router, nc := setupNutritionCarbonTestRouter(db)
+    user := createNutritionCarbonTestUser(db)
 
+    // 使用与validateDate函数相同的方式获取今天的日期
+    now := time.Now()
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+    // 先创建一个初始目标
+    initialGoal := models.CarbonGoal{
+        UserID:   user.ID,
+        Date:     today,
+        Emission: 10.5,
+    }
+    db.Create(&initialGoal)
+
+    router.POST("/carbon/goals", func(c *gin.Context) {
+        c.Set("user_id", user.ID)
+        nc.SetCarbonGoals(c)
+    })
+
+    // 准备更新请求
+    updateRequest := []CarbonGoalRequest{
+        {
+            Date:     today,
+            Emission: 12.5,
+        },
+    }
+
+    jsonBody, _ := json.Marshal(updateRequest)
+    req, _ := http.NewRequest(http.MethodPost, "/carbon/goals", bytes.NewBuffer(jsonBody))
+    req.Header.Set("Content-Type", "application/json")
+    
+    w := httptest.NewRecorder()
+    router.ServeHTTP(w, req)
+
+    // 验证更新响应
+    assert.Equal(t, http.StatusOK, w.Code)
+
+    // 验证数据库中的值已更新
+    var updatedGoal models.CarbonGoal
+    result := db.Where("user_id = ? AND date = ?", user.ID, today).First(&updatedGoal)
+    assert.NoError(t, result.Error)
+    assert.Equal(t, float64(12.5), updatedGoal.Emission)
+}
 func TestSetSharedNutritionCarbonIntake(t *testing.T) {
     db := setupNutritionCarbonTestDB(t)
     router, nc := setupNutritionCarbonTestRouter(db)
@@ -739,25 +786,6 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
             expectedError: "用户 4 不属于同一个家庭",
         },
         {
-            name: "比例总和不等于1-失败",
-            requestBody: SharedNutritionCarbonIntakeRequest{
-                Date:          time.Now(),
-                MealType:      models.Dinner,
-                Calories:      1500,
-                Protein:       45,
-                Fat:           60,
-                Carbohydrates: 180,
-                Sodium:        1500,
-                Emission:      7.5,
-                UserShares: []UserShare{
-                    {UserID: user1.ID, Ratio: 0.3},
-                    {UserID: user2.ID, Ratio: 0.3},
-                },
-            },
-            expectedStatus: http.StatusBadRequest,
-            expectedError: "分摊比例之和必须等于1",
-        },
-        {
             name: "比例值大于1-失败",
             requestBody: SharedNutritionCarbonIntakeRequest{
                 Date:          time.Now(),
@@ -774,6 +802,26 @@ func TestSetSharedNutritionCarbonIntake(t *testing.T) {
             },
             expectedStatus: http.StatusBadRequest,
             expectedError: "无效的请求数据",
+        },
+        {
+            name: "比例值和大于1-失败",
+            requestBody: SharedNutritionCarbonIntakeRequest{
+                Date:          time.Now(),
+                MealType:      models.Dinner,
+                Calories:      1500,
+                Protein:       45,
+                Fat:           60,
+                Carbohydrates: 180,
+                Sodium:        1500,
+                Emission:      7.5,
+                UserShares: []UserShare{
+                    {UserID: user1.ID, Ratio: 0.5},
+                    {UserID: user2.ID, Ratio: 0.6},
+                    {UserID: user3.ID, Ratio: 0.6},
+                },
+            },
+            expectedStatus: http.StatusBadRequest,
+            expectedError: "用户分摊比例之和不能大于1",
         },
         {
             name: "负数比例值-失败",
@@ -967,3 +1015,97 @@ func TestNutritionCarbonUnauthorizedAccess(t *testing.T) {
         })
     }
 }	
+
+func TestValidateDate(t *testing.T) {
+    // 获取今天的日期（去除时间部分）
+    now := time.Now()
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+    
+    tests := []struct {
+        name          string
+        dates         []time.Time
+        expectValid   bool
+        expectedError string
+    }{
+        {
+            name: "连续日期-从今天开始",
+            dates: []time.Time{
+                today,
+                today.AddDate(0, 0, 1),
+                today.AddDate(0, 0, 2),
+            },
+            expectValid:   true,
+            expectedError: "",
+        },
+        {
+            name: "日期不连续",
+            dates: []time.Time{
+                today,
+                today.AddDate(0, 0, 2), // 跳过了一天
+            },
+            expectValid:   false,
+            expectedError: "日期不连续",
+        },
+        {
+            name: "日期早于今天",
+            dates: []time.Time{
+                today.AddDate(0, 0, -1), // 昨天
+                today,
+            },
+            expectValid:   false,
+            expectedError: "日期不能早于今天",
+        },
+        {
+            name: "单个日期-今天",
+            dates: []time.Time{
+                today,
+            },
+            expectValid:   true,
+            expectedError: "",
+        },
+        {
+            name: "日期乱序",
+            dates: []time.Time{
+                today.AddDate(0, 0, 1),
+                today,
+            },
+            expectValid:   false,
+            expectedError: "日期不连续",
+        },
+        {
+            name: "空日期数组",
+            dates: []time.Time{},
+            expectValid:   true,
+            expectedError: "",
+        },
+        {
+            name: "包含时分秒的日期",
+            dates: []time.Time{
+                time.Date(today.Year(), today.Month(), today.Day(), 15, 30, 45, 0, today.Location()),
+                time.Date(today.Year(), today.Month(), today.Day(), 8, 0, 0, 0, today.Location()).AddDate(0, 0, 1),
+            },
+            expectValid:   true,
+            expectedError: "",
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            valid, err := validateDate(tt.dates)
+            
+            // 验证结果
+            assert.Equal(t, tt.expectValid, valid, "验证结果不符合预期")
+            
+            if tt.expectedError == "" {
+                assert.NoError(t, err, "期望无错误，但得到错误")
+            } else {
+                assert.EqualError(t, err, tt.expectedError, "错误消息不符合预期")
+            }
+            
+            // 如果测试用例包含日期，输出日期信息以便调试
+            if len(tt.dates) > 0 {
+                t.Logf("测试日期: %v", tt.dates)
+            }
+        })
+    }
+}
