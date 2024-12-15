@@ -38,7 +38,8 @@
     </view>
 	
 	<!-- Display the post time -->
-	<view class="post-time">{{ post.savetime }}</view>
+	<view class="post-time">{{ formattedSaveTime }}</view>
+	<view class="post-time">阅读量：{{ post.viewCount }}</view>
 
     <!-- 操作按钮 -->
     <view class="inline-interaction-buttons">
@@ -101,6 +102,16 @@ import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
 const newsStore = useNewsStore();
 const userStore = useUserStore(); // 使用用户存储
 
+const BASE_URL = 'http://122.51.231.155:8080';
+const BASE_URL_SH = 'http://122.51.231.155';
+const PageId = ref('');
+
+// 用来获取本地时间和日期
+const systemDate = new Date();
+const systemDateStr = systemDate.toISOString().slice(0, 10); // 获取当前系统日期，格式：YYYY-MM-DD
+
+const jwtToken = computed(() => userStore.user.token);; // Replace with actual token
+
 const newsData = ref([]);
 const comments = reactive([
   { text: "这篇文章非常有用！", liked: false, replies: [] },
@@ -130,23 +141,8 @@ const avatarSrc = computed(() =>
 
 // 模拟传入的post数据
 const post = ref({
-  id: '1',
-  authoravatar: 'https://example.com/avatar.jpg',
-  authorname: 'John Doe',
-  authorid: '123',
-  savetime: '2024-12-13',
-  title: 'Sample Article Title',
-  description: 'This is a description of the article.',
   components: [
-    { id: 1, content: 'This is a text component', style: 'text' },
-    { id: 2, content: 'https://cdn.pixabay.com/photo/2017/04/09/07/25/honey-pomelo-2215031_1280.jpg', style: 'image', description: 'This is an image' },
   ],
-  likeCount: 1001,
-  shareCount: 37,
-  favoriteCount: 897,
-  followCount: 189,
-  dislikeCount: 199,
-  type: 'main',
 });
 
 //转换数字
@@ -154,168 +150,182 @@ const formatCount = (count) => {
   return count < 10000 ? count : (count / 1000).toFixed(1) + 'k';
 };
 
-//处理操作
+//转换时间
+const formattedSaveTime = computed(() => {
+  const postDate = post.value.savetime.slice(0, 10); // 提取日期部分
+
+  if (postDate === systemDateStr) {
+    // 如果日期相同，显示 "today" + 时间
+    const postTime = new Date(post.value.savetime); // 转换为 Date 对象
+    const hours = postTime.getHours().toString().padStart(2, '0');
+    const minutes = postTime.getMinutes().toString().padStart(2, '0');
+    const seconds = postTime.getSeconds().toString().padStart(2, '0');
+    return `今天 ${hours}:${minutes}:${seconds}`;
+  } else {
+    // 否则显示完整日期
+    return postDate;
+  }
+});
+
 const toggleInteraction = (type) => {
-  const userId = uni.getStorageSync('UserId');
-  if (type === "like") {
-		if(ifLike.value === false) {
-			uni.request({
-			url: `http://122.51.231.155:8080/news/${post.id}/like`,
-			method: "POST",
-			header: {
-				"Content-type": "application/json",
-			},
-			data: {
-				user_id: userId,
-			},
-			success: () => {
-				post.likeCount++;
-				ifLike.value = true;
-			},
-			fail: (err) => {
-				console.error("Error liking news:", err);
-			},
-		});
-	  }
-	  else{
-		    uni.request({
-		    	url: `http://122.51.231.155:8080/news/${post.id}/cancel_like`,
-		    	method: "POST",
-		    	header: {
-		    		"Content-type": "application/json",
-		    	},
-		    	data: {
-		    		user_id: userId,
-		    	},
-		    	success: () => {
-		    		post.likeCount--;
-		    		ifLike.value = false;
-		    	},
-		    	fail: (err) => {
-		    		console.error("Error Cancel liking news:", err);
-		    	},
-		    });
-	  }
-  } else if (type === "favorite") {
-	  if(ifFavourite.value === false){
-		  uni.request({
-		    url: `http://122.51.231.155:8080/news/${post.id}/favourite`,
-		    method: "POST",
-		    header: {
-		      "Content-type": "application/json",
-		    },
-		    data: {
-		      user_id: userId,
-		    },
-		    success: () => {
-		      post.favoriteCount++;
-			  ifFavourite.value = true;
-		    },
-		    fail: (err) => {
-		      console.error("Error favoriting news:", err);
-		    },
-		  });
-	  }
-	  else{
-		  uni.request({
-		    url: `http://122.51.231.155:8080/news/${post.id}/favourite`,
-		    method: "POST",
-		    header: {
-		      "Content-type": "application/json",
-		    },
-		    data: {
-		      user_id: userId,
-		    },
-		    success: () => {
-		      post.favoriteCount--;
-		  	  ifFavourite.value = false;
-		    },
-		    fail: (err) => {
-		      console.error("Error favoriting news:", err);
-		    },
-		  });
-	  }
-  } else if (type === "follow") {
+  // Helper function to make requests with token authorization
+  const makeRequest = (url, method, data, successCallback, failCallback) => {
+    uni.request({
+      url,
+      method,
+      header: {
+        "Content-type": "application/json",
+        "Authorization": `Bearer ${jwtToken.value}`, // Include token in headers
+      },
+      data,
+      success: successCallback,
+      fail: failCallback,
+    });
+  };
+
+  // Handle news view tracking
+  if (type === "view") {
+    makeRequest(
+      `http://122.51.231.155:8080/news/${PageId.value}/view`,
+      "POST",
+      {},
+      () => {
+        console.log("News view recorded successfully");
+      },
+      (err) => {
+        console.error("Error viewing news:", err);
+      }
+    );
+  }
+
+  // Handle like news
+  else if (type === "like") {
+    if (ifLike.value === false) {
+      makeRequest(
+        `http://122.51.231.155:8080/news/${PageId.value}/like`,
+        "POST",
+        {},
+        () => {
+          post.likeCount++;
+          ifLike.value = true;
+        },
+        (err) => {
+          console.error("Error liking news:", err);
+        }
+      );
+    } else {
+      makeRequest(
+        `http://122.51.231.155:8080/news/${PageId.value}/like`,
+        "DELETE",
+        {},
+        () => {
+          post.likeCount--;
+          ifLike.value = false;
+        },
+        (err) => {
+          console.error("Error canceling like on news:", err);
+        }
+      );
+    }
+  }
+
+  // Handle favorite news
+  else if (type === "favorite") {
+    if (ifFavourite.value === false) {
+      makeRequest(
+        `http://122.51.231.155:8080/news/${PageId.value}/favorite`,
+        "POST",
+        {},
+        () => {
+          post.favoriteCount++;
+          ifFavourite.value = true;
+        },
+        (err) => {
+          console.error("Error favoriting news:", err);
+        }
+      );
+    } else {
+      makeRequest(
+        `http://122.51.231.155:8080/news/${PageId.value}/favorite`,
+        "DELETE",
+        {},
+        () => {
+          post.favoriteCount--;
+          ifFavourite.value = false;
+        },
+        (err) => {
+          console.error("Error canceling favorite on news:", err);
+        }
+      );
+    }
+  }
+
+  // Handle follow user
+  else if (type === "follow") {
     if (ifFollowed.value === false) {
-      // 向后端发送关注请求
-      uni.request({
-        url: `http://122.51.231.155:8080/user/${uid.value}/follow`,
-        method: "POST",
-        header: {
-          "Content-type": "application/json",
-        },
-        data: {
-          target_id: post.authorName, // 示例参数
-        },
-        success: () => {
+      makeRequest(
+        `http://122.51.231.155:8080/user/${uid.value}/follow`,
+        "POST",
+        { target_id: post.authorName },
+        () => {
           ifFollowed.value = true;
         },
-        fail: (err) => {
+        (err) => {
           console.error("Error following user:", err);
-        },
-      });
+        }
+      );
     } else {
-      // 向后端发送取消关注请求
-      uni.request({
-        url: `http://122.51.231.155:8080/user/${uid.value}/unfollow`,
-        method: "POST",
-        header: {
-          "Content-type": "application/json",
-        },
-        data: {
-          target_id: post.authorName, // 示例参数
-        },
-        success: () => {
+      makeRequest(
+        `http://122.51.231.155:8080/user/${uid.value}/unfollow`,
+        "POST",
+        { target_id: post.authorName },
+        () => {
           ifFollowed.value = false;
         },
-        fail: (err) => {
+        (err) => {
           console.error("Error unfollowing user:", err);
-        },
-      });
+        }
+      );
     }
-  } else if (type === "share") {
+  }
+
+  // Handle share news
+  else if (type === "share") {
     post.shareCount++;
-  } else if (type === "dislike"){
-	  if(ifDislike.value === false){
-		  uni.request({
-		  	url: `http://122.51.231.155:8080/news/${post.id}/dislike`,
-		  	method: "POST",
-		  	header: {
-		  		"Content-type": "application/json",
-		  	},
-		  	data: {
-		  		user_id: userId,
-		  	},
-		  	success: () => {
-		  		post.dislikeCount++;
-		  		ifDislike.value = true;
-		  	},
-		  	fail: (err) => {
-		  		console.error("Error liking news:", err);
-		  	},
-		  });
-	  }
-	  else{
-		  uni.request({
-		  	url: `http://122.51.231.155:8080/news/${post.id}/cancel_dislike`,
-		  	method: "POST",
-		  	header: {
-		  		"Content-type": "application/json",
-		  	},
-		  	data: {
-		  		user_id: userId,
-		  	},
-		  	success: () => {
-		  		post.dislikeCount--;
-		  		ifDislike.value = false;
-		  	},
-		  	fail: (err) => {
-		  		console.error("Error liking news:", err);
-		  	},
-		  });
-	  }
+  }
+
+  // Handle dislike news
+  else if (type === "dislike") {
+    if (ifDislike.value === false) {
+      makeRequest(
+        `http://122.51.231.155:8080/news/${PageId.value}/dislike`,
+        "POST",
+        {},
+        () => {
+          post.dislikeCount++;
+          ifDislike.value = true;
+        },
+        (err) => {
+          console.error("Error disliking news:", err);
+        }
+      );
+    } else {
+      makeRequest(
+        `http://122.51.231.155:8080/news/${PageId.value}/dislike`,
+        "DELETE",
+        {},
+        () => {
+          post.dislikeCount--;
+          ifDislike.value = false;
+        },
+        (err) => {
+          console.error("Error canceling dislike on news:", err);
+        }
+      );
+    }
   }
 };
+
 
 //评论相关方法
 const toggleCommentLike = (index) => {
@@ -382,6 +392,89 @@ const addComment = () => {
   }
 };
 
+
+// Simulate fetching data from backend
+onLoad(async (options) => {
+  const articleId = options.id;
+  PageId.value = articleId;
+  console.log('接收到的文章 ID:', articleId);
+
+  // 根据 articleId 获取文章详情等操作
+  const details = await getArticleDetails(PageId.value, false);
+  console.log('获取的文章内容:', details);
+
+  // 更新 post 对象
+  post.value = {
+    id: PageId.value,
+    authoravatar: avatarSrc.value,
+    authorname: details.author.nickname,
+    authorid: details.author.id,
+    savetime: details.upload_time,
+    title: details.title,
+    description: details.paragraphs[0].text,
+    components: [] ,// 初始化组件数组
+	likeCount: details.like_count,
+	shareCount: details.share_count,
+	favoriteCount: details.favorite_count,
+	followCount: 189,
+	dislikeCount: details.dislike_count,
+	viewCount: details.view_count,
+	type: 'main',
+  };
+
+  // 更新 title 和 description
+  //title.value = post.value.title;
+  //description.value = post.value.description;
+
+  // 遍历 paragraphs 和 images 填充 components
+  const totalItems = Math.max(details.paragraphs.length, details.images.length);
+  for (let index = 1; index < totalItems; index++) {
+    // 处理段落文本
+    if (details.paragraphs[index] && details.paragraphs[index].text) {
+      post.value.components.push({
+        id: index + 1, // 确保 id 从 1 开始
+        content: details.paragraphs[index].text,
+        style: 'text',
+      });
+    }
+
+    // 处理图片
+    if (details.images[index] && details.images[index].url) {
+      post.value.components.push({
+        id: index + 1, // 确保 id 从 1 开始
+        content: details.images[index].url,
+        style: 'image',
+        description: details.images[index].description || '', // 如果没有描述，则为空
+      });
+    }
+  }
+
+  console.log('更新后的组件内容:', post.value.components);
+
+  // 将 post 中的组件内容添加到 items 中
+});
+
+// Function to get news or draft details
+const getArticleDetails = async (id, isDraft = false) => {
+  const url = isDraft
+    ? `${BASE_URL}/news/details/draft/${id}`
+    : `${BASE_URL}/news/details/news/${id}`;
+  try {
+    const res = await uni.request({
+      url: url,
+      method: 'GET',
+      header: {
+        'Authorization': `Bearer ${jwtToken.value}`
+      }
+    });
+    console.log('获取详细信息');
+    console.log(res.data);
+    return res.data;
+  } catch (error) {
+    console.error('Error fetching article details', error);
+    return null;
+  }
+};
 </script>
 
 <style scoped>

@@ -166,11 +166,62 @@ const publish = () => {
 
 // 确认发布
 const confirmPublish = () => {
+  // 确保 PageId 是整数格式
+  const pageIdInt = parseInt(PageId.value, 10); // 转换为整数
+  console.log('转换后的草稿Id:',pageIdInt);
+  if (isNaN(pageIdInt)) {
+    uni.showToast({
+      title: 'Invalid PageId',
+      icon: 'none',
+      duration: 2000,
+    });
+    return;
+  }
+
+  // 确认发布前输出信息（可用于调试）
   console.log('文章标题:', title.value)
   console.log('文章简介:', description.value)
   console.log('发布内容:', items.value)
-  showModal.value = false
+
+  // 调用 API 将草稿转换为新闻
+  uni.request({
+    url: `${BASE_URL}/news/convert_draft`, // 转换草稿的 API 路径
+    method: 'POST',
+    header: {
+      'Authorization': `Bearer ${token.value}`, // 使用当前 token
+      'Content-Type': 'application/json',
+    },
+    data: {
+      draft_id: pageIdInt, // 使用转换后的整数 PageId
+    },
+    success: (res) => {
+      if (res.data.message === 'Draft converted to news successfully.') {
+        uni.showToast({
+          title: '草稿已发布为新闻',
+          icon: 'success',
+          duration: 2000,
+        });
+        showModal.value = false; // 关闭弹窗
+      } else {
+        uni.showToast({
+          title: '发布失败',
+          icon: 'none',
+          duration: 2000,
+        });
+        console.error('后端错误信息:', res.data.message);
+      }
+    },
+    fail: (err) => {
+      uni.showToast({
+        title: '请求失败',
+        icon: 'none',
+        duration: 2000,
+      });
+      console.error('请求失败', err);
+    }
+  });
 }
+
 
 // 取消发布
 const cancelPublish = () => {
@@ -212,7 +263,6 @@ const uploadImage = (filePath) => {
 };
 
 
-// 保存草稿
 const saveDraft = async () => {
   // 生成草稿对象，包含标题、简介、组件内容等
   const post = {
@@ -236,27 +286,28 @@ const saveDraft = async () => {
   const data = {
     title: post.title,
     paragraphs: [], // 用于存放文本段落
-    images: [], // 用于存放图片链接
+    image_updates: [], // 用于存放图片链接
     image_descriptions: [] // 用于存放图片描述
   };
 
   // 默认简介为第一个自然段
   data.paragraphs.push(description.value);
-  data.images.push(''); // 先添加一个空的图片路径
+  data.image_updates.push({image_index: 0, image_path: ''}); // 先添加一个空的图片路径
   data.image_descriptions.push('');
-
+  let index = 0;
 	// 上传所有图片并填充图片路径
 	const imagePaths = await Promise.all(
 	  post.components.map((item) => {
+		index += 1;
 		if (item.style === 'image' && item.content) {
 		  data.paragraphs.push(''); // 添加空段落
 		  console.log(item);
-		  data.images.push(item.content); // 保存上传后的图片路径
+		  data.image_updates.push({ image_index: index, image_path: item.content }); // 修正为正确的语法
 		  data.image_descriptions.push(item.description || ''); // 保存图片描述
 		  console.log(item.description);
 		} else if (item.style === 'text') {
 		  data.paragraphs.push(item.content || ''); // 添加文字段落
-		  data.images.push(''); // 空白图片路径
+		  data.image_updates.push({ image_index: index, image_path: '' }); // 空白图片路径
 		  data.image_descriptions.push(''); // 空白图片描述
 		}
 	  })
@@ -274,7 +325,7 @@ const saveDraft = async () => {
       title: data.title,
       paragraphs: data.paragraphs,
       image_descriptions: data.image_descriptions,
-      image_paths: data.images,
+      image_updates: data.image_updates,
     },
     success: (res) => {
       if (res.data.message === 'Draft updated successfully.') {
@@ -302,6 +353,7 @@ const saveDraft = async () => {
     }
   });
 };
+
 
 
 // 处理图片上传
