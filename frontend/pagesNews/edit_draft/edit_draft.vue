@@ -22,21 +22,21 @@
 
     <!-- 预览区 -->
     <view class="preview">
-      <view v-for="(item, index) in post.components" :key="item.id" class="preview-item">
+      <view v-for="(item, index) in items" :key="index" class="preview-item">
         <view
           class="item-content"
-          :style="{ height: item.style === 'image' ? item.imageHeight + 'px' : 'auto' }"
+          :style="{ height: item.type === 'image' ? item.itemHeight + 'px' : 'auto' }"
         >
           <textarea
-            v-if="item.style === 'text'"
+            v-if="item.type === 'text'"
             v-model="item.content"
             class="text-input"
             :placeholder="t('putin_text_placeholder')"
             autoHeight
           ></textarea>
 
-          <!-- 图片预览功能 -->
-          <view v-if="item.style === 'image'">
+          <!-- 图片上传功能 -->
+          <view v-if="item.type === 'image'">
             <image
               :src="item.content"
               class="image-preview"
@@ -44,19 +44,20 @@
               @click="handleImageChange(index)"
             />
             <textarea
-              v-model="item.description"
+              v-model="item.imageDescription"
               class="image-description-input"
               :placeholder="t('add_description')"
               autoHeight
             ></textarea>
           </view>
 
-          <!-- 删除按钮 -->
+          <!-- 删除按钮改为小图标 -->
           <button @click="removeItem(index)" class="remove-btn">🗑️</button>
         </view>
       </view>
     </view>
 
+    <!-- 功能区 -->
     <!-- 功能区 -->
     <view class="functions">
       <button v-if="showfunctions" @click="addText" class="function-btn">
@@ -71,135 +72,419 @@
       <button v-if="showfunctions" @click="saveDraft" class="function-btn">
         <image src="@/pagesNews/static/save.svg" alt="Save" class="icon"></image>
       </button>
-      <button v-if="showfunctions" @click="changefunction" class="function-btn">
-        <image src="@/pagesNews/static/minus.svg" alt="-" class="icon"></image>
-      </button>
-      <button v-if="hidefunctions" @click="changefunction" class="add-btn">
-        <image src="@/pagesNews/static/plus.svg" alt="+" class="icon"></image>
-      </button>
+	  <button v-if="showfunctions" @click="changefunction" class="function-btn">
+	  		<image src="@/pagesNews/static/minus.svg" alt="-" class="icon"></image>
+	  </button>
+	  <button v-if="hidefunctions" @click="changefunction" class="add-btn">
+	  		<image src="@/pagesNews/static/plus.svg" alt="+" class="icon"></image>
+	  </button>
     </view>
 
     <!-- 发布确认弹窗 -->
     <view v-if="showModal" class="modal">
-      <view class="popup-content">
-        <view class="popup-header">
-          <image :src="authorAvatar" class="avatar" />
-          <span class="nickname">{{ authorNickname }}</span>
-        </view>
-
-        <view class="popup-body">
-          <button @click="confirmPublish" class="confirm-btn">{{ t('ano_issue') }}</button>
-        </view>
-
-        <view class="popup-footer">
-          <button @click="confirmPublish" class="confirm-btn">{{ t('confirm_issue') }}</button>
-          <button @click="cancelPublish" class="cancel-btn">{{ t('cancel') }}</button>
+        <view class="popup-content">
+          <!-- 显示作者头像和昵称 -->
+          <view class="popup-header">
+            <image :src="authorAvatar" class="avatar" />
+            <span class="nickname">{{ authorNickname }}</span>
+          </view>
+    
+          <view class="popup-body">
+            <button @click="confirmPublish" class="confirm-btn">{{ t('ano_issue') }}</button>
+          </view>
+    
+          <view class="popup-footer">
+            <button @click="confirmPublish" class="confirm-btn">{{ t('confirm_issue') }}</button>
+            <button @click="cancelPublish" class="cancel-btn">{{ t('cancel') }}</button>
+          </view>
         </view>
       </view>
-    </view>
-  </view>
+	</view>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { ref, onMounted, computed} from 'vue';
+import { useI18n } from 'vue-i18n'
 import { useDraftStore } from '@/stores/draft';
-import { useUserStore } from '@/stores/user'; // 引入 Pinia 用户存储
-
+import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
+import { onLoad } from "@dcloudio/uni-app";
 const draftStore = useDraftStore();
 const userStore = useUserStore();
 
 const BASE_URL = 'http://122.51.231.155:8080';
+const BASE_URL_SH = 'http://122.51.231.155';
+const PageId = ref('');
 
 const authorNickname = computed(() => userStore.user.nickName);
 const authorAvatar = computed(() =>
-  userStore.user.avatarUrl
-    ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
-    : '/static/images/index/background_img.jpg'
+    userStore.user.avatarUrl
+        ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
+        : '/static/images/index/background_img.jpg'
 );
+const token = computed(() => userStore.user.token);
+const jwtToken = computed(() => userStore.user.token);; // Replace with actual token
+const { t } = useI18n()
 
-const { t } = useI18n();
+const title = ref('') // 文章标题
+const description = ref('') // 文章简介
+const items = ref([]) // 预览区的内容
+const showModal = ref(false) // 控制发布确认弹窗的显示与否
+const showfunctions = ref(true)
+const hidefunctions = ref(false)
+const post = ref({ components: []})
 
-// 草稿数据初始化
-const post = ref({
-  id: '1',
-  authoravatar: 'https://example.com/avatar.jpg',
-  authorname: 'John Doe',
-  authorid: '123',
-  savetime: '2024-12-13',
-  title: 'Sample Article Title',
-  description: 'This is a description of the article.',
-  components: [
-    { id: 1, content: 'This is a text component', style: 'text' },
-    { id: 2, content: 'https://cdn.pixabay.com/photo/2017/04/09/07/25/honey-pomelo-2215031_1280.jpg', style: 'image', description: 'This is an image' },
-  ],
-});
-
-const title = ref(post.value.title);
-const description = ref(post.value.description);
-
-// 根据post组件内容动态渲染
+// 添加文字
 const addText = () => {
-  post.value.components.push({ type: 'text', content: '' });
-};
+  items.value.push({ type: 'text', content: '' })
+}
 
+const changefunction = () => {
+	if(showfunctions.value === true){
+		showfunctions.value = false;
+		hidefunctions.value = true;
+	}
+	else{
+		showfunctions.value = true;
+		hidefunctions.value = false;
+	}
+}
+
+// 添加图片
 const addImage = () => {
-  post.value.components.push({ type: 'image', content: '', imageHeight: 200, description: '' });
-};
+  items.value.push({ type: 'image', content: '', itemHeight: 280, imageHeight: 200, imageDescription: '' }) // 初始化图片项
+}
 
+// 删除项目
 const removeItem = (index) => {
-  post.value.components.splice(index, 1);
+  items.value.splice(index, 1)
+}
+
+// 发布
+const publish = () => {
+  showModal.value = true
+}
+
+// 确认发布
+const confirmPublish = () => {
+  // 确保 PageId 是整数格式
+  const pageIdInt = parseInt(PageId.value, 10); // 转换为整数
+  console.log('转换后的草稿Id:',pageIdInt);
+  if (isNaN(pageIdInt)) {
+    uni.showToast({
+      title: 'Invalid PageId',
+      icon: 'none',
+      duration: 2000,
+    });
+    return;
+  }
+
+  // 确认发布前输出信息（可用于调试）
+  console.log('文章标题:', title.value)
+  console.log('文章简介:', description.value)
+  console.log('发布内容:', items.value)
+
+  // 调用 API 将草稿转换为新闻
+  uni.request({
+    url: `${BASE_URL}/news/convert_draft`, // 转换草稿的 API 路径
+    method: 'POST',
+    header: {
+      'Authorization': `Bearer ${token.value}`, // 使用当前 token
+      'Content-Type': 'application/json',
+    },
+    data: {
+      draft_id: pageIdInt, // 使用转换后的整数 PageId
+    },
+    success: (res) => {
+      if (res.data.message === 'Draft converted to news successfully.') {
+        uni.showToast({
+          title: '草稿已发布为新闻',
+          icon: 'success',
+          duration: 2000,
+        });
+        showModal.value = false; // 关闭弹窗
+      } else {
+        uni.showToast({
+          title: '发布失败',
+          icon: 'none',
+          duration: 2000,
+        });
+        console.error('后端错误信息:', res.data.message);
+      }
+    },
+    fail: (err) => {
+      uni.showToast({
+        title: '请求失败',
+        icon: 'none',
+        duration: 2000,
+      });
+      console.error('请求失败', err);
+    }
+  });
+}
+
+
+// 取消发布
+const cancelPublish = () => {
+  showModal.value = false
+}
+
+//上传图片
+const uploadImage = (filePath) => {
+	console.log(token.value);
+  return new Promise((resolve, reject) => {
+    uni.uploadFile({
+      url: `${BASE_URL}/news/upload_image`, // 上传图片的 API 地址
+      method: 'POST',
+      header: {
+        "Authorization": `Bearer ${token.value}`, // 替换为实际的 Token 变量
+        "Content-Type": "application/json", // 设置请求类型
+      },
+      filePath: filePath,
+      name: 'image', // form-data 中字段名
+      success: (res) => {
+        console.log('上传图片返回结果:', res); // 打印响应内容用于调试
+        try {
+          const data = JSON.parse(res.data); // 解析返回的 JSON 数据
+          if (data.message === 'Image uploaded successfully') {
+            resolve(data.path); // 返回图片相对路径
+			console.log(data.path);
+          } else {
+            reject(data.error); // 上传失败，返回错误信息
+          }
+        } catch (error) {
+          reject(`JSON 解析错误: ${error.message}`); // 解析失败时的错误提示
+        }
+      },
+      fail: (err) => {
+        reject(err); // 请求失败，返回错误信息
+      }
+    });
+  });
 };
 
+
+const saveDraft = async () => {
+  // 生成草稿对象，包含标题、简介、组件内容等
+  const post = {
+    title: title.value, // 文章标题
+    description: description.value, // 文章简介
+    components: items.value.map((item, index) => {
+      if (item.type === 'text') {
+        return { id: index + 1, content: item.content, style: 'text' };
+      } else if (item.type === 'image') {
+        return { 
+          id: index + 1, 
+          content: item.content, 
+          style: 'image', 
+          description: item.imageDescription || '' 
+        };
+      }
+    })
+  };
+
+  // 准备请求数据
+  const data = {
+    title: post.title,
+    paragraphs: [], // 用于存放文本段落
+    image_updates: [], // 用于存放图片链接
+    image_descriptions: [] // 用于存放图片描述
+  };
+
+  // 默认简介为第一个自然段
+  data.paragraphs.push(description.value);
+  data.image_updates.push({image_index: 0, image_path: ''}); // 先添加一个空的图片路径
+  data.image_descriptions.push('');
+  let index = 0;
+	// 上传所有图片并填充图片路径
+	const imagePaths = await Promise.all(
+	  post.components.map((item) => {
+		index += 1;
+		if (item.style === 'image' && item.content) {
+		  data.paragraphs.push(''); // 添加空段落
+		  console.log(item);
+		  data.image_updates.push({ image_index: index, image_path: item.content }); // 修正为正确的语法
+		  data.image_descriptions.push(item.description || ''); // 保存图片描述
+		  console.log(item.description);
+		} else if (item.style === 'text') {
+		  data.paragraphs.push(item.content || ''); // 添加文字段落
+		  data.image_updates.push({ image_index: index, image_path: '' }); // 空白图片路径
+		  data.image_descriptions.push(''); // 空白图片描述
+		}
+	  })
+	);
+  console.log('保存的草稿:',data);
+  // 提交草稿数据到服务器
+  uni.request({
+    url: `${BASE_URL}/news/drafts/${PageId.value}`,
+    method: 'PUT',
+    header: {
+      'Authorization': `Bearer ${token.value}`,
+      'Content-Type': 'application/json',
+    },
+    data: {
+      title: data.title,
+      paragraphs: data.paragraphs,
+      image_descriptions: data.image_descriptions,
+      image_updates: data.image_updates,
+    },
+    success: (res) => {
+      if (res.data.message === 'Draft updated successfully.') {
+        uni.showToast({
+          title: '草稿已保存',
+          icon: 'success',
+          duration: 2000,
+        });
+      } else {
+        uni.showToast({
+          title: '保存草稿失败',
+          icon: 'none',
+          duration: 2000,
+        });
+        console.error('后端错误信息:', res.data.message);
+      }
+    },
+    fail: (err) => {
+      uni.showToast({
+        title: '请求失败',
+        icon: 'none',
+        duration: 2000,
+      });
+      console.error('请求失败', err);
+    }
+  });
+};
+
+
+
+// 处理图片上传
 const handleImageChange = (index) => {
+  console.log("正在更改图片");
+
   uni.chooseImage({
-    count: 1,
+    count: 1, // 选择一张图片
+    sourceType: ['album'], // 只从相册中选择
     success: (res) => {
       const imagePath = res.tempFilePaths[0];
-      post.value.components[index].content = imagePath;
-      
-      // 调整图片高度
+      items.value[index].content = imagePath;
+
+      // 获取图片的宽高比
       uni.getImageInfo({
         src: imagePath,
         success: (info) => {
           const aspectRatio = info.width / info.height;
           const newHeight = uni.getSystemInfoSync().windowWidth / aspectRatio;
-          post.value.components[index].imageHeight = newHeight;
+          items.value[index].imageHeight = newHeight;
+          items.value[index].itemHeight = newHeight + 80;
         },
+        fail: (err) => {
+          console.error('获取图片信息失败', err);
+        }
+      });
+
+      // 上传图片到服务器
+      uploadImage(imagePath).then((uploadedPath) => {
+        // 将上传返回的路径拼接成完整URL
+        const fullImageUrl = `${BASE_URL}/static/${uploadedPath}`;
+		console.log(fullImageUrl);
+        items.value[index].content = fullImageUrl;
+      }).catch((error) => {
+        console.error('图片上传服务器失败', error);
       });
     },
+    fail: (err) => {
+      console.error('上传图片失败', err);
+    }
   });
 };
 
-const publish = () => {
-  showModal.value = true;
-};
 
-const confirmPublish = () => {
-  console.log('文章标题:', title.value);
-  console.log('文章简介:', description.value);
-  console.log('发布内容:', post.value.components);
-  showModal.value = false;
-};
+// Simulate fetching data from backend
+onLoad(async (options) => {
+  const articleId = options.id;
+  PageId.value = articleId;
+  console.log('接收到的文章 ID:', articleId);
 
-const cancelPublish = () => {
-  showModal.value = false;
-};
+  // 根据 articleId 获取文章详情等操作
+  const details = await getArticleDetails(PageId.value, true);
+  console.log('获取的文章内容:', details);
 
-const saveDraft = () => {
-  draftStore.saveDraft();
-  uni.showToast({
-    title: '草稿已保存',
-    icon: 'success',
-    duration: 2000,
+  // 更新 post 对象
+  post.value = {
+    id: details.id,
+    authoravatar: details.author.avatar_url,
+    authorname: details.author.nickname,
+    authorid: details.author.id,
+    savetime: details.savetime,
+    title: details.title,
+    description: details.paragraphs[0].text,
+    components: [] // 初始化组件数组
+  };
+
+  // 更新 title 和 description
+  title.value = post.value.title;
+  description.value = post.value.description;
+
+  // 遍历 paragraphs 和 images 填充 components
+  const totalItems = Math.max(details.paragraphs.length, details.images.length);
+  for (let index = 1; index < totalItems; index++) {
+    // 处理段落文本
+    if (details.paragraphs[index] && details.paragraphs[index].text) {
+      post.value.components.push({
+        id: index + 1, // 确保 id 从 1 开始
+        content: details.paragraphs[index].text,
+        style: 'text',
+      });
+    }
+
+    // 处理图片
+    if (details.images[index] && details.images[index].url) {
+      post.value.components.push({
+        id: index + 1, // 确保 id 从 1 开始
+        content: details.images[index].url,
+        style: 'image',
+        description: details.images[index].description || '', // 如果没有描述，则为空
+      });
+    }
+  }
+
+  console.log('更新后的组件内容:', post.value.components);
+
+  // 将 post 中的组件内容添加到 items 中
+  post.value.components.forEach((component) => {
+    if (component.style === 'text') {
+      addText(); // 添加文本项
+      items.value[items.value.length - 1].content = component.content; // 设置文本内容
+    } else if (component.style === 'image') {
+      addImage(); // 添加图片项
+      items.value[items.value.length - 1].content = component.content; // 设置图片路径
+      items.value[items.value.length - 1].imageDescription = component.description || ''; // 设置图片描述
+    }
   });
+});
+
+// Function to get news or draft details
+const getArticleDetails = async (id, isDraft = true) => {
+  const url = isDraft
+    ? `${BASE_URL}/news/details/draft/${id}`
+    : `${BASE_URL}/news/details/news/${id}`;
+  try {
+    const res = await uni.request({
+      url: url,
+      method: 'GET',
+      header: {
+        'Authorization': `Bearer ${jwtToken.value}`
+      }
+    });
+    console.log('获取详细信息');
+    console.log(res.data);
+    return res.data;
+  } catch (error) {
+    console.error('Error fetching article details', error);
+    return null;
+  }
 };
 
-const showModal = ref(false);
-const showfunctions = ref(true);
-const hidefunctions = ref(false);
 </script>
-
 
 <style scoped>
 .container {

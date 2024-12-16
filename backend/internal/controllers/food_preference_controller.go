@@ -5,6 +5,8 @@ import (
     "encoding/json"
     "net/http"
     "os"
+    "path/filepath"
+    "runtime"
 
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
@@ -20,6 +22,12 @@ type FoodPreferenceController struct {
 type foodDislikeResponse struct {
     ID uint `json:"id"`
     Name string `json:"name"`
+}
+
+func getProjectRoot() string {
+    _, b, _, _ := runtime.Caller(0)
+    projectRoot := filepath.Join(filepath.Dir(b), "../..")
+    return projectRoot
 }
 
 // 验证偏好是否存在于配置文件中

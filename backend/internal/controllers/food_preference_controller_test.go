@@ -55,7 +55,9 @@ func setupFoodPreferenceTestRouter(db *gorm.DB) (*gin.Engine, *FoodPreferenceCon
 		"vegan":       true,
 	}
 	preferencesJSON, _ := json.Marshal(preferences)
-	err = os.WriteFile("../../data/food_preference/foodPreferences.json", preferencesJSON, 0644)
+	projectRoot := getProjectRoot()
+    filePath := filepath.Join(projectRoot, "data", "food_preference", "foodPreferences-test.json")
+	err = os.WriteFile(filePath, preferencesJSON, 0644)
 	if err != nil {
 		panic(err)
 	}

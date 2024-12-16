@@ -176,6 +176,7 @@ func importRecipesData(db *gorm.DB, filename string) error {
             ImageURL:    fmt.Sprintf("recipes_id_%d", recipeID),
             Ingredients: string(newJsonStr), // 使用转换后的小写JSON字符串
             Foods:       foods,
+            Category:    record[5],
         }
 
         // 保存到数据库
@@ -225,7 +226,7 @@ func main() {
     // 导入菜谱数据
     log.Println("Starting recipe data import...")
 
-    if err := importRecipesData(db, "../../data/recipes_dataset/recipes_dataset.csv"); err != nil {
+    if err := importRecipesData(db, "../../data/recipes_dataset/recipes_dataset_url.csv"); err != nil {
         log.Fatal("Error importing recipes data:", err)
     }
 
