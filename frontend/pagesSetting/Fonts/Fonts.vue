@@ -43,8 +43,8 @@ function confirmFontSize() {
     data: fontSize.value,
     success: () => {
       uni.showToast({
-        title: '设置已保存',
-        icon: 'success'
+        title: '小程序不支持此操作',
+        icon: 'error'
       });
     }
   });

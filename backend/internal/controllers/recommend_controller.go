@@ -12,6 +12,8 @@ import (
     "slices"
     "math/rand"
     "log"
+    "path/filepath"
+    "strings"
 )
 
 type RecommendController struct {
@@ -28,6 +30,7 @@ type IngredientRecommendRequest struct {
 // 食谱推荐以及设置用户最近选择的食材请求结构体
 type RecipeRecommendAndSetUserLastSelectedFoodsRequest struct {
     SelectedIngredients []uint `json:"selected_ingredients"`
+    DislikedIngredients []uint `json:"disliked_ingredients"`
 }
 
 // 食谱推荐响应结构体
@@ -41,11 +44,18 @@ type RecipeRecommendResponse struct {
     } `json:"recommended_recipes"`
 }
 
+// 食材得分结构体
+type foodScore struct {
+    id    uint
+    score float64
+}
+
 // 食材推荐响应结构体
 type IngredientRecommendResponse struct {
     RecommendedIngredients []struct {
         ID          uint    `json:"id"`
         Name        string  `json:"name"`
+        ImageURL    string  `json:"image_url"`
     } `json:"recommended_ingredients"`
 }
 
@@ -97,32 +107,12 @@ func union(a, b []string) []string {
     return result
 }
 
-// 辅助函数：从分布中采样n个元素
-func sample(distribution []float64, n int) []uint {
-    total := 0.0
-    for _, score := range distribution {
-        total += score
-    }
-    
-    // 归一化并采样
-    result := make([]uint, 0, n)
-    for i := 0; i < n; i++ {
-        r := rand.Float64() * total
-        sum := 0.0
-        for id, score := range distribution {
-            sum += score
-            if sum >= r {
-                result = append(result, uint(id))
-                break
-            }
-        }
-    }
-    return result
-}
 
 // 辅助函数：加载食物偏好
 func (ic *RecommendController) loadFoodPreferences(preferences []models.FoodPreference) (Pos_id []uint, Neg_id []uint, err error) {
-    data, err := os.ReadFile("../data/food_preference/foodPreferences.json")
+    projectRoot := getProjectRoot()
+    filePath := filepath.Join(projectRoot, "data", "food_preference", "foodPreferences.json")
+    data, err := os.ReadFile(filePath)
     if err != nil {
         return nil, nil, err
     }
@@ -167,7 +157,7 @@ func (ic *RecommendController) loadFoodPreferences(preferences []models.FoodPref
     // 处理positive foods
     for _, food := range allPosFood {
         var foodItem models.Food
-        if err := ic.DB.Table("foods").Where("en_food_name = ?", food).First(&foodItem).Error; err != nil {
+        if err := ic.DB.Table("foods").Where("en_food_name = ?", strings.ToLower(food)).First(&foodItem).Error; err != nil {
             continue
         }
         foodPos_id = append(foodPos_id, foodItem.ID)
@@ -177,13 +167,51 @@ func (ic *RecommendController) loadFoodPreferences(preferences []models.FoodPref
     // 处理 negative foods
     for _, food := range allNegFood {
         var foodItem models.Food
-        if err := ic.DB.Table("foods").Where("en_food_name = ?", food).First(&foodItem).Error; err != nil {
+        if err := ic.DB.Table("foods").Where("en_food_name = ?", strings.ToLower(food)).First(&foodItem).Error; err != nil {
             continue
         }
         foodNeg_id = append(foodNeg_id, foodItem.ID)
     }
     log.Printf("处理negative foods成功")
     return foodPos_id, foodNeg_id, nil
+}
+
+// 辅助函数：采样食材
+func sample(foodScores []foodScore, n int) []uint {
+    if len(foodScores) == 0 {
+        return nil
+    }
+    
+    total := 0.0
+    for _, item := range foodScores {
+        total += item.score
+    }
+    
+    result := make([]uint, 0, n)
+    remainingScores := make([]foodScore, len(foodScores))
+    copy(remainingScores, foodScores)
+    
+    for i := 0; i < n && len(remainingScores) > 0; i++ {
+        if total <= 0 {
+            break
+        }
+        
+        r := rand.Float64() * total
+        cumSum := 0.0
+        
+        for j, item := range remainingScores {
+            cumSum += item.score
+            if cumSum >= r {
+                result = append(result, item.id)
+                // 更新总分和剩余食材
+                total -= item.score
+                remainingScores = append(remainingScores[:j], remainingScores[j+1:]...)
+                break
+            }
+        }
+    }
+    
+    return result
 }
 
 // 推荐食材
@@ -209,20 +237,43 @@ func (ic *RecommendController) RecommendIngredients(c *gin.Context) {
     }
     log.Printf("request: %v", request)
 
-    // 如果使用上一次的食材，则需要传输上一次的食材
+    // 如果使用上一次的食材，则直接返回上次的食材
     if request.UseLastIngredients {
         var lastSelectedFoods []models.UserLastSelectedFoods
         if err := ic.DB.Where("user_id = ?", userID).Find(&lastSelectedFoods).Error; err != nil {
             c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get last selected foods"})
             return
         }
-        for _, food := range lastSelectedFoods {
-            request.LikedIngredients = append(request.LikedIngredients, food.FoodID)
-        }
-        log.Printf("获取上一次的食材成功")
         
-        // 传输
-        c.JSON(http.StatusOK, gin.H{"message": "User selected foods set successfully"})
+        // 构造推荐食材响应
+        recommendedIngredients := make([]struct {
+            ID   uint   `json:"id"`
+            Name string `json:"name"`
+            ImageURL string `json:"image_url"`
+        }, 0, len(lastSelectedFoods))
+
+        // 获取每个食材的详细信息
+        for _, food := range lastSelectedFoods {
+            var foodInfo models.Food
+            if err := ic.DB.First(&foodInfo, food.FoodID).Error; err != nil {
+                continue
+            }
+            recommendedIngredients = append(recommendedIngredients, struct {
+                ID   uint   `json:"id"`
+                Name string `json:"name"`
+                ImageURL string `json:"image_url"`
+            }{
+                ID:   foodInfo.ID,
+                Name: foodInfo.EnFoodName,
+                ImageURL: foodInfo.ImageUrl,
+            })
+        }
+
+        response := IngredientRecommendResponse{
+            RecommendedIngredients: recommendedIngredients,
+        }
+        
+        c.JSON(http.StatusOK, response)
         return
     }
 
@@ -286,7 +337,6 @@ func (ic *RecommendController) RecommendIngredients(c *gin.Context) {
     tx.Commit()
     log.Printf("更新用户偏好成功")
 
-    ingredientScores := make(map[uint]float64)
 
     // 获取所有食物名称
     foodNameResponse, err := models.GetAllFoodNames(ic.DB, "en")
@@ -296,6 +346,7 @@ func (ic *RecommendController) RecommendIngredients(c *gin.Context) {
     }
     log.Printf("获取所有食物名称成功")
     // base score
+    ingredientScores := make(map[uint]float64)
     for _, food := range foodNameResponse {
         ingredientScores[food.ID] = BASE_SCORE
     }
@@ -338,6 +389,7 @@ func (ic *RecommendController) RecommendIngredients(c *gin.Context) {
     log.Printf("获取设置界面用户的食物偏好类型成功")
     foodPos_id, foodNeg_id, err := ic.loadFoodPreferences(foodPreferences)
     if err != nil {
+        log.Printf("获取食物偏好失败: %v", err)
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get food preferences"})
         return
     }
@@ -346,10 +398,16 @@ func (ic *RecommendController) RecommendIngredients(c *gin.Context) {
         ingredientScores[id] += WEIGHT_FOOD_PREF
     }
     log.Printf("更新食物偏好类型成功")
-    // 构造分布，采样直到得到20个非负面食材
-    var distribution []float64
-    for _, score := range ingredientScores {
-        distribution = append(distribution, score)
+
+    // 将map转换为带ID的切片
+    foodScores := make([]foodScore, 0, len(ingredientScores))
+    for id, score := range ingredientScores {
+        foodScores = append(foodScores, foodScore{id: id, score: score})
+    }
+
+    if len(foodScores) == 0 {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "No valid ingredients found"})
+        return
     }
     
     sampled := make([]uint, 0, 20)
@@ -359,19 +417,13 @@ func (ic *RecommendController) RecommendIngredients(c *gin.Context) {
     maxAttempts := 100
     attempts := 0
     for len(sampled) < 20 && attempts < maxAttempts {
-        newSamples := sample(distribution, 20-len(sampled))
+        newSamples := sample(foodScores, 20-len(sampled))
         attempts++
-        // 采样新的食材
+        
         for _, id := range newSamples {
-            // 跳过已使用的ID
-            if usedIDs[id] {
+            if usedIDs[id] || slices.Contains(foodNeg_id, id) {
                 continue
             }
-            // 跳过负面食材
-            if slices.Contains(foodNeg_id, id) {
-                continue
-            }
-            
             sampled = append(sampled, id)
             usedIDs[id] = true
             
@@ -385,20 +437,29 @@ func (ic *RecommendController) RecommendIngredients(c *gin.Context) {
     recommendedIngredients := make([]struct {
         ID   uint   `json:"id"`
         Name string `json:"name"`
+        ImageURL string `json:"image_url"`
     }, 0, len(sampled))
+    log.Printf("sampled: %v", sampled)
 
     for _, id := range sampled {
         var food models.Food
         if err := ic.DB.Table("foods").First(&food, id).Error; err != nil {
+            log.Printf("获取食材失败: %v", err)
             continue
         }
         recommendedIngredients = append(recommendedIngredients, struct {
             ID   uint   `json:"id"`
             Name string `json:"name"`
+            ImageURL string `json:"image_url"`
         }{
             ID:   food.ID,
             Name: food.EnFoodName,
+            ImageURL: food.ImageUrl,
         })
+    }
+    if len(recommendedIngredients) == 0 {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "No recommended ingredients"})
+        return
     }
     log.Printf("构造推荐食材响应成功")
     response := IngredientRecommendResponse{
@@ -449,10 +510,35 @@ func (ic *RecommendController) RecommendRecipes(c *gin.Context) {
         c.JSON(http.StatusBadRequest, gin.H{"error": "No ingredients selected"})
         return
     }
+    
+    // 获取设置界面用户的食物偏好类型
+    foodPreferences, err := models.GetUserFoodPreferences(ic.DB, userID.(uint))
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get food preferences"})
+        return
+    }
+    log.Printf("获取设置界面用户的食物偏好类型成功")
+    
+    _, foodNeg_id, err := ic.loadFoodPreferences(foodPreferences)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get food preferences"})
+        return
+    }
+
+    // 合并foodNeg_id 与 request.DislikedIngredients
+    foodNeg_id = append(foodNeg_id, request.DislikedIngredients...)
+
+
 
     // 对于每一个食材id，获取包含该食材的食谱
     var recipes []models.Recipe
+    maxAttempts := 20
     for _, ingredientID := range request.SelectedIngredients {
+        // 跳过负面食材
+        if slices.Contains(foodNeg_id, ingredientID) {
+            continue
+        }
+
         // 验证ingredientID是否存在
         var food models.Food
         if err := ic.DB.First(&food, ingredientID).Error; err != nil {
@@ -462,20 +548,68 @@ func (ic *RecommendController) RecommendRecipes(c *gin.Context) {
 
         recipeIDs, err := models.GetRecipeIDsByFoodID(ic.DB, ingredientID)
         if err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get recipe IDs"})
-            return
+            log.Printf("获取包含食材%v的食谱失败: %v", ingredientID, err)
+            continue
         }
         log.Printf("获取包含食材%v的食谱成功", ingredientID)
 
-        // 对于recipeIDs,随机选取1个
         if len(recipeIDs) > 0 {
-            randomIndex := rand.Intn(len(recipeIDs))
-            recipe, err := models.GetRecipeByID(ic.DB, recipeIDs[randomIndex])
-            if err != nil {
-                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get recipe"})
-                return
+            attempts := 0
+            validRecipe := false
+
+            availableRecipes := make([]uint, len(recipeIDs))
+            copy(availableRecipes, recipeIDs)
+
+            for attempts < maxAttempts && !validRecipe && len(availableRecipes) > 1 {
+                randomIndex := rand.Intn(len(availableRecipes))
+                recipeID := availableRecipes[randomIndex]
+                recipe, err := models.GetRecipeByID(ic.DB, recipeID)
+                if err != nil {
+                    log.Printf("获取食谱失败: recipeID=%v, error=%v", recipeID, err)
+                    availableRecipes = append(availableRecipes[:randomIndex], availableRecipes[randomIndex+1:]...)
+                    attempts++
+                    continue
+                }
+                // 获取食谱关联的食材
+                ingredientIds, err := models.GetIngredientIDsByRecipeID(ic.DB, recipe.ID)
+                if err != nil {
+                    log.Printf("获取食谱关联的食材失败: %v", err)
+                    availableRecipes = append(availableRecipes[:randomIndex], availableRecipes[randomIndex+1:]...)
+                    attempts++
+                    continue
+                }
+
+                containsNeg := false
+                for _, id := range ingredientIds {
+                    if slices.Contains(foodNeg_id, id) {
+                        containsNeg = true
+                        break
+                    }
+                }
+
+                if !containsNeg {
+                    validRecipe = true
+                    recipes = append(recipes, *recipe)
+                }
+
+                availableRecipes = append(availableRecipes[:randomIndex], availableRecipes[randomIndex+1:]...)
+                attempts++
             }
-            recipes = append(recipes, *recipe)
+
+            if !validRecipe {
+                log.Printf("无法找到有效的食谱, 选取最后一个可能的食谱")
+                // 数组长度检查
+                if len(availableRecipes) == 0 {
+                    log.Printf("没有可用的食谱")
+                    continue
+                }
+                recipe, err := models.GetRecipeByID(ic.DB, availableRecipes[0])
+                if err != nil {
+                    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get recipe"})
+                    return
+                }
+                recipes = append(recipes, *recipe)
+            }
         }
         log.Printf("获取包含食材%v的食谱成功", ingredientID)
     }

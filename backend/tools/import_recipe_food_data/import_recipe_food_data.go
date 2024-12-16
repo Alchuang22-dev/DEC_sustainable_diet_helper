@@ -64,6 +64,7 @@ func importFoodsData(db *gorm.DB, filename string) error {
         carbs, err4 := stringToFloat64(record[6])
         sodium, err5 := stringToFloat64(record[7])
         price, err6 := stringToFloat64(record[8])
+        
 
         if err != nil || err1 != nil || err2 != nil || err3 != nil || 
            err4 != nil || err5 != nil || err6 != nil {
@@ -76,13 +77,14 @@ func importFoodsData(db *gorm.DB, filename string) error {
         food := models.Food{
             ZhFoodName:    record[0],
             GHG:           ghg,
-            EnFoodName:    record[2],
+            EnFoodName:    strings.ToLower(record[2]),  // 将英文名称转换为小写
             Calories:      calories * 10, // 对于营养的部分，我们数据中的单位是每100g，但是我们的模型中的单位是每1kg
             Protein:       protein * 10,
             Fat:           fat * 10,
             Carbohydrates: carbs * 10,
             Sodium:        sodium * 10,
             Price:         price,
+            ImageUrl:      record[9],
         }
 
         // 保存到数据库
@@ -98,49 +100,6 @@ func importFoodsData(db *gorm.DB, filename string) error {
     return nil
 }
 
-// // 自定义CSV行解析函数 (保持不变)
-// func parseCSVLine(line string) []string {
-//     var fields []string
-//     var currentField strings.Builder
-//     inQuotes := false
-//     inBrackets := 0
-//     inBraces := 0
-
-//     for _, ch := range line {
-//         switch ch {
-//         case '[':
-//             inBrackets++
-//             currentField.WriteRune(ch)
-//         case ']':
-//             inBrackets--
-//             currentField.WriteRune(ch)
-//         case '{':
-//             inBraces++
-//             currentField.WriteRune(ch)
-//         case '}':
-//             inBraces--
-//             currentField.WriteRune(ch)
-//         case '"':
-//             inQuotes = !inQuotes
-//             currentField.WriteRune(ch)
-//         case ',':
-//             if inQuotes || inBrackets > 0 || inBraces > 0 {
-//                 currentField.WriteRune(ch)
-//             } else {
-//                 fields = append(fields, currentField.String())
-//                 currentField.Reset()
-//             }
-//         default:
-//             currentField.WriteRune(ch)
-//         }
-//     }
-
-//     if currentField.Len() > 0 {
-//         fields = append(fields, currentField.String())
-//     }
-
-//     return fields
-// }
 
 // importRecipesData 导入食谱数据
 func importRecipesData(db *gorm.DB, filename string) error {
@@ -185,8 +144,22 @@ func importRecipesData(db *gorm.DB, filename string) error {
             continue
         }
 
+        // 创建新的 map 存储小写的食材名称
+        lowercaseIngredients := make(map[string]float64)
+        for foodName, amount := range ingredients {
+            lowercaseIngredients[strings.ToLower(foodName)] = amount
+        }
+
+        // 将新的 map 转换回 JSON 字符串
+        newJsonStr, err := json.Marshal(lowercaseIngredients)
+        if err != nil {
+            log.Printf("转换食材JSON错误 %s: %v", record[3], err)
+            failed++
+            continue
+        }
+
         var foods []models.Food
-        for foodName := range ingredients {
+        for foodName := range lowercaseIngredients {
             foodID, err := models.FindFoodIDByName(db, foodName)
             if err != nil {
                 log.Printf("找不到食材 %s: %v", foodName, err)
@@ -201,8 +174,9 @@ func importRecipesData(db *gorm.DB, filename string) error {
             URL:         record[0],
             Name:        record[3],
             ImageURL:    fmt.Sprintf("recipes_id_%d", recipeID),
-            Ingredients: jsonStr, // 直接存储JSON字符串
+            Ingredients: string(newJsonStr), // 使用转换后的小写JSON字符串
             Foods:       foods,
+            Category:    record[5],
         }
 
         // 保存到数据库
@@ -245,14 +219,14 @@ func main() {
     // 导入食物数据
     log.Println("Starting food data import...")
 
-    if err := importFoodsData(db, "../../data/food_dataset/foods_dataset.csv"); err != nil {
+    if err := importFoodsData(db, "../../data/food_dataset/foods_dataset_url.csv"); err != nil {
         log.Fatal("Error importing foods data:", err)
     }
 
     // 导入菜谱数据
     log.Println("Starting recipe data import...")
 
-    if err := importRecipesData(db, "../../data/recipes_dataset/recipes_dataset.csv"); err != nil {
+    if err := importRecipesData(db, "../../data/recipes_dataset/recipes_dataset_url.csv"); err != nil {
         log.Fatal("Error importing recipes data:", err)
     }
 

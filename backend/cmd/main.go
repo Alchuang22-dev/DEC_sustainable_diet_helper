@@ -50,6 +50,8 @@ func main() {
         &models.DislikedFoodPreference{},
         &models.UserRecipeHistory{},
         &models.UserLastSelectedFoods{},
+        &models.UserIngredientHistory{},
+        &models.UserIngredientPreference{},
         &models.Draft{},
         &models.DraftImage{},
         &models.DraftParagraph{},

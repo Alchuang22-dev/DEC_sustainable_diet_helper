@@ -1,4 +1,4 @@
-package tests
+package controllers
 
 import (
 	"bytes"
@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/controllers"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -39,10 +38,10 @@ func setupFoodPreferenceTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func setupFoodPreferenceTestRouter(db *gorm.DB) (*gin.Engine, *controllers.FoodPreferenceController) {
+func setupFoodPreferenceTestRouter(db *gorm.DB) (*gin.Engine, *FoodPreferenceController) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	fpc := &controllers.FoodPreferenceController{DB: db}
+	fpc := &FoodPreferenceController{DB: db}
 
 	// Create test food preferences configuration
 	err := os.MkdirAll(filepath.Join("data", "food_preference"), 0755)
@@ -56,7 +55,9 @@ func setupFoodPreferenceTestRouter(db *gorm.DB) (*gin.Engine, *controllers.FoodP
 		"vegan":       true,
 	}
 	preferencesJSON, _ := json.Marshal(preferences)
-	err = os.WriteFile(filepath.Join("data", "food_preference", "foodPreferences.json"), preferencesJSON, 0644)
+	projectRoot := getProjectRoot()
+    filePath := filepath.Join(projectRoot, "data", "food_preference", "foodPreferences-test.json")
+	err = os.WriteFile(filePath, preferencesJSON, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -500,3 +501,101 @@ func TestGetUserDislikedPreferences(t *testing.T) {
 		assert.True(t, found, "未找到匹配的食物: %v", food)
 	}
 }
+
+func TestFoodPreferenceUnauthorizedAccess(t *testing.T) {
+    db := setupFoodPreferenceTestDB(t)
+    router, fpc := setupFoodPreferenceTestRouter(db)
+
+    // 测试所有需要授权的端点
+    tests := []struct {
+        name       string
+        method     string
+        path       string
+        body       map[string]interface{}
+    }{
+        {
+            name:   "未授权添加食物偏好",
+            method: http.MethodPost,
+            path:   "/preferences",
+            body:   map[string]interface{}{"preference_name": "highProtein"},
+        },
+        {
+            name:   "未授权删除食物偏好",
+            method: http.MethodDelete,
+            path:   "/preferences",
+            body:   map[string]interface{}{"preference_name": "highProtein"},
+        },
+        {
+            name:   "未授权获取食物偏好",
+            method: http.MethodGet,
+            path:   "/preferences",
+            body:   nil,
+        },
+        {
+            name:   "未授权添加不喜欢的食物",
+            method: http.MethodPost,
+            path:   "/disliked_preferences",
+            body:   map[string]interface{}{"food_id": 1},
+        },
+        {
+            name:   "未授权删除不喜欢的食物",
+            method: http.MethodDelete,
+            path:   "/disliked_preferences",
+            body:   map[string]interface{}{"food_id": 1},
+        },
+        {
+            name:   "未授权获取不喜欢的食物列表",
+            method: http.MethodGet,
+            path:   "/disliked_preferences",
+            body:   nil,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // 设置路由处理函数
+            switch tt.path {
+            case "/preferences":
+                switch tt.method {
+                case http.MethodPost:
+                    router.POST(tt.path, fpc.AddFoodPreference)
+                case http.MethodDelete:
+                    router.DELETE(tt.path, fpc.DeleteFoodPreference)
+                case http.MethodGet:
+                    router.GET(tt.path, fpc.GetUserPreferences)
+                }
+            case "/disliked_preferences":
+                switch tt.method {
+                case http.MethodPost:
+                    router.POST(tt.path, fpc.AddDislikedFoodPreference)
+                case http.MethodDelete:
+                    router.DELETE(tt.path, fpc.DeleteDislikedFoodPreference)
+                case http.MethodGet:
+                    router.GET(tt.path, fpc.GetUserDislikedPreferences)
+                }
+            }
+
+            // 创建请求
+            var req *http.Request
+            if tt.body != nil {
+                jsonBody, _ := json.Marshal(tt.body)
+                req, _ = http.NewRequest(tt.method, tt.path, bytes.NewBuffer(jsonBody))
+                req.Header.Set("Content-Type", "application/json")
+            } else {
+                req, _ = http.NewRequest(tt.method, tt.path, nil)
+            }
+
+            // 发送请求并记录响应
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            // 验证响应
+            assert.Equal(t, http.StatusUnauthorized, w.Code)
+            
+            var response map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &response)
+            assert.NoError(t, err)
+            assert.Equal(t, "Unauthorized", response["error"])
+        })
+    }
+}	

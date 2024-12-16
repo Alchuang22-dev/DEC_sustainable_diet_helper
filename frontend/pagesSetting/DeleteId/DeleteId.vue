@@ -10,7 +10,7 @@
       <text>账号注销不可恢复，请谨慎操作。</text>
     </view>
     <view class="button_holder">
-      <button class="confirm-button" @click="deleteData">注销账号</button> 
+      <button class="confirm-button" @click="deleteId">注销账号</button> 
     </view>
   </view>
 </template>
@@ -24,15 +24,9 @@ const fontSizeBig = fontSize.value + 4;
 
 function deleteId() {
   // TODO：这一部分没找到对应的后端
-  uni.setStorage({
-    key: 'User',
-    data: 'delete',
-    success: () => {
-      uni.showToast({
-        title: '账号已注销',
-        icon: 'success'
-      });
-    }
+  uni.showToast({
+    title: '不支持此操作',
+    icon: 'error'
   });
 }
 </script>
