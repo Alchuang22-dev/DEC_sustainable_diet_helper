@@ -42,6 +42,7 @@ import { useI18n } from 'vue-i18n';
 import { useUserStore } from "@/stores/user.js";
 import { FamilyStatus, useFamilyStore } from "@/stores/family.js";
 import { onLoad } from "@dcloudio/uni-app";
+import {formatDate} from "../../uni_modules/uni-dateformat/components/uni-dateformat/date-format";
 
 // 国际化
 const { t } = useI18n();
@@ -95,13 +96,25 @@ const getDefaultMealType = () => {
   return 3; // 其他
 };
 
+function formatToISO(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+
+  // 组合成指定格式，仍然使用 Z 后缀
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+}
+
 // 保存为自己计算
 const saveForSelf = () => {
   const today = new Date();
+  const haha = formatToISO(today);
+  console.log('当前时间:', haha);
   const requestData = {
-    date: today.getFullYear() + '-'
-        + String(today.getMonth() + 1).padStart(2, '0') + '-'
-        + String(today.getDate()).padStart(2, '0'),
+    date: formatToISO(today),
     meal_type: mealTypesValue[selectedMealIndex.value],
     calories: nutritionData[0] || 0,
     protein: nutritionData[1] || 0,
