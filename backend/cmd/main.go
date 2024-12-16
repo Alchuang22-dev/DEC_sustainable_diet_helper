@@ -34,9 +34,8 @@ func main() {
     err = db.AutoMigrate(
         &models.User{},
         &models.News{},
-        &models.Resource{},
+        &models.NewsImage{},
         &models.Paragraph{},
-        &models.Video{},
         &models.Comment{},
         &models.Food{},
         &models.Recipe{},
@@ -51,9 +50,13 @@ func main() {
         &models.DislikedFoodPreference{},
         &models.UserRecipeHistory{},
         &models.UserLastSelectedFoods{},
+        &models.Draft{},
+        &models.DraftImage{},
+        &models.DraftParagraph{},
     )
     if err != nil {
         log.Fatal("自动迁移失败:", err)
+        return
     }
 
     // 初始化Gin引擎
