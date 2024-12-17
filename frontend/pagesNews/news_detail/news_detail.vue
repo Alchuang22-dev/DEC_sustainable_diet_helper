@@ -31,7 +31,7 @@
 
         <!-- 图片组件 -->
         <view v-if="component.style === 'image'" class="image-content">
-          <image src="https://cdn.pixabay.com/photo/2017/04/09/07/25/honey-pomelo-2215031_1280.jpg" class="image"></image>
+          <image :src="component.content" class="image"></image>
           <p class="image-description">{{ component.description }}</p>
         </view>
       </view>
@@ -168,163 +168,222 @@ const formattedSaveTime = computed(() => {
 });
 
 const toggleInteraction = (type) => {
-  // Helper function to make requests with token authorization
-  const makeRequest = (url, method, data, successCallback, failCallback) => {
+  // 确保 post 是一个 ref，并正确访问其属性
+  const authorName = post.value.authorName; // 确保 post 对象中有 authorName 属性
+
+  // 获取当前系统时间
+  const systemDate = new Date();
+  const systemDateStr = systemDate.toISOString().slice(0, 10); // YYYY-MM-DD
+ 
+  // 处理操作
+  if (type === "view") {
     uni.request({
-      url,
-      method,
+      url: `http://122.51.231.155:8080/news/${PageId.value}/view`,
+      method: "POST",
       header: {
         "Content-type": "application/json",
-        "Authorization": `Bearer ${jwtToken.value}`, // Include token in headers
+        "Authorization": `Bearer ${jwtToken.value}`, // 直接使用 jwtToken
       },
-      data,
-      success: successCallback,
-      fail: failCallback,
-    });
-  };
-
-  // Handle news view tracking
-  if (type === "view") {
-    makeRequest(
-      `http://122.51.231.155:8080/news/${PageId.value}/view`,
-      "POST",
-      {},
-      () => {
+      data: {},
+      success: () => {
         console.log("News view recorded successfully");
       },
-      (err) => {
+      fail: (err) => {
         console.error("Error viewing news:", err);
-      }
-    );
+      },
+    });
   }
 
-  // Handle like news
   else if (type === "like") {
     if (ifLike.value === false) {
-      makeRequest(
-        `http://122.51.231.155:8080/news/${PageId.value}/like`,
-        "POST",
-        {},
-        () => {
-          post.likeCount++;
-          ifLike.value = true;
+      console.log('点赞新闻');
+      uni.request({
+        url: `http://122.51.231.155:8080/news/${PageId.value}/like`,
+        method: "POST",
+        header: {
+          "Content-type": "application/json",
+          "Authorization": `Bearer ${jwtToken.value}`,
         },
-        (err) => {
-          console.error("Error liking news:", err);
-        }
-      );
+        data: {},
+        success: (res) => {
+                  if (res.statusCode === 200) {
+                    post.value.likeCount = res.data.like_count; // 使用后端返回的like_count
+                    ifLike.value = true;
+                    console.log('点赞状态:', ifLike.value);
+                  } else {
+                    console.error("Unexpected response:", res);
+					uni.showToast({
+					  title: '已经点过赞了~',
+					  icon: 'none',
+					  duration: 2000,
+					});
+					ifLike.value = true;
+                  }
+                },
+                fail: (err) => {
+                  console.error("Error liking news:", err);
+                },
+      });
     } else {
-      makeRequest(
-        `http://122.51.231.155:8080/news/${PageId.value}/like`,
-        "DELETE",
-        {},
-        () => {
-          post.likeCount--;
-          ifLike.value = false;
+      console.log('取消点赞新闻');
+      uni.request({
+        url: `http://122.51.231.155:8080/news/${PageId.value}/like`,
+        method: "DELETE",
+        header: {
+          "Content-type": "application/json",
+          "Authorization": `Bearer ${jwtToken.value}`,
         },
-        (err) => {
+        data: {},
+        success: () => {
+          post.value.likeCount--;
+          ifLike.value = false;
+          console.log('点赞状态:', ifLike.value);
+		  uni.showToast({
+		    title: '点赞已取消',
+		    icon: 'none',
+		    duration: 2000,
+		  });
+        },
+        fail: (err) => {
           console.error("Error canceling like on news:", err);
-        }
-      );
+        },
+      });
     }
   }
 
-  // Handle favorite news
   else if (type === "favorite") {
     if (ifFavourite.value === false) {
-      makeRequest(
-        `http://122.51.231.155:8080/news/${PageId.value}/favorite`,
-        "POST",
-        {},
-        () => {
-          post.favoriteCount++;
-          ifFavourite.value = true;
+      uni.request({
+        url: `http://122.51.231.155:8080/news/${PageId.value}/favorite`,
+        method: "POST",
+        header: {
+          "Content-type": "application/json",
+          "Authorization": `Bearer ${jwtToken.value}`,
         },
-        (err) => {
-          console.error("Error favoriting news:", err);
-        }
-      );
+        data: {},
+        success: (res) => {
+                  if (res.statusCode === 200) {
+                    post.value.favoriteCount = res.data.favorite_count; // 使用后端返回的favorite_count
+                    ifFavourite.value = true;
+                  } else {
+                    console.error("Unexpected response:", res);
+					uni.showToast({
+					  title: '已经收藏了~',
+					  icon: 'none',
+					  duration: 2000,
+					});
+					ifFavourite.value = true;
+                  }
+                },
+                fail: (err) => {
+                  console.error("Error favoriting news:", err);
+                },
+      });
     } else {
-      makeRequest(
-        `http://122.51.231.155:8080/news/${PageId.value}/favorite`,
-        "DELETE",
-        {},
-        () => {
-          post.favoriteCount--;
-          ifFavourite.value = false;
+      uni.request({
+        url: `http://122.51.231.155:8080/news/${PageId.value}/favorite`,
+        method: "DELETE",
+        header: {
+          "Content-type": "application/json",
+          "Authorization": `Bearer ${jwtToken.value}`,
         },
-        (err) => {
+        data: {},
+        success: () => {
+          post.value.favoriteCount--;
+          ifFavourite.value = false;
+		  uni.showToast({
+		    title: '已取消收藏',
+		    icon: 'none',
+		    duration: 2000,
+		  });
+        },
+        fail: (err) => {
           console.error("Error canceling favorite on news:", err);
-        }
-      );
+        },
+      });
     }
   }
 
-  // Handle follow user
   else if (type === "follow") {
     if (ifFollowed.value === false) {
-      makeRequest(
-        `http://122.51.231.155:8080/user/${uid.value}/follow`,
-        "POST",
-        { target_id: post.authorName },
-        () => {
+      uni.request({
+        url: `http://122.51.231.155:8080/user/${uid.value}/follow`,
+        method: "POST",
+        header: {
+          "Content-type": "application/json",
+          "Authorization": `Bearer ${jwtToken.value}`,
+        },
+        data: { target_id: authorName },
+        success: () => {
           ifFollowed.value = true;
         },
-        (err) => {
+        fail: (err) => {
           console.error("Error following user:", err);
-        }
-      );
+        },
+      });
     } else {
-      makeRequest(
-        `http://122.51.231.155:8080/user/${uid.value}/unfollow`,
-        "POST",
-        { target_id: post.authorName },
-        () => {
+      uni.request({
+        url: `http://122.51.231.155:8080/user/${uid.value}/unfollow`,
+        method: "POST",
+        header: {
+          "Content-type": "application/json",
+          "Authorization": `Bearer ${jwtToken.value}`,
+        },
+        data: { target_id: authorName },
+        success: () => {
           ifFollowed.value = false;
         },
-        (err) => {
+        fail: (err) => {
           console.error("Error unfollowing user:", err);
-        }
-      );
+        },
+      });
     }
   }
 
-  // Handle share news
   else if (type === "share") {
-    post.shareCount++;
+    post.value.shareCount++;
+    // 这里您可以根据需要添加分享的逻辑，例如调用分享 API 或显示分享选项
   }
 
-  // Handle dislike news
   else if (type === "dislike") {
     if (ifDislike.value === false) {
-      makeRequest(
-        `http://122.51.231.155:8080/news/${PageId.value}/dislike`,
-        "POST",
-        {},
-        () => {
-          post.dislikeCount++;
+      uni.request({
+        url: `http://122.51.231.155:8080/news/${PageId.value}/dislike`,
+        method: "POST",
+        header: {
+          "Content-type": "application/json",
+          "Authorization": `Bearer ${jwtToken.value}`,
+        },
+        data: {},
+        success: () => {
+          post.value.dislikeCount++;
           ifDislike.value = true;
         },
-        (err) => {
+        fail: (err) => {
           console.error("Error disliking news:", err);
-        }
-      );
+        },
+      });
     } else {
-      makeRequest(
-        `http://122.51.231.155:8080/news/${PageId.value}/dislike`,
-        "DELETE",
-        {},
-        () => {
-          post.dislikeCount--;
+      uni.request({
+        url: `http://122.51.231.155:8080/news/${PageId.value}/dislike`,
+        method: "DELETE",
+        header: {
+          "Content-type": "application/json",
+          "Authorization": `Bearer ${jwtToken.value}`,
+        },
+        data: {},
+        success: () => {
+          post.value.dislikeCount--;
           ifDislike.value = false;
         },
-        (err) => {
+        fail: (err) => {
           console.error("Error canceling dislike on news:", err);
-        }
-      );
+        },
+      });
     }
   }
 };
+
 
 
 //评论相关方法
