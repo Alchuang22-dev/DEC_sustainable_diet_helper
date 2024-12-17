@@ -21,10 +21,10 @@
 		
 		<!-- 生成菜谱按钮 -->
 		<view class="button-container">
-		    <button class="generate-button fade-in-up delay-6" @click="regetRecipe">
+		    <button class="generate-button fade-in-up delay-7" @click="regetRecipe">
 		        {{$t('change_food')}}
 		    </button>
-		    <button class="generate-button fade-in-up delay-6" @click="generateRecipe">
+		    <button class="generate-button fade-in-up delay-7" @click="generateRecipe">
 		        {{$t('generate_recipe')}}
 		    </button>
 		</view>
@@ -234,24 +234,51 @@ const parseIngredients = (ingredientsStr) => {
   try {
     const ingredients = JSON.parse(ingredientsStr);
     console.log('Parsed ingredients:', ingredients); // 调试日志
-    
+
+    let displayIngredients = '';
+
     if (Array.isArray(ingredients)) {
-      // 如果是数组，直接连接
-      return ingredients.join(', ');
+      if (ingredients.length > 5) {
+        // 处理前5个元素，并添加省略号
+        displayIngredients = ingredients.slice(0, 5).join(', ') + ', ...';
+      } else {
+        // 处理所有元素
+        displayIngredients = ingredients.join(', ');
+      }
     } else if (typeof ingredients === 'object' && ingredients !== null) {
-      // 如果是对象，提取键名并使用 t() 方法进行翻译
-      return Object.keys(ingredients).map(key => t(key)).join(', ');
+      const keys = Object.keys(ingredients);
+      if (keys.length > 5) {
+        // 处理前5个键，并添加省略号
+        displayIngredients = keys.slice(0, 5).map(key => t(key)).join(', ') + ', ...';
+      } else {
+        // 处理所有键
+        displayIngredients = keys.map(key => t(key)).join(', ');
+      }
       
       // 如果需要显示键值对（例如，食材名称和数量），可以使用以下代码：
-      // return Object.entries(ingredients).map(([key, value]) => `${t(key)}: ${value}`).join(', ');
+      /*
+      if (keys.length > 5) {
+        displayIngredients = Object.entries(ingredients)
+          .slice(0, 5)
+          .map(([key, value]) => `${t(key)}: ${value}`)
+          .join(', ') + ', ...';
+      } else {
+        displayIngredients = Object.entries(ingredients)
+          .map(([key, value]) => `${t(key)}: ${value}`)
+          .join(', ');
+      }
+      */
     } else {
-      return t('ingredients_unavailable'); // 使用 t() 方法翻译默认信息
+      displayIngredients = t('ingredients_unavailable'); // 使用 t() 方法翻译默认信息
     }
+
+    return displayIngredients;
   } catch (e) {
     console.error('解析原料失败:', e);
     return t('ingredients_unavailable'); // 使用 t() 方法翻译默认错误信息
   }
 }
+
 
 
 
@@ -452,6 +479,7 @@ onMounted(() => {
 	    display: flex;
 	    justify-content: space-between; /* 按钮左右排布 */
 	    width: 75%;
+		margin-top: 20px;
 	    gap: 20rpx; /* 按钮之间的间距 */
 	}
 	
@@ -459,6 +487,7 @@ onMounted(() => {
 		background-color: var(--primary-color);
 		color: #ffffff;
 		padding: 20rpx 40rpx;
+		margin-top: 20px;
 		border: none;
 		border-radius: 30rpx;
 		font-size: 32rpx;
