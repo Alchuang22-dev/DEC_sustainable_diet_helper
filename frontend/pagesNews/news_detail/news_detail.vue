@@ -50,42 +50,45 @@
     </view>
 
     <!-- Comments Section -->
-    <view class="comments-section">
-      <view class="comments-header">评论</view>
-      <view id="comments-container">
-        <view v-for="(comment, index) in comments" :key="index" class="comment">
-          <view class="comment-content">
-            <view class="comment-avatar"></view>
-            <view>
-              <text class="comment-username">user_test:</text>
-              <text class="comment-text">{{ comment.text }}</text>
-            </view>
-          </view>
-          <view class="comment-interactions">
-            <button @click="toggleCommentLike(index)">👍 {{ comment.liked ? '已点赞' : '点赞' }}</button>
-            <button @click="replyToComment(index)">💬 回复</button>
-          </view>
+	<!-- Comments Section -->
+	<view class="comments-section">
+	  <view class="comments-header">评论</view>
+	  <view id="comments-container">
+		<view v-for="(comment, index) in comments" :key="comment.id" class="comment">
+		  <view class="comment-content">
+			<view class="comment-avatar"></view>
+			<view>
+			  <text class="comment-username">user_test:</text>
+			  <text class="comment-text">{{ comment.text }}</text>
+			</view>
+		  </view>
+		  <view class="comment-time">{{ comment.publish_time }}</view> <!-- Display publish_time -->
+		  <view class="comment-interactions">
+			<button @click="toggleCommentLike(index)">👍 {{ comment.liked ? '已点赞' : '点赞' }}</button>
+			<button @click="replyToComment(index)">💬 回复</button>
+		  </view>
 
-          <!-- Reply Input Section -->
-          <view v-if="replyingTo === index" class="add-reply">
-            <input type="text" v-model="newReply" placeholder="回复..." />
-            <button @click="addReply(index)">发送</button>
-          </view>
+		  <!-- Reply Input Section -->
+		  <view v-if="replyingTo === index" class="add-reply">
+			<input type="text" v-model="newReply" placeholder="回复..." />
+			<button @click="addReply(index)">发送</button>
+		  </view>
 
-          <!-- Replies Section -->
-          <view v-if="comment.replies.length > 0" class="replies">
-            <view v-for="(reply, replyIndex) in comment.replies" :key="replyIndex" class="reply">
-              <text class="comment-username">user_test:</text>
-              <text class="comment-text">{{ reply.text }}</text>
-            </view>
-          </view>
-        </view>
-      </view>
-      <view class="add-comment">
-        <input type="text" v-model="newComment" placeholder="发表评论..." />
-        <button @click="addComment">评论</button>
-      </view>
-    </view>
+		  <!-- Replies Section -->
+		  <view v-if="comment.replies.length > 0" class="replies">
+			<view v-for="(reply, replyIndex) in comment.replies" :key="reply.id" class="reply">
+			  <text class="comment-username">user_test:</text>
+			  <text class="comment-text">{{ reply.text }}</text>
+			  <text class="comment-time">{{ reply.publish_time }}</text> <!-- Display publish_time -->
+			</view>
+		  </view>
+		</view>
+	  </view>
+	  <view class="add-comment">
+		<input type="text" v-model="newComment" placeholder="发表评论..." />
+		<button @click="addComment">评论</button>
+	  </view>
+	</view>
 
   </view>
 </template>
@@ -113,9 +116,7 @@ const systemDateStr = systemDate.toISOString().slice(0, 10); // 获取当前系�
 const jwtToken = computed(() => userStore.user.token);; // Replace with actual token
 
 const newsData = ref([]);
-const comments = reactive([
-  { text: "这篇文章非常有用！", liked: false, replies: [] },
-]);
+const comments = reactive([]); // Initialize as empty array
 const newComment = ref("");
 const replyingTo = ref(null); // 当前正在回复的评论的索引
 const newReply = ref(""); // 回复内容
@@ -166,6 +167,23 @@ const formattedSaveTime = computed(() => {
     return postDate;
   }
 });
+
+/**
+ * 格式化评论和回复的发布时刻
+ * @param {string} publishTime - ISO 格式的时间字符串
+ * @returns {string} - 格式化后的时间字符串
+ */
+const formatPublishTime = (publishTime) => {
+  const date = new Date(publishTime);
+  const dateStr = date.toISOString().slice(0, 10);
+  if (dateStr === systemDateStr) {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `今天 ${hours}:${minutes}`;
+  } else {
+    return dateStr;
+  }
+};
 
 const toggleInteraction = (type) => {
   // 确保 post 是一个 ref，并正确访问其属性
@@ -396,60 +414,107 @@ const replyToComment = (index) => {
   newReply.value = ""; // 清空之前的回复内容
 };
 
+/**
+ * 添加回复的函数，修改为使用新的后端接口
+ */
 const addReply = (index) => {
   if (newReply.value.trim()) {
+    const parentComment = comments[index];
     uni.request({
-      url: `http://122.51.231.155:8080/news/${post.id}/comment`,
+      url: `${BASE_URL}/news/comments`,
       method: "POST",
       header: {
         "Content-type": "application/json",
+        "Authorization": `Bearer ${jwtToken.value}`,
       },
       data: {
+        news_id: parseInt(PageId.value), // 转换为 int
         content: newReply.value,
-        publish_time: "2024-11-05T12:35:00Z",
-        user_id: uid.value,
-        parent_id: 1,
-        news_id: post.id,
         is_reply: true,
+        parent_id: parentComment.id, // 使用被回复评论的 id
       },
-      success: () => {
-        comments[index].replies.push({ text: newReply.value });
-        newReply.value = "";
-        replyingTo.value = null; // 回复完成后取消回复状态
+      success: (res) => {
+        if (res.statusCode === 201) {
+          const newReplyComment = res.data.comment;
+          comments[index].replies.push({
+            id: newReplyComment.id,
+            text: newReplyComment.content,
+            liked: newReplyComment.like_count > 0, // 根据需要调整
+			publish_time: formatPublishTime(newReplyComment.publish_time), // Format time
+          });
+          newReply.value = "";
+          replyingTo.value = null; // 回复完成后取消回复状态
+        } else {
+          console.error("Unexpected response:", res);
+          uni.showToast({
+            title: '回复失败',
+            icon: 'none',
+            duration: 2000,
+          });
+        }
       },
       fail: (err) => {
         console.error("Error adding reply:", err);
+        uni.showToast({
+          title: '回复失败',
+          icon: 'none',
+          duration: 2000,
+        });
       },
     });
   }
 };
 
+/**
+ * 添加评论的函数，修改为使用新的后端接口
+ */
 const addComment = () => {
   if (newComment.value.trim()) {
     uni.request({
-      url: `http://122.51.231.155:8080/news/${post.id}/comment`,
+      url: `${BASE_URL}/news/comments`,
       method: "POST",
       header: {
         "Content-type": "application/json",
+        "Authorization": `Bearer ${jwtToken.value}`,
       },
       data: {
+        news_id: parseInt(PageId.value), // 转换为 int
         content: newComment.value,
-        publish_time: "2024-11-05T12:30:00Z",
-        user_id: uid.value,
-        news_id: post.id,
         is_reply: false,
-        is_liked: false,
+        parent_id: 0, // 设为 0 或 null 表示顶级评论
       },
-      success: () => {
-        comments.push({ text: newComment.value, liked: false, replies: [] });
-        newComment.value = "";
+      success: (res) => {
+        if (res.statusCode === 201) {
+          const newCommentData = res.data.comment;
+          comments.push({
+            id: newCommentData.id,
+            text: newCommentData.content,
+            liked: newCommentData.like_count > 0, // 根据需要调整
+			publish_time: formatPublishTime(newCommentData.publish_time), // Format time
+            replies: [],
+          });
+          newComment.value = "";
+        } else {
+          console.error("Unexpected response:", res);
+          uni.showToast({
+            title: '发表评论失败',
+            icon: 'none',
+            duration: 2000,
+          });
+        }
       },
       fail: (err) => {
         console.error("Error adding comment:", err);
+        uni.showToast({
+          title: '发表评论失败',
+          icon: 'none',
+          duration: 2000,
+        });
       },
     });
   }
 };
+
 
 
 // Simulate fetching data from backend
@@ -511,6 +576,45 @@ onLoad(async (options) => {
   console.log('更新后的组件内容:', post.value.components);
 
   // 将 post 中的组件内容添加到 items 中
+  // 处理评论
+    if (details.comments && Array.isArray(details.comments)) {
+      details.comments.forEach((comment) => {
+        // Format the publish_time
+        const formattedTime = formatPublishTime(comment.publish_time);
+  
+        // Construct the comment object
+        const commentObj = {
+          id: comment.id,
+          text: comment.content,
+          liked: comment.like_count > 0,
+          publish_time: formattedTime,
+          replies: [],
+        };
+  
+        // Process replies if any
+        if (comment.replies && Array.isArray(comment.replies)) {
+          comment.replies.forEach((reply) => {
+            // Format the publish_time for replies
+            const formattedReplyTime = formatPublishTime(reply.publish_time);
+  
+            // Construct the reply object
+            const replyObj = {
+              id: reply.id,
+              text: reply.content,
+              liked: reply.like_count > 0,
+              publish_time: formattedReplyTime,
+            };
+  
+            commentObj.replies.push(replyObj);
+          });
+        }
+  
+        // Add the comment to the comments array
+        comments.push(commentObj);
+      });
+    } else {
+      console.warn('No comments found in details.');
+    }
 });
 
 // Function to get news or draft details
@@ -710,6 +814,12 @@ const getArticleDetails = async (id, isDraft = false) => {
 
 .comment-interactions button:hover {
   color: #4caf50;
+}
+
+.comment-time {
+  font-size: 12px;
+  color: #999;
+  margin-top: 5px;
 }
 
 .add-comment,
