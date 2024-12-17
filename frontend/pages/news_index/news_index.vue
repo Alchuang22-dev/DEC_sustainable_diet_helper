@@ -26,7 +26,7 @@
         v-for="(item, index) in filteredNewsItems"
         :key="index"
         :class="['news-item', { active: activeIndex === index }]"
-        @click="navigateTo(item.link, item.title)"
+        @click="navigateTo(item.id, item.title)"
         @touchstart="pressFeedback(index)"
         @touchend="releaseFeedback()"
       >
@@ -69,16 +69,11 @@ const { t } = useI18n();
 
 // 页面跳转方法
 function navigateTo(link, name) {
+	console.log('跳转至：',link);
   setTimeout(() => {
-    if (link.startsWith("http")) {
       uni.navigateTo({
-        url: `/pagesNews/web_detail/web_detail?url=${encodeURIComponent(link)}`,
+        url: `/pagesNews/news_detail/news_detail?id=${link}`,
       });
-    } else {
-      uni.navigateTo({
-        url: `/pagesNews/${link}/${link}?title=${name}`,
-      });
-    }
   }, 100);
 }
 

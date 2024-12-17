@@ -1,86 +1,141 @@
 // stores/news_list.js
 import { defineStore } from 'pinia';
+import { computed } from "vue";
+import { useUserStore } from "./user.js";
+
+const userStore = useUserStore(); // 使用用户存储
+const jwtToken = computed(() => userStore.user.token); // Replace with actual token
+const systemDate = new Date();
+const systemDateStr = systemDate.toISOString().slice(0, 10); // 获取当前系统日期，格式：YYYY-MM-DD
+
+const BASE_URL = 'http://122.51.231.155:8080'; //url基本路径
+
+// Helper function to format publish time
+const formatPublishTime = (publishTime) => {
+  const date = new Date(publishTime);
+  const dateStr = date.toISOString().slice(0, 10);
+  if (dateStr === systemDateStr) {
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `今天 ${hours}:${minutes}`;
+  } else {
+    return dateStr;
+  }
+};
 
 export const useNewsStore = defineStore('news', {
   state: () => ({
-    allNewsItems: [
-    ],
-    rawNewsData: [], // 原始后端数据
-    //selectedSection: '全部', // 当前选中的分类
-    isRefreshing: false, // 是否正在刷新页面
+    allNewsItems: [],
+    rawNewsData: [], // Raw backend data
+    isRefreshing: false, // Whether the page is refreshing
+    isLoading: true, // Flag to track loading state
   }),
   getters: {
     filteredNewsItems(state) {
-    //  if (state.selectedSection === '全部') {
-        return state.allNewsItems;
-    //  }
-    //  return state.allNewsItems.filter((item) =>
-    //    item.categories.includes(state.selectedSection)
-    //  );
+      if (state.isLoading) {
+        // You can return a loading state or an empty array while data is being fetched
+        console.log('新闻项正在加载...');
+        return []; // or you can return some loading indicator here
+      }
+      console.log('新闻项：', state.allNewsItems);
+      return state.allNewsItems;
     },
   },
   actions: {
-    //setSection(section) {
-	//	console.log("setSection");
-    //  this.selectedSection = section;
-    //},
-	refreshNews() {
-	  this.isRefreshing = true;
-	  console.log("in refreshing");
-	    setTimeout(() => {
-	      // 使用 Vue.set 触发响应式更新
-	      this.allNewsItems = this.allNewsItems.sort(() => Math.random() - 0.5);
-	      this.isRefreshing = false;
-	    }, 1000);
-	},
-    async fetchNews() {
-		console.log('正在获取新闻');
-	  this.allNewsItems = [];
-      try {
-        const mockResponse = {
-          data: [
-            {
-				id: '', //唯一识别号
-				authoravatar: '', //作者头像
-				authorname: '测试作者', //作者姓名
-				authorid: '', //作者识别号
-				savetime: '2024-12-12', //发布时间
-				title: '测试新闻', //文章题目
-				description: '测试描述', //文章描述
-				components: [], //文章内容
-				likeCount: 1001,
-				shareCount: 37,
-				favoriteCount: 897,
-				followCount: 189, //可选
-				dislikeCount: 199,
-				type: 'main', //可选
-            },
-          ],
-        };
+    // Refresh the news items with random order
+    refreshNews() {
+      this.isRefreshing = true;
+      console.log("in refreshing");
+      setTimeout(() => {
+        this.allNewsItems = this.allNewsItems.sort(() => Math.random() - 0.5);
+        this.isRefreshing = false;
+      }, 1000);
+    },
 
-        this.rawNewsData = mockResponse.data;
-        this.rawNewsData.forEach(this.convertnewsToItems);
+    // Fetch the news based on type (by views, likes, or latest)
+    async fetchNews(page = 1, type = 'top-views') {
+      console.log(`正在获取新闻, type: ${type}, page: ${page}`);
+      this.allNewsItems = [];
+      this.isLoading = true; // Start loading
+      const loadingTimeout = setTimeout(() => {
+        // If the data hasn't been loaded after 3 seconds, set isLoading to false
+        this.isLoading = false;
+        console.log('加载超时');
+      }, 3000); // Set the timeout to 3 seconds
+
+      try {
+        let url = '';
+        switch (type) {
+          case 'top-views':
+            url = `${BASE_URL}/news/paginated/view_count?page=${page}`;
+            break;
+          case 'top-likes':
+            url = `${BASE_URL}/news/paginated/like_count?page=${page}`;
+            break;
+          case 'latest':
+            url = `${BASE_URL}/news/paginated/upload_time?page=${page}`;
+            break;
+          default:
+            throw new Error('Invalid news type');
+        }
+
+        const res = await uni.request({
+          url: url,
+          method: 'GET',
+          header: {
+            "Content-type": "application/json",
+            "Authorization": `Bearer ${jwtToken.value}`,
+          },
+        });
+        console.log('后端返回：', res);
+        const newsIds = res.data.news_ids;
+        console.log('获取的新闻id:', newsIds);
+        if (newsIds.length) {
+          // Get details for each news ID
+          const newsDetails = await Promise.all(newsIds.map(id => this.getNewsDetails(id)));
+          this.rawNewsData = newsDetails;
+          this.rawNewsData.forEach(this.convertNewsToItems);
+        }
+        this.isLoading = false; // Finish loading
+        clearTimeout(loadingTimeout); // Clear the timeout if data is loaded
       } catch (error) {
         console.error('Error fetching data:', error);
+        this.isLoading = false; // Finish loading even on error
+        clearTimeout(loadingTimeout); // Clear the timeout on error
       }
     },
-    convertnewsToItems(news) {
-	  console.log('正在将新闻放入数组...');
-      if (news.type === 'main') {
-        //const categories = news.tabs; // 使用 tabs 作为 categories
-        let link = '';
-        link = 'news_detail';
 
-        this.allNewsItems.push({
+    // Fetch detailed information for a specific news item by ID
+    async getNewsDetails(id) {
+      const url = `${BASE_URL}/news/details/news/${id}`;
+      try {
+        const res = await uni.request({
+          url: url,
+          method: 'GET',
+          header: {
+            'Authorization': `Bearer ${jwtToken.value}`,
+          },
+        });
+        console.log('获取详细信息:', res);
+        return res.data;
+      } catch (error) {
+        console.error('Error fetching article details', error);
+        return null;
+      }
+    },
+
+    // Convert raw news data into a usable format for the UI
+    convertNewsToItems(news) {
+        const formattedNews = {
           id: news.id,
-          link: link,
+          link: 'news_detail',
           title: news.title,
-          description: `${news.savetime}`,
+          description: `${formatPublishTime(news.upload_time)}`,
           info: `阅读量: ${news.followCount} | 点赞量: ${news.likeCount}`,
           form: news.form,
-          //categories: news.tabs, // 添加 categories 字段，在之后可以修改为其他方法
-        });
-      }
+        };
+		 console.log('正在将新闻放入数组...',formattedNews);
+        this.allNewsItems.push(formattedNews);
     },
   },
 });
