@@ -126,15 +126,16 @@ export const useNewsStore = defineStore('news', {
 
     // Convert raw news data into a usable format for the UI
     convertNewsToItems(news) {
+		console.log('正在解析新闻...',news);
         const formattedNews = {
           id: news.id,
           link: 'news_detail',
           title: news.title,
           description: `${formatPublishTime(news.upload_time)}`,
-          info: `阅读量: ${news.followCount} | 点赞量: ${news.likeCount}`,
+          info: `阅读量: ${news.view_count} | 点赞量: ${news.like_count}`,
           form: news.form,
         };
-		 console.log('正在将新闻放入数组...',formattedNews);
+		console.log('正在将新闻放入数组...',formattedNews);
         this.allNewsItems.push(formattedNews);
     },
   },
