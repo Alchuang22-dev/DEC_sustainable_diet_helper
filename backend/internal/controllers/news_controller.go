@@ -1,11 +1,18 @@
 // controllers/news_controller.go
+// internal/controllers/news_controller.go
 package controllers
 
 import (
+    "mime/multipart"
+    // "encoding/json"
+    "path/filepath"
     "net/http"
     "strconv"
     "time"
     "fmt"
+    "os"
+    "io"
+    // "bytes"
 
     "github.com/gin-gonic/gin"
     "gorm.io/gorm"
@@ -20,8 +27,15 @@ func NewNewsController(db *gorm.DB) *NewsController {
     return &NewsController{DB: db}
 }
 
-// 上传新闻
-func (nc *NewsController) UploadNews(c *gin.Context) {
+// CreateDraftRequest 定义创建草稿的请求结构
+type CreateDraftRequest struct {
+    Title      string               `json:"title" binding:"required"`
+    Paragraphs []models.DraftParagraph `json:"paragraphs,omitempty"`
+    // Images 和 Descriptions 将通过 multipart/form-data 处理
+}
+
+// CreateDraft 详细创建草稿
+func (nc *NewsController) CreateDraft(c *gin.Context) {
     // 获取用户 ID
     userID, exists := c.Get("user_id")
     if !exists {
@@ -29,154 +43,445 @@ func (nc *NewsController) UploadNews(c *gin.Context) {
         return
     }
 
-    // 自定义绑定的 JSON 结构
-    var newsRequest struct {
-        Title        string           `json:"title" binding:"required"`
-        Description  string           `json:"description" binding:"required"`
-        NewsType     models.NewsType  `json:"news_type" binding:"required"`
-        Video        *models.Video    `json:"video,omitempty"`
-        Paragraphs   []models.Paragraph `json:"paragraphs,omitempty"`
-        Resources    []models.Resource `json:"resources,omitempty"`
-        ExternalLink string           `json:"external_link,omitempty"`
-        Tags         []string         `json:"tags,omitempty"`
+    // 解析 JSON 请求体
+    var request struct {
+        Title             string   `json:"title"`
+        Paragraphs        []string `json:"paragraphs"`
+        ImageDescriptions []string `json:"image_descriptions"`
+        ImagePaths        []string `json:"image_paths"`
     }
 
-    if err := c.ShouldBindJSON(&newsRequest); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+    if err := c.ShouldBindJSON(&request); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
         return
     }
 
-    // 初始化新闻对象
-    news := models.News{
-        Title:          newsRequest.Title,
-        Description:    newsRequest.Description,
-        NewsType:       newsRequest.NewsType,
-        AuthorID:       userID.(uint), // 设置作者 ID 为当前用户
-        AuthorName:     "",            // 后续通过查询补充
-        AuthorAvatar:   "",            // 后续通过查询补充
-        UploadTime:     time.Now(),
-        ViewCount:      0,
-        LikeCount:      0,
-        FavoriteCount:  0,
-        DislikeCount:   0,
-        ShareCount:     0,
-        LikedByUsers:   []models.User{},
-        FavoritedByUsers: []models.User{},
-        DislikedByUsers: []models.User{},
-        Tags:           []models.Tag{},
-    }
-
-    // 根据 NewsType 进行验证并设置相关字段
-    switch news.NewsType {
-    case models.NewsTypeVideo:
-        if newsRequest.Video == nil || newsRequest.Video.VideoURL == "" {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "Video URL is required for video news"})
-            return
-        }
-        news.Video = *newsRequest.Video
-    case models.NewsTypeRegular:
-        if len(newsRequest.Paragraphs) == 0 && len(newsRequest.Resources) == 0 {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "At least one of Paragraphs or Resources is required for regular news"})
-            return
-        }
-        news.Paragraphs = newsRequest.Paragraphs
-        news.Resources = newsRequest.Resources
-    case models.NewsTypeExternal:
-        if newsRequest.ExternalLink == "" {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "External link is required for external news"})
-            return
-        }
-        news.ExternalLink = newsRequest.ExternalLink
-    default:
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid NewsType"})
+    // 校验必填字段
+    if request.Title == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Title is required"})
         return
     }
 
-    // 处理 Tags
-    if len(newsRequest.Tags) > 0 {
-        var existingTags []models.Tag
-        var tagNames []string
-        tagNames = append(tagNames, newsRequest.Tags...)
-
-        // 查找现有标签
-        nc.DB.Where("name IN ?", tagNames).Find(&existingTags)
-
-        // 创建不存在的标签
-        existingTagNames := map[string]bool{}
-        for _, tag := range existingTags {
-            existingTagNames[tag.Name] = true
-        }
-        for _, tagName := range tagNames {
-            if !existingTagNames[tagName] {
-                newTag := models.Tag{Name: tagName}
-                if err := nc.DB.Create(&newTag).Error; err != nil {
-                    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new tags"})
-                    return
-                }
-                existingTags = append(existingTags, newTag)
-            }
-        }
-
-        // 关联新闻和标签
-        news.Tags = existingTags
-    }
-
-    // 补充作者信息
-    var author models.User
-    if err := nc.DB.First(&author, userID.(uint)).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch author information"})
+    // 校验图片描述和图片路径数量是否匹配
+    if len(request.ImageDescriptions) != len(request.ImagePaths) {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Number of image descriptions and image paths do not match"})
         return
     }
-    news.AuthorName = author.Nickname
-    news.AuthorAvatar = author.AvatarURL
+
+    // 构建段落对象
+    var paragraphs []models.DraftParagraph
+    for _, text := range request.Paragraphs {
+        paragraphs = append(paragraphs, models.DraftParagraph{
+            Text: text,
+        })
+    }
+
+    // 构建图片对象
+    var draftImages []models.DraftImage
+    for i, path := range request.ImagePaths {
+        draftImages = append(draftImages, models.DraftImage{
+            URL:         path,
+            Description: request.ImageDescriptions[i],
+        })
+    }
+
+    // 初始化草稿对象
+    draft := models.Draft{
+        Title:      request.Title,
+        AuthorID:   userID.(uint),
+        CreatedAt:  time.Now(),
+        UpdatedAt:  time.Now(),
+        Paragraphs: paragraphs,
+        Images:     draftImages,
+    }
 
     // 插入数据库
-    if err := nc.DB.Create(&news).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create news"})
+    if err := nc.DB.Create(&draft).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create draft"})
         return
     }
 
-    // 返回成功响应
-    response := struct {
-        ID          uint      `json:"id"`
-        Title       string    `json:"title"`
-        Description string    `json:"description"`
-        UploadTime  time.Time `json:"upload_time"`
-        ViewCount   int       `json:"view_count"`
-        LikeCount   int       `json:"like_count"`
-        FavoriteCount int     `json:"favorite_count"`
-        DislikeCount int      `json:"dislike_count"`
-        ShareCount  int       `json:"share_count"`
-        NewsType    models.NewsType `json:"news_type"`
-        Tags        []string  `json:"tags"`
-    }{
-        ID:           news.ID,
-        Title:        news.Title,
-        Description:  news.Description,
-        UploadTime:   news.UploadTime,
-        ViewCount:    news.ViewCount,
-        LikeCount:    news.LikeCount,
-        FavoriteCount: news.FavoriteCount,
-        DislikeCount:  news.DislikeCount,
-        ShareCount:    news.ShareCount,
-        NewsType:     news.NewsType,
-        Tags:         newsRequest.Tags,
-    }
-
-    c.JSON(http.StatusCreated, response)
+    c.JSON(http.StatusCreated, gin.H{
+        "message":  "Draft created successfully.",
+        "draft_id": draft.ID,
+    })
 }
 
-// 以 id 为索引，获取单个新闻的具体信息
-func (nc *NewsController) GetNewsDetail(c *gin.Context) {
-    // 从 JWT 中获取用户 ID
+// UploadImage 处理单张图片上传，并返回图片的相对路径
+func (nc *NewsController) UploadImage(c *gin.Context) {
+    // 获取用户 ID
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        fmt.Println(userID)
+        return
+    }
+
+    // 获取图片文件
+    file, err := c.FormFile("image")
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Image file is required"})
+        return
+    }
+
+    // 生成保存路径
+    relativePath, err := uploadImage(file, userID.(uint))
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload image"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Image uploaded successfully",
+        "path":    relativePath,
+    })
+}
+
+// uploadImage 处理图片文件上传，并返回图片 URL
+func uploadImage(file *multipart.FileHeader, draftID uint) (string, error) {
+    // 获取基地址
+    baseUploadPath := os.Getenv("BASE_UPLOAD_PATH")
+    if baseUploadPath == "" {
+        baseUploadPath = "./uploads" // 如果没有设置环境变量，使用默认路径
+    }
+
+    // 打开文件
+    src, err := file.Open()
+    if err != nil {
+        return "", err
+    }
+    defer src.Close()
+
+    // 生成保存路径，确保文件名唯一
+    timestamp := time.Now().UnixNano()
+    filename := fmt.Sprintf("%d_%s", timestamp, filepath.Base(file.Filename))
+    relativePath := filepath.Join("drafts", fmt.Sprintf("%d", draftID), filename)
+    savePath := filepath.Join(baseUploadPath, relativePath)
+
+    // 创建目标文件
+    out, err := createFile(savePath)
+    if err != nil {
+        return "", err
+    }
+    defer out.Close()
+
+    // 复制文件内容
+    _, err = io.Copy(out, src)
+    if err != nil {
+        return "", err
+    }
+
+    // 返回图片的相对路径
+    return relativePath, nil
+}
+
+// createFile 创建文件夹并创建目标文件
+func createFile(savePath string) (*os.File, error) {
+    // 创建文件夹
+    dir := filepath.Dir(savePath)
+    if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+        return nil, err
+    }
+
+    // 创建文件
+    return os.Create(savePath)
+}
+
+// ConvertDraftToNews 处理将草稿转换为新闻的请求
+func (nc *NewsController) ConvertDraftToNews(c *gin.Context) {
+    // 获取用户 ID
     userID, exists := c.Get("user_id")
     if !exists {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
         return
     }
-    userIDInt, ok := userID.(uint)
-    if !ok {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
+
+    type ConvertDraftToNewsRequest struct {
+        DraftID uint `json:"draft_id" binding:"required"`
+    }
+
+    // 绑定 JSON 请求体
+    var convertRequest ConvertDraftToNewsRequest
+    if err := c.ShouldBindJSON(&convertRequest); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+        return
+    }
+
+    // 查找草稿，确保草稿属于当前用户
+    var draft models.Draft
+    if err := nc.DB.Preload("Paragraphs").Preload("Images").First(&draft, "id = ? AND author_id = ?", convertRequest.DraftID, userID.(uint)).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            c.JSON(http.StatusNotFound, gin.H{"error": "Draft not found"})
+            return
+        }
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find draft"})
+        return
+    }
+
+    // 初始化新闻对象
+    news := models.News{
+        Title:           draft.Title,
+        AuthorID:        draft.AuthorID,
+        UploadTime:      time.Now(),
+        ViewCount:       0,
+        LikeCount:       0,
+        FavoriteCount:   0,
+        DislikeCount:    0,
+        ShareCount:      0,
+        LikedByUsers:    []models.User{},
+        FavoritedByUsers: []models.User{},
+        DislikedByUsers: []models.User{},
+        Paragraphs:      []models.Paragraph{},
+        Images:          []models.NewsImage{},
+    }
+
+    // 复制段落
+    for _, p := range draft.Paragraphs {
+        news.Paragraphs = append(news.Paragraphs, models.Paragraph{
+            Text: p.Text,
+        })
+    }
+
+    // 复制图片，包括描述
+    for _, img := range draft.Images {
+        news.Images = append(news.Images, models.NewsImage{
+            URL:         img.URL,
+            Description: img.Description, // 复制描述
+        })
+    }
+
+    // 开始事务
+    tx := nc.DB.Begin()
+    if tx.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+        return
+    }
+
+    // 创建新闻
+    if err := tx.Create(&news).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create news"})
+        return
+    }
+
+    // 删除关联的图片数据
+    if err := tx.Where("draft_id = ?", draft.ID).Delete(&models.DraftImage{}).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete draft images"})
+        return
+    }
+    // 删除关联的段落数据
+    if err := tx.Where("draft_id = ?", draft.ID).Delete(&models.DraftParagraph{}).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete draft paragraphs"})
+        return
+    }
+
+    // 删除草稿及其关联的段落和图片
+    if err := tx.Delete(&draft).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete draft"})
+        return
+    }
+
+    // 提交事务
+    if err := tx.Commit().Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Draft converted to news successfully.",
+        "news_id": news.ID,
+    })
+}
+
+// UpdateDraft 更新草稿
+func (nc *NewsController) UpdateDraft(c *gin.Context) {
+    // 获取用户 ID
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    // 获取草稿 ID
+    draftID, err := strconv.Atoi(c.Param("id"))
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid draft ID"})
+        return
+    }
+
+    // 查找草稿
+    var draft models.Draft
+    if err := nc.DB.Preload("Images").First(&draft, draftID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Draft not found"})
+        return
+    }
+
+    // 验证是否为草稿作者
+    if draft.AuthorID != userID {
+        c.JSON(http.StatusForbidden, gin.H{"error": "You do not have permission to edit this draft"})
+        return
+    }
+
+    // 删除旧草稿
+    if err := nc.DB.Transaction(func(tx *gorm.DB) error {
+        // 删除关联段落
+        if err := tx.Where("draft_id = ?", draft.ID).Delete(&models.DraftParagraph{}).Error; err != nil {
+            return err
+        }
+
+        // 删除关联图片及本地文件
+        for _, image := range draft.Images {
+            filePath := filepath.Join(os.Getenv("BASE_UPLOAD_PATH"), image.URL)
+            if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+                return fmt.Errorf("failed to delete file: %s", filePath)
+            }
+        }
+        if err := tx.Where("draft_id = ?", draft.ID).Delete(&models.DraftImage{}).Error; err != nil {
+            return err
+        }
+
+        // 删除草稿本体
+        if err := tx.Delete(&draft).Error; err != nil {
+            return err
+        }
+
+        return nil
+    }); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete old draft"})
+        return
+    }
+
+    // 创建新草稿
+    var request struct {
+        Title             string   `json:"title"`
+        Paragraphs        []string `json:"paragraphs"`
+        ImageDescriptions []string `json:"image_descriptions"`
+        ImagePaths        []string `json:"image_paths"`
+    }
+
+    if err := c.ShouldBindJSON(&request); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+        return
+    }
+
+    // 校验必填字段
+    if request.Title == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Title is required"})
+        return
+    }
+    if len(request.ImageDescriptions) != len(request.ImagePaths) {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Number of image descriptions and image paths do not match"})
+        return
+    }
+
+    // 构建段落对象
+    var paragraphs []models.DraftParagraph
+    for _, text := range request.Paragraphs {
+        paragraphs = append(paragraphs, models.DraftParagraph{
+            Text: text,
+        })
+    }
+
+    // 构建图片对象
+    var draftImages []models.DraftImage
+    for i, path := range request.ImagePaths {
+        draftImages = append(draftImages, models.DraftImage{
+            URL:         path,
+            Description: request.ImageDescriptions[i],
+        })
+    }
+
+    // 创建新草稿
+    newDraft := models.Draft{
+        Title:      request.Title,
+        AuthorID:   userID.(uint),
+        CreatedAt:  time.Now(),
+        UpdatedAt:  time.Now(),
+        Paragraphs: paragraphs,
+        Images:     draftImages,
+    }
+
+    if err := nc.DB.Create(&newDraft).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new draft"})
+        return
+    }
+
+    c.JSON(http.StatusCreated, gin.H{
+        "message":  "Draft updated successfully",
+        "draft_id": newDraft.ID,
+    })
+}
+
+// DeleteDraft 删除草稿及其图片文件
+func (nc *NewsController) DeleteDraft(c *gin.Context) {
+    // 获取用户 ID
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    // 获取草稿 ID
+    draftID, err := strconv.Atoi(c.Param("id"))
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid draft ID"})
+        return
+    }
+
+    // 查找草稿
+    var draft models.Draft
+    if err := nc.DB.Preload("Images").First(&draft, draftID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Draft not found"})
+        return
+    }
+
+    // 验证是否为草稿作者
+    if draft.AuthorID != userID {
+        c.JSON(http.StatusForbidden, gin.H{"error": "You do not have permission to delete this draft"})
+        return
+    }
+
+    // 删除草稿记录及其关联的段落和图片
+    if err := nc.DB.Transaction(func(tx *gorm.DB) error {
+        // 删除关联的段落
+        if err := tx.Where("draft_id = ?", draft.ID).Delete(&models.DraftParagraph{}).Error; err != nil {
+            return err
+        }
+
+        // 删除关联的图片，同时删除本地文件
+        for _, image := range draft.Images {
+            if err := deleteLocalFile(image.URL); err != nil {
+                fmt.Printf("Failed to delete local file: %s, error: %v\n", image.URL, err)
+            }
+        }
+
+        if err := tx.Where("draft_id = ?", draft.ID).Delete(&models.DraftImage{}).Error; err != nil {
+            return err
+        }
+
+        // 删除草稿
+        if err := tx.Delete(&draft).Error; err != nil {
+            return err
+        }
+
+        return nil
+    }); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete draft"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Draft deleted successfully."})
+}
+
+// DeleteNews 删除新闻
+func (nc *NewsController) DeleteNews(c *gin.Context) {
+    // 获取用户 ID
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
         return
     }
 
@@ -187,218 +492,497 @@ func (nc *NewsController) GetNewsDetail(c *gin.Context) {
         return
     }
 
-    // 查询新闻基础信息
+    // 查找新闻
     var news models.News
-    if err := nc.DB.Preload("Tags").
-        Preload("Author").
-        First(&news, newsID).Error; err != nil {
+    if err := nc.DB.Preload("Images").First(&news, newsID).Error; err != nil {
         c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
         return
     }
 
-    // 查询用户是否点赞、收藏、点踩了该新闻
-    var isLiked, isFavorited, isDisliked int64
-    if err := nc.DB.Table("user_likes_news").
-        Where("user_id = ? AND news_id = ?", userIDInt, newsID).
-        Count(&isLiked).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check like status"})
-        return
-    }
-    if err := nc.DB.Table("user_favorites_news").
-        Where("user_id = ? AND news_id = ?", userIDInt, newsID).
-        Count(&isFavorited).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check favorite status"})
-        return
-    }
-    if err := nc.DB.Table("user_dislikes_news").
-        Where("user_id = ? AND news_id = ?", userIDInt, newsID).
-        Count(&isDisliked).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check dislike status"})
+    // 验证是否为新闻作者
+    if news.AuthorID != userID {
+        c.JSON(http.StatusForbidden, gin.H{"error": "You do not have permission to delete this news"})
         return
     }
 
-    // 查询所有一级评论
-    var comments []models.Comment
-    if err := nc.DB.Where("news_id = ? AND is_reply = ?", newsID, false).
-        Preload("Replies").
-        Find(&comments).Error; err != nil {
+    // 开始事务
+    if err := nc.DB.Transaction(func(tx *gorm.DB) error {
+        // 删除关联的段落
+        if err := tx.Where("news_id = ?", news.ID).Delete(&models.Paragraph{}).Error; err != nil {
+            return err
+        }
+
+        // 删除关联的图片
+        if err := tx.Where("news_id = ?", news.ID).Delete(&models.NewsImage{}).Error; err != nil {
+            return err
+        }
+
+        // 删除本地图片文件
+        for _, image := range news.Images {
+            if err := deleteLocalFile(image.URL); err != nil {
+                // 记录日志，但不终止事务
+                fmt.Printf("Failed to delete local file: %s, error: %v\n", image.URL, err)
+            }
+        }
+
+        // 删除新闻
+        if err := tx.Delete(&news).Error; err != nil {
+            return err
+        }
+
+        return nil
+    }); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete news"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "News deleted successfully."})
+}
+
+// deleteLocalFile 删除本地文件
+func deleteLocalFile(filePath string) error {
+    baseUploadPath := os.Getenv("BASE_UPLOAD_PATH")
+    if baseUploadPath == "" {
+        baseUploadPath = "./uploads" // 如果没有设置环境变量，使用默认路径
+    }
+
+    // 拼接完整路径
+    fullPath := filepath.Join(baseUploadPath, filePath)
+    if err := os.Remove(fullPath); err != nil {
+        if os.IsNotExist(err) {
+            // 如果文件不存在，不认为是错误
+            return nil
+        }
+        return err
+    }
+
+    return nil
+}
+
+// GetMyNews 获取用户创建的新闻 ID 列表
+func (nc *NewsController) GetMyNews(c *gin.Context) {
+    // 获取用户 ID
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    var newsList []models.News
+    if err := nc.DB.Select("id").Where("author_id = ?", userID).Order("upload_time DESC").Find(&newsList).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch news"})
+        return
+    }
+
+    // 提取 ID 列表
+    ids := make([]uint, len(newsList))
+    for i, news := range newsList {
+        ids[i] = news.ID
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "news_ids": ids,
+    })
+}
+
+// GetMyDrafts 获取用户创建的草稿 ID 列表
+func (nc *NewsController) GetMyDrafts(c *gin.Context) {
+    // 获取用户 ID
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    var draftList []models.Draft
+    if err := nc.DB.Select("id").Where("author_id = ?", userID).Order("updated_at DESC").Find(&draftList).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch drafts"})
+        return
+    }
+
+    // 提取 ID 列表
+    ids := make([]uint, len(draftList))
+    for i, draft := range draftList {
+        ids[i] = draft.ID
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "draft_ids": ids,
+    })
+}
+
+// PreviewNewsRequest 定义预览新闻的请求结构
+type PreviewNewsRequest struct {
+    IDs []uint `json:"ids" binding:"required"`
+}
+
+// PreviewNewsResponse 定义预览新闻的响应结构
+type PreviewNewsResponse struct {
+    Previews []PreviewNewsItem `json:"previews"`
+}
+
+// PreviewNewsItem 定义单个新闻预览的结构
+type PreviewNewsItem struct {
+    ID                 uint   `json:"id"`
+    Title              string `json:"title"`
+    FirstParagraphText string `json:"first_paragraph_text"`
+    FirstImageURL      string `json:"first_image_url"`
+    ImageDescription   string `json:"image_description"`      // 新增描述字段
+    AuthorNickname     string `json:"author_nickname"`
+    AuthorAvatarURL    string `json:"author_avatar_url"`
+    LikeCount          int    `json:"like_count"`
+}
+
+// PreviewNews 处理新闻预览的请求
+func (nc *NewsController) PreviewNews(c *gin.Context) {
+    var req PreviewNewsRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+        return
+    }
+
+    var newsList []models.News
+    if err := nc.DB.Preload("Author").Preload("Paragraphs").Preload("Images").
+        Where("id IN ?", req.IDs).Find(&newsList).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch news"})
+        return
+    }
+
+    previews := make([]PreviewNewsItem, 0, len(newsList))
+    for _, news := range newsList {
+        firstParagraphText := ""
+        if len(news.Paragraphs) > 0 {
+            firstParagraphText = news.Paragraphs[0].Text
+        }
+
+        firstImageURL := ""
+        imageDescription := ""
+        if len(news.Images) > 0 {
+            firstImageURL = news.Images[0].URL
+            imageDescription = news.Images[0].Description // 获取描述
+        }
+
+        preview := PreviewNewsItem{
+            ID:                 news.ID,
+            Title:              news.Title,
+            FirstParagraphText: firstParagraphText,
+            FirstImageURL:      firstImageURL,
+            ImageDescription:   imageDescription, // 设置描述
+            AuthorNickname:     news.Author.Nickname,
+            AuthorAvatarURL:    news.Author.AvatarURL,
+            LikeCount:          news.LikeCount,
+        }
+        previews = append(previews, preview)
+    }
+
+    c.JSON(http.StatusOK, PreviewNewsResponse{
+        Previews: previews,
+    })
+}
+
+// PreviewDraftRequest 定义预览草稿的请求结构
+type PreviewDraftRequest struct {
+    IDs []uint `json:"ids" binding:"required"`
+}
+
+// PreviewDraftResponse 定义预览草稿的响应结构
+type PreviewDraftResponse struct {
+    Previews []PreviewDraftItem `json:"previews"`
+}
+
+// PreviewDraftItem 定义单个草稿预览的结构
+type PreviewDraftItem struct {
+    ID                 uint   `json:"id"`
+    Title              string `json:"title"`
+    FirstParagraphText string `json:"first_paragraph_text"`
+    FirstImageURL      string `json:"first_image_url"`
+    ImageDescription   string `json:"image_description"` // 新增描述字段
+}
+
+// PreviewDrafts 处理草稿预览的请求
+func (nc *NewsController) PreviewDrafts(c *gin.Context) {
+    var req PreviewDraftRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+        return
+    }
+
+    var drafts []models.Draft
+    if err := nc.DB.Preload("Paragraphs").Preload("Images").
+        Where("id IN ?", req.IDs).Find(&drafts).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch drafts"})
+        return
+    }
+
+    previews := make([]PreviewDraftItem, 0, len(drafts))
+    for _, draft := range drafts {
+        firstParagraphText := ""
+        if len(draft.Paragraphs) > 0 {
+            firstParagraphText = draft.Paragraphs[0].Text
+        }
+
+        firstImageURL := ""
+        imageDescription := ""
+        if len(draft.Images) > 0 {
+            firstImageURL = draft.Images[0].URL
+            imageDescription = draft.Images[0].Description // 获取描述
+        }
+
+        preview := PreviewDraftItem{
+            ID:                 draft.ID,
+            Title:              draft.Title,
+            FirstParagraphText: firstParagraphText,
+            FirstImageURL:      firstImageURL,
+            ImageDescription:   imageDescription, // 设置描述
+        }
+        previews = append(previews, preview)
+    }
+
+    c.JSON(http.StatusOK, PreviewDraftResponse{
+        Previews: previews,
+    })
+}
+
+// AuthorInfo 定义作者信息的结构
+type AuthorInfo struct {
+    ID         uint   `json:"id"`
+    Nickname   string `json:"nickname"`
+    AvatarURL  string `json:"avatar_url"`
+}
+
+// NewsDetailResponse 定义详细查看新闻的响应结构
+type NewsDetailResponse struct {
+    ID              uint          `json:"id"`
+    Title           string        `json:"title"`
+    UploadTime      time.Time     `json:"upload_time"`
+    ViewCount       int           `json:"view_count"`
+    LikeCount       int           `json:"like_count"`
+    FavoriteCount   int           `json:"favorite_count"`
+    DislikeCount    int           `json:"dislike_count"`
+    ShareCount      int           `json:"share_count"`
+    Author          AuthorInfo    `json:"author"`
+    Paragraphs      []models.Paragraph `json:"paragraphs"`
+    Images          []models.NewsImage `json:"images"`
+    Comments        []models.Comment   `json:"comments"`
+}
+
+// GetNewsDetails 详细查看单个新闻
+func (nc *NewsController) GetNewsDetails(c *gin.Context) {
+    // 获取用户 ID
+    _, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    // 获取新闻 ID
+    newsIDStr := c.Param("id")
+    newsID, err := strconv.ParseUint(newsIDStr, 10, 64)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid news ID"})
+        return
+    }
+
+    var news models.News
+    if err := nc.DB.Preload("Author").Preload("Paragraphs").Preload("Images").
+        First(&news, "id = ?", newsID).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+            return
+        }
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch news details"})
+        return
+    }
+
+    // 获取顶级评论
+    var topLevelComments []models.Comment
+    if err := nc.DB.Preload("Replies").Where("news_id = ? AND parent_id IS NULL", newsID).Find(&topLevelComments).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch comments"})
         return
     }
 
-    // 根据新闻类型加载特定资源
-    var video models.Video
-    var paragraphs []models.Paragraph
-    var resources []models.Resource
-    switch news.NewsType {
-    case models.NewsTypeVideo:
-        if err := nc.DB.Where("news_id = ?", newsID).First(&video).Error; err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load video details"})
-            return
-        }
-    case models.NewsTypeRegular:
-        if err := nc.DB.Where("news_id = ?", newsID).Find(&paragraphs).Error; err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load paragraphs"})
-            return
-        }
-        if err := nc.DB.Where("news_id = ?", newsID).Find(&resources).Error; err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load resources"})
-            return
-        }
+    // 构建递归评论结构
+    comments := buildCommentTree(nc.DB, topLevelComments)
+
+    response := NewsDetailResponse{
+        ID:            news.ID,
+        Title:         news.Title,
+        UploadTime:    news.UploadTime,
+        ViewCount:     news.ViewCount,
+        LikeCount:     news.LikeCount,
+        FavoriteCount: news.FavoriteCount,
+        DislikeCount:  news.DislikeCount,
+        ShareCount:    news.ShareCount,
+        Author: AuthorInfo{
+            ID:        news.Author.ID,
+            Nickname:  news.Author.Nickname,
+            AvatarURL: news.Author.AvatarURL,
+        },
+        Paragraphs: news.Paragraphs,
+        Images:     news.Images,
+        Comments:   comments,
     }
 
-    // 构建响应
-    response := gin.H{
-        "id":             news.ID,
-        "title":          news.Title,
-        "description":    news.Description,
-        "upload_time":    news.UploadTime,
-        "view_count":     news.ViewCount,
-        "like_count":     news.LikeCount,
-        "favorite_count": news.FavoriteCount,
-        "dislike_count":  news.DislikeCount,
-        "share_count":    news.ShareCount,
-        "news_type":      news.NewsType,
-        "author_name":    news.AuthorName,
-        "author_avatar":  news.AuthorAvatar,
-        "tags":           news.Tags,
-        "is_liked":       isLiked,              // 该用户是否点赞了新闻
-        "is_favorited":   isFavorited,
-        "is_disliked":    isDisliked,
-        "comments":       comments,
-    }
-
-    // 根据 NewsType 动态添加字段
-    switch news.NewsType {
-    case models.NewsTypeVideo:
-        response["video"] = video
-    case models.NewsTypeRegular:
-        response["paragraphs"] = paragraphs
-        response["resources"] = resources
-    case models.NewsTypeExternal:
-        response["external_link"] = news.ExternalLink
-    }
-
-    // 返回响应
     c.JSON(http.StatusOK, response)
 }
 
-// 以某些条件为约束，查看多个新闻预览
-func (nc *NewsController) GetNewsPreviews(c *gin.Context) {
-    // 解析查询参数
-    category := c.Query("category")
-    page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+// buildCommentTree 构建递归评论结构
+func buildCommentTree(db *gorm.DB, comments []models.Comment) []models.Comment {
+    for i := range comments {
+        var replies []models.Comment
+        if err := db.Preload("Replies").Where("parent_id = ?", comments[i].ID).Find(&replies).Error; err == nil {
+            comments[i].Replies = buildCommentTree(db, replies)
+        }
+    }
+    return comments
+}
+
+// DraftDetailResponse 定义详细查看草稿的响应结构
+type DraftDetailResponse struct {
+    ID          uint                `json:"id"`
+    Title       string              `json:"title"`
+    Author      AuthorInfo          `json:"author"`
+    CreatedAt   time.Time           `json:"created_at"`
+    UpdatedAt   time.Time           `json:"updated_at"`
+    Paragraphs  []models.DraftParagraph `json:"paragraphs"`
+    Images      []models.DraftImage `json:"images"`
+}
+
+// GetDraftDetails 详细查看单个草稿
+func (nc *NewsController) GetDraftDetails(c *gin.Context) {
+    // 获取用户 ID
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    // 获取草稿 ID
+    draftIDStr := c.Param("id")
+    draftID, err := strconv.ParseUint(draftIDStr, 10, 64)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid draft ID"})
+        return
+    }
+
+    var draft models.Draft
+    if err := nc.DB.Preload("Author").Preload("Paragraphs").Preload("Images").
+        First(&draft, "id = ? AND author_id = ?", draftID, userID).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            c.JSON(http.StatusNotFound, gin.H{"error": "Draft not found"})
+            return
+        }
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch draft details"})
+        return
+    }
+
+    response := DraftDetailResponse{
+        ID:       draft.ID,
+        Title:    draft.Title,
+        Author: AuthorInfo{
+            ID:        draft.Author.ID,
+            Nickname:  draft.Author.Nickname,
+            AvatarURL: draft.Author.AvatarURL,
+        },
+        CreatedAt:  draft.CreatedAt,
+        UpdatedAt:  draft.UpdatedAt,
+        Paragraphs: draft.Paragraphs,
+        Images:     draft.Images,
+    }
+
+    c.JSON(http.StatusOK, response)
+}
+
+// GetNewsByViewCount 获取按观看量降序排序的新闻 ID 列表，每页 10 条
+func (nc *NewsController) GetNewsByViewCount(c *gin.Context) {
+    pageStr := c.Query("page")
+    page, err := strconv.Atoi(pageStr)
     if err != nil || page < 1 {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
         return
     }
-    size, err := strconv.Atoi(c.DefaultQuery("size", "10"))
-    if err != nil || size < 1 {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page size"})
-        return
-    }
-    sortBy := c.DefaultQuery("sort_by", "upload_time") // 默认按上传时间排序
-    order := c.DefaultQuery("order", "desc")          // 默认降序
 
-    // 校验排序字段和顺序
-    allowedSortFields := map[string]bool{
-        "upload_time": true,
-        "view_count":  true,
-        "like_count":  true,
-    }
-    if !allowedSortFields[sortBy] {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sort_by parameter"})
-        return
-    }
-    if order != "asc" && order != "desc" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order parameter"})
+    var newsList []models.News
+    if err := nc.DB.Select("id").
+        Order("view_count DESC").
+        Limit(10).
+        Offset((page - 1) * 10).
+        Find(&newsList).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch news"})
         return
     }
 
-    // 计算分页偏移量
-    offset := (page - 1) * size
-
-    // 定义预览响应结构
-    type NewsPreview struct {
-        ID             uint       `json:"id"`
-        Title          string     `json:"title"`
-        Description    string     `json:"description"`
-        UploadTime     time.Time  `json:"upload_time"`
-        ViewCount      int        `json:"view_count"`
-        ShareCount     int        `json:"share_count"`
-        LikeCount      int        `json:"like_count"`
-        FavoriteCount  int        `json:"favorite_count"`
-        DislikeCount   int        `json:"dislike_count"`
-        NewsType       string     `json:"news_type"`
-        AuthorName     string     `json:"author_name"`
-        AuthorAvatar   string     `json:"author_avatar"`
-        Tags           []string   `json:"tags"`
-        ExtraField     string     `json:"extra_field,omitempty"` // 根据 NewsType 动态字段 类似于预览图片 TODO
+    // 提取 ID 列表
+    ids := make([]uint, len(newsList))
+    for i, news := range newsList {
+        ids[i] = news.ID
     }
 
-    // 查询新闻列表
-    var news []models.News
-    query := nc.DB.Preload("Tags").Preload("Author").
-        Order(fmt.Sprintf("%s %s", sortBy, order)).
-        Offset(offset).
-        Limit(size)
-    if category != "" {
-        query = query.Where("type = ?", category)
-    }
-
-    if err := query.Find(&news).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch news previews"})
-        return
-    }
-
-    // 转换为响应格式
-    previews := make([]NewsPreview, len(news))
-    for i, n := range news {
-        tags := []string{}
-        for _, tag := range n.Tags {
-            tags = append(tags, tag.Name)
-        }
-
-        preview := NewsPreview{
-            ID:            n.ID,
-            Title:         n.Title,
-            Description:   n.Description,
-            UploadTime:    n.UploadTime,
-            ViewCount:     n.ViewCount,
-            ShareCount:    n.ShareCount,
-            LikeCount:     n.LikeCount,
-            FavoriteCount: n.FavoriteCount,
-            DislikeCount:  n.DislikeCount,
-            NewsType:      string(n.NewsType),
-            AuthorName:    n.AuthorName,
-            AuthorAvatar:  n.AuthorAvatar,
-            Tags:          tags,
-        }
-
-        // 根据 NewsType 动态添加字段
-        // TODO
-        switch n.NewsType {
-        case models.NewsTypeVideo:
-            preview.ExtraField = "Video-specific data" // 示例
-        case models.NewsTypeRegular:
-            preview.ExtraField = "Regular-specific data" // 示例
-        case models.NewsTypeExternal:
-            preview.ExtraField = n.ExternalLink // 示例：返回外部链接
-        }
-
-        previews[i] = preview
-    }
-
-    // 返回响应
     c.JSON(http.StatusOK, gin.H{
-        "total": len(previews),
-        "page":  page,
-        "size":  size,
-        "data":  previews,
+        "news_ids": ids,
     })
 }
 
-// 添加评论
+// GetNewsByLikeCount 获取按点赞量降序排序的新闻 ID 列表，每页 10 条
+func (nc *NewsController) GetNewsByLikeCount(c *gin.Context) {
+    pageStr := c.Query("page")
+    page, err := strconv.Atoi(pageStr)
+    if err != nil || page < 1 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
+        return
+    }
+
+    var newsList []models.News
+    if err := nc.DB.Select("id").
+        Order("like_count DESC").
+        Limit(10).
+        Offset((page - 1) * 10).
+        Find(&newsList).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch news"})
+        return
+    }
+
+    // 提取 ID 列表
+    ids := make([]uint, len(newsList))
+    for i, news := range newsList {
+        ids[i] = news.ID
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "news_ids": ids,
+    })
+}
+
+// GetNewsByUploadTime 获取按上传时间降序排序的新闻 ID 列表，每页 10 条
+func (nc *NewsController) GetNewsByUploadTime(c *gin.Context) {
+    pageStr := c.Query("page")
+    page, err := strconv.Atoi(pageStr)
+    if err != nil || page < 1 {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page number"})
+        return
+    }
+
+    var newsList []models.News
+    if err := nc.DB.Select("id").
+        Order("upload_time DESC").
+        Limit(10).
+        Offset((page - 1) * 10).
+        Find(&newsList).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch news"})
+        return
+    }
+
+    // 提取 ID 列表
+    ids := make([]uint, len(newsList))
+    for i, news := range newsList {
+        ids[i] = news.ID
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "news_ids": ids,
+    })
+}
+
 func (nc *NewsController) AddComment(c *gin.Context) {
     // 从 JWT 中获取用户 ID
     userID, exists := c.Get("user_id")
@@ -407,27 +991,26 @@ func (nc *NewsController) AddComment(c *gin.Context) {
         return
     }
 
-    // 定义请求体绑定结构，避免前端上传不必要的字段
+    // 请求体绑定
     var commentRequest struct {
         NewsID   uint   `json:"news_id" binding:"required"`
         Content  string `json:"content" binding:"required"`
         IsReply  bool   `json:"is_reply"`
         ParentID *uint  `json:"parent_id,omitempty"`
     }
-
     if err := c.ShouldBindJSON(&commentRequest); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
         return
     }
 
-    // 检查 newsID 是否有效
+    // 检查新闻是否存在
     var newsExists bool
-    if err := nc.DB.Model(&models.News{}).Select("count(*) > 0").Where("id = ?", commentRequest.NewsID).Find(&newsExists).Error; err != nil || !newsExists {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid newsID"})
+    if err := nc.DB.Model(&models.News{}).Select("count(*) > 0").Where("id = ?", commentRequest.NewsID).Scan(&newsExists).Error; err != nil || !newsExists {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid news ID"})
         return
     }
 
-    // 检查 is_reply 字段逻辑
+    // 校验父评论逻辑
     if commentRequest.IsReply {
         if commentRequest.ParentID == nil || *commentRequest.ParentID == 0 {
             c.JSON(http.StatusBadRequest, gin.H{"error": "ParentID is required for a reply"})
@@ -440,43 +1023,115 @@ func (nc *NewsController) AddComment(c *gin.Context) {
             return
         }
 
-        // 确保 parentComment 的 newsID 与当前 comment 的 newsID 一致
         if parentComment.NewsID != commentRequest.NewsID {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "NewsID does not match the parent comment's newsID"})
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Parent comment does not belong to the specified news"})
             return
         }
     } else {
-        // 如果不是回复评论，则 parentID 必须为 nil 或 0
         if commentRequest.ParentID != nil && *commentRequest.ParentID != 0 {
-            c.JSON(http.StatusBadRequest, gin.H{"error": "ParentID must be 0 for a top-level comment"})
+            c.JSON(http.StatusBadRequest, gin.H{"error": "ParentID must be empty for a top-level comment"})
             return
         }
     }
 
-    // 创建评论
+    // 创建评论对象
     comment := models.Comment{
-        NewsID:     commentRequest.NewsID,
-        Content:    commentRequest.Content,
-        UserID:     userID.(uint), // 从 JWT 获取的用户 ID
-        IsReply:    commentRequest.IsReply,
-        ParentID:   commentRequest.ParentID,
+        NewsID:      commentRequest.NewsID,
+        Content:     commentRequest.Content,
+        UserID:      userID.(uint),
+        IsReply:     commentRequest.IsReply,
+        ParentID:    commentRequest.ParentID,
         PublishTime: time.Now(),
-        LikeCount:  0,
-        Replies: []models.Comment{},
+        LikeCount:   0,
     }
 
+    // 保存评论
     if err := nc.DB.Create(&comment).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create comment"})
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add comment"})
         return
     }
 
     c.JSON(http.StatusCreated, gin.H{
         "message": "Comment added successfully",
-        "comment": comment,
+        "comment": gin.H{
+            "id":        comment.ID,
+            "news_id":   comment.NewsID,
+            "content":   comment.Content,
+            "is_reply":  comment.IsReply,
+            "parent_id": comment.ParentID,
+            "user_id":   comment.UserID,
+            "publish_time": comment.PublishTime,
+            "like_count":   comment.LikeCount,
+        },
     })
 }
 
-// 用户点赞新闻
+func (nc *NewsController) DeleteComment(c *gin.Context) {
+    // 从 JWT 中获取用户 ID
+    userID, exists := c.Get("user_id")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+        return
+    }
+
+    // 获取评论 ID
+    commentID, err := strconv.Atoi(c.Param("id"))
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid comment ID"})
+        return
+    }
+
+    // 查找评论
+    var comment models.Comment
+    if err := nc.DB.First(&comment, commentID).Error; err != nil {
+        c.JSON(http.StatusNotFound, gin.H{"error": "Comment not found"})
+        return
+    }
+
+    // 验证用户是否为评论作者
+    if comment.UserID != userID {
+        c.JSON(http.StatusForbidden, gin.H{"error": "You do not have permission to delete this comment"})
+        return
+    }
+
+    // 删除评论及其子评论
+    if err := nc.DB.Transaction(func(tx *gorm.DB) error {
+        // 递归删除子评论
+        if err := deleteCommentRecursive(tx, commentID); err != nil {
+            return err
+        }
+        return nil
+    }); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete comment"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Comment deleted successfully"})
+}
+
+// deleteCommentRecursive 删除评论及其所有子评论
+func deleteCommentRecursive(tx *gorm.DB, commentID int) error {
+    // 删除所有子评论
+    var childComments []models.Comment
+    if err := tx.Where("parent_id = ?", commentID).Find(&childComments).Error; err != nil {
+        return err
+    }
+
+    for _, child := range childComments {
+        if err := deleteCommentRecursive(tx, int(child.ID)); err != nil {
+            return err
+        }
+    }
+
+    // 删除当前评论
+    if err := tx.Delete(&models.Comment{}, commentID).Error; err != nil {
+        return err
+    }
+
+    return nil
+}
+
+// LikeNews 处理用户点赞新闻的请求
 func (nc *NewsController) LikeNews(c *gin.Context) {
     // 从 JWT 中获取用户 ID
     userID, exists := c.Get("user_id")
@@ -485,51 +1140,84 @@ func (nc *NewsController) LikeNews(c *gin.Context) {
         return
     }
 
+    // 获取新闻 ID
     newsID, err := strconv.Atoi(c.Param("id"))
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid news ID"})
         return
     }
 
-    // 检查新闻是否存在
+    // 开始事务
+    tx := nc.DB.Begin()
+    if tx.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+        return
+    }
+
+    defer func() {
+        if r := recover(); r != nil {
+            tx.Rollback()
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+        }
+    }()
+
+    // 查找新闻
     var news models.News
-    if err := nc.DB.First(&news, newsID).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+    if err := tx.First(&news, newsID).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            tx.Rollback()
+            c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+            return
+        }
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find news"})
         return
     }
 
     // 检查用户是否已点赞
-    var likeExists int64
-    if err := nc.DB.Table("user_likes_news").
-        Where("user_id = ? AND news_id = ?", userID, newsID).
-        Count(&likeExists).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check like status"})
-        return
-    }
-    if likeExists > 0 {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "You have already liked this news"})
+    var user models.User
+    if err := tx.Preload("LikedByUsers").First(&user, userID).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find user"})
         return
     }
 
+    // 如果用户已点赞，返回错误
+    for _, likedNews := range user.LikedNews {
+        if likedNews.ID == uint(newsID) {
+            tx.Rollback()
+            c.JSON(http.StatusBadRequest, gin.H{"error": "You have already liked this news"})
+            return
+        }
+    }
+
     // 建立点赞关系
-    if err := nc.DB.Exec("INSERT INTO user_likes_news (user_id, news_id) VALUES (?, ?)", userID, newsID).Error; err != nil {
+    if err := tx.Model(&user).Association("LikedByUsers").Append(&news); err != nil {
+        tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to like news"})
         return
     }
 
     // 增加点赞数
-    if err := nc.DB.Model(&news).Update("like_count", gorm.Expr("like_count + 1")).Error; err != nil {
+    if err := tx.Model(&news).UpdateColumn("like_count", gorm.Expr("like_count + ?", 1)).Error; err != nil {
+        tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update like count"})
         return
     }
 
+    // 提交事务
+    if err := tx.Commit().Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+        return
+    }
+
     c.JSON(http.StatusOK, gin.H{
-        "message": "News liked successfully",
-        "like_count": news.LikeCount + 1,
+        "message":     "News liked successfully",
+        "like_count":  news.LikeCount + 1,
     })
 }
 
-// 取消用户点赞新闻
+// CancelLikeNews 处理用户取消点赞新闻的请求
 func (nc *NewsController) CancelLikeNews(c *gin.Context) {
     // 从 JWT 中获取用户 ID
     userID, exists := c.Get("user_id")
@@ -538,259 +1226,444 @@ func (nc *NewsController) CancelLikeNews(c *gin.Context) {
         return
     }
 
+    // 获取新闻 ID
     newsID, err := strconv.Atoi(c.Param("id"))
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid news ID"})
         return
     }
 
-    // 检查新闻是否存在
+    // 开始事务
+    tx := nc.DB.Begin()
+    if tx.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+        return
+    }
+
+    defer func() {
+        if r := recover(); r != nil {
+            tx.Rollback()
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+        }
+    }()
+
+    // 查找新闻
     var news models.News
-    if err := nc.DB.First(&news, newsID).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+    if err := tx.First(&news, newsID).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            tx.Rollback()
+            c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+            return
+        }
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find news"})
+        return
+    }
+
+    // 查找用户
+    var user models.User
+    if err := tx.Preload("LikedByUsers").First(&user, userID).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find user"})
         return
     }
 
     // 检查用户是否已点赞
-    var likeExists int64
-    if err := nc.DB.Table("user_likes_news").
-        Where("user_id = ? AND news_id = ?", userID, newsID).
-        Count(&likeExists).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check like status"})
-        return
+    liked := false
+    for _, likedNews := range user.LikedNews {
+        if likedNews.ID == uint(newsID) {
+            liked = true
+            break
+        }
     }
-    if likeExists == 0 {
+    if !liked {
+        tx.Rollback()
         c.JSON(http.StatusBadRequest, gin.H{"error": "You have not liked this news"})
         return
     }
 
     // 删除点赞关系
-    if err := nc.DB.Exec("DELETE FROM user_likes_news WHERE user_id = ? AND news_id = ?", userID, newsID).Error; err != nil {
+    if err := tx.Model(&user).Association("LikedByUsers").Delete(&news); err != nil {
+        tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel like"})
         return
     }
 
     // 减少点赞数
-    if err := nc.DB.Model(&news).Update("like_count", gorm.Expr("like_count - 1")).Error; err != nil {
+    if err := tx.Model(&news).UpdateColumn("like_count", gorm.Expr("like_count - ?", 1)).Error; err != nil {
+        tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update like count"})
         return
     }
 
+    // 提交事务
+    if err := tx.Commit().Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+        return
+    }
+
     c.JSON(http.StatusOK, gin.H{
-        "message": "News like canceled successfully",
-        "like_count": news.LikeCount - 1,
+        "message":     "News like canceled successfully",
+        "like_count":  news.LikeCount - 1,
     })
 }
 
-// 用户收藏新闻
+// FavoriteNews 处理用户收藏新闻的请求
 func (nc *NewsController) FavoriteNews(c *gin.Context) {
+    // 从 JWT 中获取用户 ID
     userID, exists := c.Get("user_id")
     if !exists {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
         return
     }
 
+    // 获取新闻 ID
     newsID, err := strconv.Atoi(c.Param("id"))
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid news ID"})
         return
     }
 
-    // 检查新闻是否存在
-    var news models.News
-    if err := nc.DB.First(&news, newsID).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+    // 开始事务
+    tx := nc.DB.Begin()
+    if tx.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
         return
     }
 
-    // 检查是否已收藏
-    var favoriteExists int64
-    if err := nc.DB.Table("user_favorites_news").
-        Where("user_id = ? AND news_id = ?", userID, newsID).
-        Count(&favoriteExists).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check favorite status"})
+    defer func() {
+        if r := recover(); r != nil {
+            tx.Rollback()
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+        }
+    }()
+
+    // 查找新闻
+    var news models.News
+    if err := tx.First(&news, newsID).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            tx.Rollback()
+            c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+            return
+        }
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find news"})
         return
     }
-    if favoriteExists > 0 {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "You have already favorited this news"})
+
+    // 查找用户
+    var user models.User
+    if err := tx.Preload("FavoritedByUsers").First(&user, userID).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find user"})
         return
+    }
+
+    // 如果用户已收藏，返回错误
+    for _, favoritedNews := range user.FavoritedNews {
+        if favoritedNews.ID == uint(newsID) {
+            tx.Rollback()
+            c.JSON(http.StatusBadRequest, gin.H{"error": "You have already favorited this news"})
+            return
+        }
     }
 
     // 建立收藏关系
-    if err := nc.DB.Exec("INSERT INTO user_favorites_news (user_id, news_id) VALUES (?, ?)", userID, newsID).Error; err != nil {
+    if err := tx.Model(&user).Association("FavoritedByUsers").Append(&news); err != nil {
+        tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to favorite news"})
         return
     }
 
-    // 更新收藏数
-    if err := nc.DB.Model(&news).Update("favorite_count", gorm.Expr("favorite_count + 1")).Error; err != nil {
+    // 增加收藏数
+    if err := tx.Model(&news).UpdateColumn("favorite_count", gorm.Expr("favorite_count + ?", 1)).Error; err != nil {
+        tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update favorite count"})
         return
     }
 
+    // 提交事务
+    if err := tx.Commit().Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+        return
+    }
+
     c.JSON(http.StatusOK, gin.H{
-        "message":        "News favorited successfully",
-        "favorite_count": news.FavoriteCount + 1,
+        "message":         "News favorited successfully",
+        "favorite_count":  news.FavoriteCount + 1,
     })
 }
 
-// 取消用户收藏新闻
+// CancelFavoriteNews 处理用户取消收藏新闻的请求
 func (nc *NewsController) CancelFavoriteNews(c *gin.Context) {
+    // 从 JWT 中获取用户 ID
     userID, exists := c.Get("user_id")
     if !exists {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
         return
     }
 
+    // 获取新闻 ID
     newsID, err := strconv.Atoi(c.Param("id"))
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid news ID"})
         return
     }
 
-    // 检查新闻是否存在
-    var news models.News
-    if err := nc.DB.First(&news, newsID).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+    // 开始事务
+    tx := nc.DB.Begin()
+    if tx.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
         return
     }
 
-    // 检查是否已收藏
-    var favoriteExists int64
-    if err := nc.DB.Table("user_favorites_news").
-        Where("user_id = ? AND news_id = ?", userID, newsID).
-        Count(&favoriteExists).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check favorite status"})
+    defer func() {
+        if r := recover(); r != nil {
+            tx.Rollback()
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+        }
+    }()
+
+    // 查找新闻
+    var news models.News
+    if err := tx.First(&news, newsID).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            tx.Rollback()
+            c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+            return
+        }
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find news"})
         return
     }
-    if favoriteExists == 0 {
+
+    // 查找用户
+    var user models.User
+    if err := tx.Preload("FavoritedByUsers").First(&user, userID).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find user"})
+        return
+    }
+
+    // 检查用户是否已收藏
+    favorited := false
+    for _, favoritedNews := range user.FavoritedNews {
+        if favoritedNews.ID == uint(newsID) {
+            favorited = true
+            break
+        }
+    }
+    if !favorited {
+        tx.Rollback()
         c.JSON(http.StatusBadRequest, gin.H{"error": "You have not favorited this news"})
         return
     }
 
     // 删除收藏关系
-    if err := nc.DB.Exec("DELETE FROM user_favorites_news WHERE user_id = ? AND news_id = ?", userID, newsID).Error; err != nil {
+    if err := tx.Model(&user).Association("FavoritedByUsers").Delete(&news); err != nil {
+        tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel favorite"})
         return
     }
 
-    // 更新收藏数
-    if err := nc.DB.Model(&news).Update("favorite_count", gorm.Expr("favorite_count - 1")).Error; err != nil {
+    // 减少收藏数
+    if err := tx.Model(&news).UpdateColumn("favorite_count", gorm.Expr("favorite_count - ?", 1)).Error; err != nil {
+        tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update favorite count"})
         return
     }
 
+    // 提交事务
+    if err := tx.Commit().Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+        return
+    }
+
     c.JSON(http.StatusOK, gin.H{
-        "message":        "News favorite canceled successfully",
-        "favorite_count": news.FavoriteCount - 1,
+        "message":         "News favorite canceled successfully",
+        "favorite_count":  news.FavoriteCount - 1,
     })
 }
 
-// 用户点踩新闻
+// DislikeNews 处理用户点踩新闻的请求
 func (nc *NewsController) DislikeNews(c *gin.Context) {
+    // 从 JWT 中获取用户 ID
     userID, exists := c.Get("user_id")
     if !exists {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
         return
     }
 
+    // 获取新闻 ID
     newsID, err := strconv.Atoi(c.Param("id"))
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid news ID"})
         return
     }
 
-    // 检查新闻是否存在
-    var news models.News
-    if err := nc.DB.First(&news, newsID).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+    // 开始事务
+    tx := nc.DB.Begin()
+    if tx.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
         return
     }
 
-    // 检查是否已点踩
-    var dislikeExists int64
-    if err := nc.DB.Table("user_dislikes_news").
-        Where("user_id = ? AND news_id = ?", userID, newsID).
-        Count(&dislikeExists).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check dislike status"})
+    defer func() {
+        if r := recover(); r != nil {
+            tx.Rollback()
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+        }
+    }()
+
+    // 查找新闻
+    var news models.News
+    if err := tx.First(&news, newsID).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            tx.Rollback()
+            c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+            return
+        }
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find news"})
         return
     }
-    if dislikeExists > 0 {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "You have already disliked this news"})
+
+    // 查找用户
+    var user models.User
+    if err := tx.Preload("DislikedByUsers").First(&user, userID).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find user"})
         return
+    }
+
+    // 如果用户已点踩，返回错误
+    for _, dislikedNews := range user.DislikedNews {
+        if dislikedNews.ID == uint(newsID) {
+            tx.Rollback()
+            c.JSON(http.StatusBadRequest, gin.H{"error": "You have already disliked this news"})
+            return
+        }
     }
 
     // 建立点踩关系
-    if err := nc.DB.Exec("INSERT INTO user_dislikes_news (user_id, news_id) VALUES (?, ?)", userID, newsID).Error; err != nil {
+    if err := tx.Model(&user).Association("DislikedByUsers").Append(&news); err != nil {
+        tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to dislike news"})
         return
     }
 
-    // 更新点踩数
-    if err := nc.DB.Model(&news).Update("dislike_count", gorm.Expr("dislike_count + 1")).Error; err != nil {
+    // 增加点踩数
+    if err := tx.Model(&news).UpdateColumn("dislike_count", gorm.Expr("dislike_count + ?", 1)).Error; err != nil {
+        tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update dislike count"})
         return
     }
 
+    // 提交事务
+    if err := tx.Commit().Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+        return
+    }
+
     c.JSON(http.StatusOK, gin.H{
-        "message":        "News disliked successfully",
-        "dislike_count":  news.DislikeCount + 1,
+        "message":         "News disliked successfully",
+        "dislike_count":   news.DislikeCount + 1,
     })
 }
 
-// 取消用户点踩新闻
+// CancelDislikeNews 处理用户取消点踩新闻的请求
 func (nc *NewsController) CancelDislikeNews(c *gin.Context) {
+    // 从 JWT 中获取用户 ID
     userID, exists := c.Get("user_id")
     if !exists {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
         return
     }
 
+    // 获取新闻 ID
     newsID, err := strconv.Atoi(c.Param("id"))
     if err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid news ID"})
         return
     }
 
-    // 检查新闻是否存在
-    var news models.News
-    if err := nc.DB.First(&news, newsID).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+    // 开始事务
+    tx := nc.DB.Begin()
+    if tx.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
         return
     }
 
-    // 检查是否已点踩
-    var dislikeExists int64
-    if err := nc.DB.Table("user_dislikes_news").
-        Where("user_id = ? AND news_id = ?", userID, newsID).
-        Count(&dislikeExists).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check dislike status"})
+    defer func() {
+        if r := recover(); r != nil {
+            tx.Rollback()
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+        }
+    }()
+
+    // 查找新闻
+    var news models.News
+    if err := tx.First(&news, newsID).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            tx.Rollback()
+            c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+            return
+        }
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find news"})
         return
     }
-    if dislikeExists == 0 {
+
+    // 查找用户
+    var user models.User
+    if err := tx.Preload("DislikedByUsers").First(&user, userID).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find user"})
+        return
+    }
+
+    // 检查用户是否已点踩
+    disliked := false
+    for _, dislikedNews := range user.DislikedNews {
+        if dislikedNews.ID == uint(newsID) {
+            disliked = true
+            break
+        }
+    }
+    if !disliked {
+        tx.Rollback()
         c.JSON(http.StatusBadRequest, gin.H{"error": "You have not disliked this news"})
         return
     }
 
     // 删除点踩关系
-    if err := nc.DB.Exec("DELETE FROM user_dislikes_news WHERE user_id = ? AND news_id = ?", userID, newsID).Error; err != nil {
+    if err := tx.Model(&user).Association("DislikedByUsers").Delete(&news); err != nil {
+        tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel dislike"})
         return
     }
 
-    // 更新点踩数
-    if err := nc.DB.Model(&news).Update("dislike_count", gorm.Expr("dislike_count - 1")).Error; err != nil {
+    // 减少点踩数
+    if err := tx.Model(&news).UpdateColumn("dislike_count", gorm.Expr("dislike_count - ?", 1)).Error; err != nil {
+        tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update dislike count"})
         return
     }
 
+    // 提交事务
+    if err := tx.Commit().Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+        return
+    }
+
     c.JSON(http.StatusOK, gin.H{
-        "message":        "News dislike canceled successfully",
-        "dislike_count":  news.DislikeCount - 1,
+        "message":         "News dislike canceled successfully",
+        "dislike_count":   news.DislikeCount - 1,
     })
 }
 
 // 用户浏览新闻
+// ViewNews 处理用户浏览新闻的请求
 func (nc *NewsController) ViewNews(c *gin.Context) {
     // 从 JWT 获取用户 ID
     userID, exists := c.Get("user_id")
@@ -806,57 +1679,101 @@ func (nc *NewsController) ViewNews(c *gin.Context) {
         return
     }
 
-    // 检查新闻是否存在
-    var news models.News
-    if err := nc.DB.First(&news, newsID).Error; err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+    // 开始事务
+    tx := nc.DB.Begin()
+    if tx.Error != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
         return
+    }
+
+    defer func() {
+        if r := recover(); r != nil {
+            tx.Rollback()
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+        }
+    }()
+
+    // 查找新闻
+    var news models.News
+    if err := tx.First(&news, newsID).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            tx.Rollback()
+            c.JSON(http.StatusNotFound, gin.H{"error": "News not found"})
+            return
+        }
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find news"})
+        return
+    }
+
+    // 查找用户
+    var user models.User
+    if err := tx.Preload("ViewedNews").First(&user, userID).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to find user"})
+        return
+    }
+
+    // 检查用户是否已浏览过该新闻
+    alreadyViewed := false
+    for _, viewedNews := range user.ViewedNews {
+        if viewedNews.ID == uint(newsID) {
+            alreadyViewed = true
+            break
+        }
     }
 
     // 限制浏览记录最大数量
     const maxViewed = 200
-    var viewedCount int64
-    if err := nc.DB.Table("user_viewed_news").
-        Where("user_id = ?", userID).
-        Count(&viewedCount).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch view count"})
-        return
-    }
+    if !alreadyViewed {
+        viewedCount := tx.Model(&user).Association("ViewedNews").Count()
 
-    // 如果浏览记录已满，则删除最早的记录
-    if viewedCount >= maxViewed {
-        var oldestNewsID uint
-        if err := nc.DB.Table("user_viewed_news").
-            Where("user_id = ?", userID).
-            Order("created_at ASC").
-            Limit(1).
-            Select("news_id").
-            Scan(&oldestNewsID).Error; err == nil {
-            nc.DB.Exec("DELETE FROM user_viewed_news WHERE user_id = ? AND news_id = ?", userID, oldestNewsID)
+        if viewedCount >= maxViewed {
+            // 删除最早的浏览记录
+            var oldestNews models.News
+            if err := tx.Raw(`
+                SELECT news.* FROM news
+                JOIN user_viewed_news ON news.id = user_viewed_news.news_id
+                WHERE user_viewed_news.user_id = ?
+                ORDER BY user_viewed_news.created_at ASC
+                LIMIT 1
+            `, userID).Scan(&oldestNews).Error; err != nil {
+                tx.Rollback()
+                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch oldest viewed news"})
+                return
+            }
+
+            if oldestNews.ID != 0 {
+                if err := tx.Model(&user).Association("ViewedNews").Delete(&oldestNews); err != nil {
+                    tx.Rollback()
+                    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete oldest viewed news"})
+                    return
+                }
+            }
+        }
+
+        // 添加新的浏览记录
+        if err := tx.Model(&user).Association("ViewedNews").Append(&news); err != nil {
+            tx.Rollback()
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to record news view"})
+            return
         }
     }
 
-    // 添加新的浏览记录
-    if err := nc.DB.Exec("INSERT INTO user_viewed_news (user_id, news_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE created_at = NOW()", userID, newsID).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to record news view"})
+    // 更新新闻的浏览计数
+    if err := tx.Model(&news).UpdateColumn("view_count", gorm.Expr("view_count + ?", 1)).Error; err != nil {
+        tx.Rollback()
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update view count"})
         return
     }
 
-    // 更新新闻的浏览计数
-    if err := nc.DB.Model(&news).Update("view_count", gorm.Expr("view_count + 1")).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update view count"})
+    // 提交事务
+    if err := tx.Commit().Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
         return
     }
 
     c.JSON(http.StatusOK, gin.H{
         "message": "News view recorded successfully",
     })
-}
-
-
-
-// TODO
-// 删除评论
-func (nc *NewsController) DeleteComment(c *gin.Context) {
-
 }

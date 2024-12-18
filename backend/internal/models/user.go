@@ -29,7 +29,6 @@ type User struct {
 
     FoodPreferences []FoodPreference `gorm:"foreignKey:UserID" json:"food_preferences"` // 用户的食物偏好
 
-
     DesiredDishes    []FamilyDish      `gorm:"foreignKey:ProposerUserID" json:"desired_dishes"` // 家庭中用户提出的想吃的菜
 
     NutritionGoals   []NutritionGoal   `gorm:"foreignKey:UserID" json:"nutrition_goals"` 
