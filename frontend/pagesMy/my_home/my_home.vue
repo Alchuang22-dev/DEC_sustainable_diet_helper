@@ -222,11 +222,18 @@ const viewArticle = (index) => {
 const editArticle = (index) => {
   const article = articles.value[index];
   console.log('编辑文章:', article);
-
-  // 将文章的 ID 作为查询参数传递到新页面
-  uni.navigateTo({
-    url: `/pagesNews/edit_draft/edit_draft?id=${article.id}`,
-  });
+  if(article.status === '草稿'){
+	// 将文章的 ID 作为查询参数传递到新页面
+	uni.navigateTo({
+	  url: `/pagesNews/edit_draft/edit_draft?id=${article.id}`,
+	});
+  } else if(article.status === '已发布'){
+  	  uni.showToast({
+  	    title: '发布后不可编辑',
+  	    icon: 'none',
+  	    duration: 2000
+  	  });
+  }
 };
 
 // Delete article function

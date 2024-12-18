@@ -25,7 +25,7 @@
       <view v-for="(item, index) in items" :key="index" class="preview-item">
         <view
           class="item-content"
-          :style="{ height: item.type === 'image' ? item.itemHeight + 'px' : 'auto' }"
+		  mode="widthFix"
         >
           <textarea
             v-if="item.type === 'text'"
@@ -42,6 +42,7 @@
               class="image-preview"
               :style="{ height: item.imageHeight + 'px' }"
               @click="handleImageChange(index)"
+			  mode="widthFix"
             />
             <textarea
               v-model="item.imageDescription"
