@@ -31,7 +31,7 @@
 
         <!-- 图片组件 -->
         <view v-if="component.style === 'image'" class="image-content">
-          <image :src="component.content" class="image"></image>
+          <image :src="component.content" class="image" mode="widthFix"></image>
           <p class="image-description">{{ component.description }}</p>
         </view>
       </view>
@@ -627,6 +627,21 @@ onLoad(async (options) => {
     } else {
       console.warn('No comments found in details.');
     }
+	uni.request({
+	  url: `http://122.51.231.155:8080/news/${PageId.value}/view`,
+	  method: "POST",
+	  header: {
+	    "Content-type": "application/json",
+	    "Authorization": `Bearer ${jwtToken.value}`, // 直接使用 jwtToken
+	  },
+	  data: {},
+	  success: () => {
+	    console.log("News view recorded successfully");
+	  },
+	  fail: (err) => {
+	    console.error("Error viewing news:", err);
+	  },
+	});
 });
 
 // Function to get news or draft details

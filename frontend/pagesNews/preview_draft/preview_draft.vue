@@ -21,7 +21,7 @@
 
         <!-- 图片组件 -->
         <view v-if="component.style === 'image'" class="image-content">
-          <image :src="component.content" class="image"></image>
+          <image :src="component.content" class="image" mode="widthFix"></image>
           <p class="image-description">{{ component.description }}</p>
         </view>
       </view>
