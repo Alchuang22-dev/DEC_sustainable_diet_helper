@@ -3,14 +3,21 @@
     <!-- Header Section -->
     <image src="/static/images/index/background_img.jpg" class="background-image"></image>
     <view class="header">
-	  <input class="search-box" v-model="searchText" @input="onSearchInput" :placeholder="placeholderText" />
-	  <button @click="onSearch" class = "search-button"> {{$t('text_search')}} </button>
-	  <button
-		v-if = "isLoggedIn"
-	    @click="createNews()"
-	  >
-	    写文章
+	  <button @click="toggleDrawer" class="drawer-button">
+		  >
 	  </button>
+      <input
+        class="search-box"
+        v-model="searchText"
+        @input="onSearchInput"
+        :placeholder="placeholderText"
+      />
+      <button @click="onSearch" class="search-button">
+        {{$t('text_search')}}
+      </button>
+      <button v-if="isLoggedIn" @click="createNews()" class="create-button">
+        写文章
+      </button>
     </view>
 
     <!-- Loading Indicator -->
@@ -35,13 +42,47 @@
           <image :src="item.image" :alt="item.title" mode="widthFix" />
         </view>
         <view class="news-description">{{ item.description }}</view>
+		<view class="news-description">{{ item.info }}</view>
       </view>
     </view>
+
+    <!-- Drawer Component -->
+    <uni-drawer
+      ref="drawer"
+      placement="bottom"
+      :mask="mask"
+      :width="drawWid"
+      :mask-closable="maskClick"
+      @close="handleDrawerClose"
+      :mask-style="'background-color: rgba(0, 0, 0, 0.5);'"
+      :style="'background-color: rgba(255, 255, 255, 0.9);'"
+    >
+      <view class="drawer-content">
+        <button 
+          @click="handleSort('latest')" 
+          :class="['nav-item', { active: currentSort === 'latest' }]"
+        >
+          按时间排序
+        </button>
+        <button 
+          @click="handleSort('top-views')" 
+          :class="['nav-item', { active: currentSort === 'top-views' }]"
+        >
+          按观看量排序
+        </button>
+        <button 
+          @click="handleSort('top-likes')" 
+          :class="['nav-item', { active: currentSort === 'top-likes' }]"
+        >
+          按点赞量排序
+        </button>
+      </view>
+    </uni-drawer>
   </view>
 </template>
 
 <script setup>
-import { onMounted, ref, reactive, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useNewsStore } from '@/stores/news_list';
 import { useI18n } from 'vue-i18n';
 import { onShow, onPullDownRefresh } from '@dcloudio/uni-app';
@@ -52,13 +93,15 @@ const newsStore = useNewsStore();
 const userStore = useUserStore(); // 使用用户存储
 
 const activeIndex = ref(null);
+const currentSort = ref('top-views'); // 默认排序类型
+
 // 计算属性从 Pinia store 获取用户状态
 const isLoggedIn = computed(() => userStore.user.isLoggedIn);
 const uid = computed(() => userStore.user.nickName);
 const avatarSrc = computed(() =>
-    userStore.user.avatarUrl
-        ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
-        : '/static/images/index/background_img.jpg'
+  userStore.user.avatarUrl
+    ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
+    : '/static/images/index/background_img.jpg'
 );
 
 // 从 Store 获取数据和方法
@@ -67,13 +110,45 @@ const { setSection, refreshNews, fetchNews } = newsStore;
 
 const { t } = useI18n();
 
+// 新增：Drawer显示状态通过ref控制
+const drawer = ref(null);
+const mask = true;
+const drawWid = '50%'; // 根据需要调整宽度
+const maskClick = true;
+
+// 切换Drawer显示/隐藏的方法
+function toggleDrawer() {
+  if (drawer.value) {
+    drawer.value.open();
+    isDrawerVisible.value = true;
+  }
+}
+
+// 隐藏Drawer的方法
+function hideDrawer() {
+  if (drawer.value) {
+    drawer.value.close();
+    isDrawerVisible.value = false;
+  }
+}
+
+// 处理Drawer关闭事件
+function handleDrawerClose() {
+  // 可以在这里处理关闭后的逻辑，如重置状态等
+  isDrawerVisible.value = false;
+  console.log('Drawer closed');
+}
+
+// 新增：isDrawerVisible 状态管理
+const isDrawerVisible = ref(false);
+
 // 页面跳转方法
 function navigateTo(link, name) {
-	console.log('跳转至：',link);
+  console.log('跳转至：', link);
   setTimeout(() => {
-      uni.navigateTo({
-        url: `/pagesNews/news_detail/news_detail?id=${link}`,
-      });
+    uni.navigateTo({
+      url: `/pagesNews/news_detail/news_detail?id=${link}`,
+    });
   }, 100);
 }
 
@@ -86,18 +161,18 @@ function releaseFeedback() {
   activeIndex.value = null;
 }
 
-// 页面更新方法
-//function refreshPage() {
-//  console.log('正在刷新页面...');
-//  fetchNews();
-//  refreshNews();
-//}
+// 跳转至新建图文页面
+function createNews() {
+  uni.navigateTo({
+    url: "/pagesNews/create_news/create_news",
+  });
+}
 
-//跳转至新建图文页面
-function createNews(){
-	uni.navigateTo({
-		url: "/pagesNews/create_news/create_news",
-	})
+// 排序功能
+function handleSort(sortType) {
+  currentSort.value = sortType;
+  fetchNews(1, sortType); // 根据排序类型获取新闻
+  hideDrawer(); // 排序后关闭抽屉
 }
 
 // 异步函数处理下拉刷新
@@ -116,27 +191,28 @@ const handlePullDownRefresh = async () => {
 onPullDownRefresh(handlePullDownRefresh);
 
 onShow(() => {
-	console.log("用户进入社区");
-	isLoggedIn.value = false; // 显式设置为未登录状态
-    uni.setNavigationBarTitle({
-      title: t('news_index')
-    })
-    uni.setTabBarItem({
-      index: 0,
-      text: t('index')
-    })
-    uni.setTabBarItem({
-      index: 1,
-      text: t('tools_index')
-    })
-    uni.setTabBarItem({
-      index: 2,
-      text: t('news_index')
-    })
-    uni.setTabBarItem({
-      index: 3,
-      text: t('my_index')
-    })
+  console.log("用户进入社区");
+  // 根据需求，这里设置为false，可能需要根据实际登录状态调整
+  isLoggedIn.value = false; // 显式设置为未登录状态
+  uni.setNavigationBarTitle({
+    title: t('news_index')
+  });
+  uni.setTabBarItem({
+    index: 0,
+    text: t('index')
+  });
+  uni.setTabBarItem({
+    index: 1,
+    text: t('tools_index')
+  });
+  uni.setTabBarItem({
+    index: 2,
+    text: t('news_index')
+  });
+  uni.setTabBarItem({
+    index: 3,
+    text: t('my_index')
+  });
   console.log("in onShow");
   fetchNews();
 });
@@ -164,7 +240,6 @@ body {
   opacity: 0.1;
 }
 
-/* Header Section */
 /* Header Section */
 .header {
   display: flex;
@@ -197,9 +272,22 @@ body {
 
 .search-box {
   flex: 1;
-  padding: 8px;
+  padding: 13px;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+
+.drawer-button {
+  background-color: #ffffff;
+  color: black;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.3s;
+  white-space: nowrap; /* 防止按钮文本换行 */
+  margin-left: 0;
+  padding: 5px 15px;
+  flex-shrink: 0; /* 防止按钮被压缩 */
 }
 
 .search-button {
@@ -211,6 +299,19 @@ body {
   transition: color 0.3s;
   white-space: nowrap; /* 防止按钮文本换行 */
   padding: 5px 15px;
+  flex-shrink: 0; /* 防止按钮被压缩 */
+}
+
+.create-button {
+  background-color: #ffffff;
+  color: black;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.3s;
+  white-space: nowrap; /* 防止按钮文本换行 */
+  padding: 5px 15px;
+  margin-right: 20px;
   flex-shrink: 0; /* 防止按钮被压缩 */
 }
 
@@ -255,8 +356,6 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* 修改头部 */
-
 /* News Section */
 .news-section {
   padding: 20px;
@@ -297,19 +396,14 @@ body {
   margin-bottom: 10px;
 }
 
-/* Footer Section */
-.footer {
-  background-color: #ffffff;
-  padding: 10px 0;
-  border-top: 1px solid #e0e0e0;
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-}
+/* Footer Toggle Button */
 
-.footer-nav {
+/* Drawer Content */
+.drawer-content {
   display: flex;
-  justify-content: space-around;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
 }
 
 .nav-item {
@@ -317,9 +411,43 @@ body {
   color: #333;
   font-weight: bold;
   cursor: pointer;
+  height: 40px;
+  transition: color 0.3s, background-color 0.3s;
+  margin-bottom: 10px;
+  width: 80%; /* 适应抽屉宽度 */
+  border-radius: 5px;
 }
 
 .nav-item:hover {
   color: #4caf50;
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.nav-item.active {
+  color: #4caf50;
+  border-bottom: 2px solid #4caf50;
+}
+
+/* 关闭按钮样式 */
+.close-button {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  width: 80%;
+  text-align: center;
+}
+
+.close-button:hover {
+  background-color: #d32f2f;
+}
+
+/* 确保uni-drawer有足够的z-index */
+.uni-drawer {
+  transition: all 0.3s ease;
+  z-index: 1000;
 }
 </style>
