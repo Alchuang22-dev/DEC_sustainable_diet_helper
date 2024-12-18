@@ -56,10 +56,10 @@
 	  <view id="comments-container">
 		<view v-for="(comment, index) in comments" :key="comment.id" class="comment">
 		  <view class="comment-content">
-			<view class="comment-avatar"></view>
+			<image class="comment-avatar" :src="formatAvatar(comment.authorAvatar)"  ></image>
 			<view>
-			  <text class="comment-username">user_test:</text>
-			  <text class="comment-text">{{ comment.text }}</text>
+			  <text class="comment-username">{{ comment.authorName}}</text>
+			  <text class="comment-text">:{{ comment.text }}</text>
 			</view>
 		  </view>
 		  <view class="comment-time">{{ comment.publish_time }}</view> <!-- Display publish_time -->
@@ -77,8 +77,8 @@
 		  <!-- Replies Section -->
 		  <view v-if="comment.replies.length > 0" class="replies">
 			<view v-for="(reply, replyIndex) in comment.replies" :key="reply.id" class="reply">
-			  <text class="comment-username">user_test:</text>
-			  <text class="comment-text">{{ reply.text }}</text>
+			  <text class="comment-username">{{ reply.authorName}}</text>
+			  <text class="comment-text">:{{ reply.text }}</text>
 			  <text class="comment-time">{{ reply.publish_time }}</text> <!-- Display publish_time -->
 			</view>
 		  </view>
@@ -145,6 +145,12 @@ const post = ref({
   components: [
   ],
 });
+
+//转换头像路径
+const formatAvatar = (path) => {
+	console.log('解析的头像路径：',`${BASE_URL}/static/${path}`);
+	return `${BASE_URL}/static/${path}`;
+}
 
 //转换数字
 const formatCount = (count) => {
@@ -440,6 +446,7 @@ const addReply = (index) => {
             id: newReplyComment.id,
             text: newReplyComment.content,
             liked: newReplyComment.like_count > 0, // 根据需要调整
+			authorName: uid.value,
 			publish_time: formatPublishTime(newReplyComment.publish_time), // Format time
           });
           newReply.value = "";
@@ -490,6 +497,8 @@ const addComment = () => {
             id: newCommentData.id,
             text: newCommentData.content,
             liked: newCommentData.like_count > 0, // 根据需要调整
+			authorName: uid.value,
+			authorAvatar: avatarSrc.value,
 			publish_time: formatPublishTime(newCommentData.publish_time), // Format time
             replies: [],
           });
@@ -588,6 +597,8 @@ onLoad(async (options) => {
           text: comment.content,
           liked: comment.like_count > 0,
           publish_time: formattedTime,
+		  authorName: comment.author.nickname,
+		  authorAvatar: comment.author.avatar_url,
           replies: [],
         };
   
@@ -602,6 +613,7 @@ onLoad(async (options) => {
               id: reply.id,
               text: reply.content,
               liked: reply.like_count > 0,
+			  authorName: reply.author.nickname,
               publish_time: formattedReplyTime,
             };
   
