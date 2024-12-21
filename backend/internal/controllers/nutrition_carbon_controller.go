@@ -110,15 +110,36 @@ func (nc *NutritionCarbonController) validateUserShares(currentUserID uint, shar
             return false, fmt.Errorf("无效的请求数据")
         }
     }
-
-    if user.Family == nil {
-        return false, fmt.Errorf("用户不属于任何家庭")
+    // 单人分摊的情况
+    if len(shares) == 1 && shares[0].UserID == currentUserID {
+        if shares[0].Ratio == 0 {
+            return false, fmt.Errorf("单人用户分摊比例不能为0")
+        }
+        return true, nil
     }
-    log.Printf("用户属于某个家庭")
+    if user.FamilyID == nil {
+        return false, fmt.Errorf("用户没有家庭")
+    }
+
     // 验证所有用户是否属于同一个家庭
     familyMembers := make(map[uint]bool)
-    for _, member := range user.Family.Members {
+    // 查询数据库获取家庭中的Members
+    var members []models.User
+    if err := nc.DB.Where("family_id = ?", user.FamilyID).Find(&members).Error; err != nil {
+        return false, fmt.Errorf("获取家庭成员失败")
+    }
+    // 将所有家庭成员的ID添加到familyMembers中
+    for _, member := range members {
         familyMembers[member.ID] = true
+    }
+    // 查询数据库获取家庭中的Admins
+    var admins []models.User
+    if err := nc.DB.Where("family_id = ?", user.FamilyID).Find(&admins).Error; err != nil {
+        return false, fmt.Errorf("获取家庭管理员失败")
+    }
+    // 将所有家庭管理员的ID添加到familyMembers中
+    for _, admin := range admins {
+        familyMembers[admin.ID] = true
     }
     log.Printf("验证所有用户是否属于同一个家庭成功")
 
