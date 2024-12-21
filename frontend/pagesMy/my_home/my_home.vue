@@ -58,6 +58,10 @@ import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
 const newsStore = useNewsStore();
 const userStore = useUserStore(); // 使用用户存储
 
+// 用来获取本地时间和日期
+const systemDate = new Date();
+const systemDateStr = systemDate.toISOString().slice(0, 10); // 获取当前系统日期，格式：YYYY-MM-DD
+
 const activeIndex = ref(null);
 // 计算属性从 Pinia store 获取用户状态
 const isLoggedIn = computed(() => userStore.user.isLoggedIn);
@@ -79,6 +83,23 @@ const BASE_URL = ref('http://122.51.231.155:8080');
 const articles = ref([]);
 const { t, locale, messages } = useI18n();
 const jwtToken = computed(() => userStore.user.token);; // Replace with actual token
+
+//转换时间
+const formattedSaveTime = computed((time) => {
+  const postDate = time.slice(0, 10); // 提取日期部分
+
+  if (postDate === systemDateStr) {
+    // 如果日期相同，显示 "today" + 时间
+    const postTime = new Date(time); // 转换为 Date 对象
+    const hours = postTime.getHours().toString().padStart(2, '0');
+    const minutes = postTime.getMinutes().toString().padStart(2, '0');
+    const seconds = postTime.getSeconds().toString().padStart(2, '0');
+    return `今天 ${hours}:${minutes}:${seconds}`;
+  } else {
+    // 否则显示完整日期
+    return postDate;
+  }
+});
 
 // Function to get published news IDs
 const getPublishedNewsIds = async () => {
@@ -149,6 +170,10 @@ const fetchArticles = async () => {
     if (details) {
       allArticles.push({
         ...details,
+		publishTime: details.upload_time,
+		likes: details.like_count,
+		favorites: details.favorite_count,
+		shares: details.share_count,
         status: '已发布',
         bgColor: 'rgba(0, 123, 255, 0.1)', // Published color
       });
@@ -160,6 +185,7 @@ const fetchArticles = async () => {
     if (details) {
       allArticles.push({
         ...details,
+		publishTime: details.updated_at,
         status: '草稿',
         bgColor: 'rgba(255, 193, 7, 0.1)', // Draft color
       });
@@ -170,7 +196,7 @@ const fetchArticles = async () => {
 };
 
 // Lifecycle hook to load articles
-onMounted(() => {
+onShow(() => {
   fetchArticles();
 });
 
@@ -196,11 +222,18 @@ const viewArticle = (index) => {
 const editArticle = (index) => {
   const article = articles.value[index];
   console.log('编辑文章:', article);
-
-  // 将文章的 ID 作为查询参数传递到新页面
-  uni.navigateTo({
-    url: `/pagesNews/edit_draft/edit_draft?id=${article.id}`,
-  });
+  if(article.status === '草稿'){
+	// 将文章的 ID 作为查询参数传递到新页面
+	uni.navigateTo({
+	  url: `/pagesNews/edit_draft/edit_draft?id=${article.id}`,
+	});
+  } else if(article.status === '已发布'){
+  	  uni.showToast({
+  	    title: '发布后不可编辑',
+  	    icon: 'none',
+  	    duration: 2000
+  	  });
+  }
 };
 
 // Delete article function

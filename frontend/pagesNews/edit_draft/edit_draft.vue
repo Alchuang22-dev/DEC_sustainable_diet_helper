@@ -25,7 +25,7 @@
       <view v-for="(item, index) in items" :key="index" class="preview-item">
         <view
           class="item-content"
-          :style="{ height: item.type === 'image' ? item.itemHeight + 'px' : 'auto' }"
+		  mode="widthFix"
         >
           <textarea
             v-if="item.type === 'text'"
@@ -42,6 +42,7 @@
               class="image-preview"
               :style="{ height: item.imageHeight + 'px' }"
               @click="handleImageChange(index)"
+			  mode="widthFix"
             />
             <textarea
               v-model="item.imageDescription"
@@ -286,13 +287,13 @@ const saveDraft = async () => {
   const data = {
     title: post.title,
     paragraphs: [], // 用于存放文本段落
-    image_updates: [], // 用于存放图片链接
+    image_paths: [], // 用于存放图片链接
     image_descriptions: [] // 用于存放图片描述
   };
 
   // 默认简介为第一个自然段
   data.paragraphs.push(description.value);
-  data.image_updates.push({image_index: 0, image_path: ''}); // 先添加一个空的图片路径
+  data.image_paths.push(''); // 先添加一个空的图片路径
   data.image_descriptions.push('');
   let index = 0;
 	// 上传所有图片并填充图片路径
@@ -302,12 +303,12 @@ const saveDraft = async () => {
 		if (item.style === 'image' && item.content) {
 		  data.paragraphs.push(''); // 添加空段落
 		  console.log(item);
-		  data.image_updates.push({ image_index: index, image_path: item.content }); // 修正为正确的语法
+		  data.image_paths.push(item.content); // 修正为正确的语法
 		  data.image_descriptions.push(item.description || ''); // 保存图片描述
 		  console.log(item.description);
 		} else if (item.style === 'text') {
 		  data.paragraphs.push(item.content || ''); // 添加文字段落
-		  data.image_updates.push({ image_index: index, image_path: '' }); // 空白图片路径
+		  data.image_paths.push(''); // 空白图片路径
 		  data.image_descriptions.push(''); // 空白图片描述
 		}
 	  })
@@ -325,15 +326,17 @@ const saveDraft = async () => {
       title: data.title,
       paragraphs: data.paragraphs,
       image_descriptions: data.image_descriptions,
-      image_updates: data.image_updates,
+      image_paths: data.image_paths,
     },
     success: (res) => {
-      if (res.data.message === 'Draft updated successfully.') {
+      if (res.data.message === 'Draft updated successfully') {
         uni.showToast({
           title: '草稿已保存',
           icon: 'success',
           duration: 2000,
         });
+		console.log(res.data);
+		PageId.value = res.data.draft_id;
       } else {
         uni.showToast({
           title: '保存草稿失败',
