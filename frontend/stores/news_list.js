@@ -75,6 +75,12 @@ export const useNewsStore = defineStore('news', {
           case 'latest':
             url = `${BASE_URL}/news/paginated/upload_time?page=${page}`;
             break;
+		  case 'favorite':
+			url = `${BASE_URL}/users/favorited`;
+			break;
+		  case 'viewed':
+			url = `${BASE_URL}/users/viewed`;
+			break;
           default:
             throw new Error('Invalid news type');
         }
