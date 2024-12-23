@@ -14,7 +14,10 @@ export const FamilyStatus = {
 
 const STORAGE_KEY = 'family_store_data';
 
-
+// 获取当前时区
+function getTimeZone() {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
 
 // 封装request为Promise，并处理401状态码
 const request = (config) => {
@@ -75,6 +78,9 @@ export const useFamilyStore = defineStore('family', () => {
                 waiting_members: [],
                 dishProposals: [],
                 status: FamilyStatus.NOT_JOINED,
+                // 新增存储字段（如果本地无则默认空）
+                memberDailyData: [],
+                familySums: {}
             };
         } catch (error) {
             console.error('Failed to get stored family data:', error);
@@ -87,6 +93,8 @@ export const useFamilyStore = defineStore('family', () => {
                 waiting_members: [],
                 dishProposals: [],
                 status: FamilyStatus.NOT_JOINED,
+                memberDailyData: [],
+                familySums: {}
             };
         }
     };
@@ -103,7 +111,11 @@ export const useFamilyStore = defineStore('family', () => {
     };
 
     const watchFamily = () => {
-        const watchKeys = ['id', 'name', 'familyId', 'memberCount', 'allMembers', 'waiting_members', 'status', 'dishProposals'];
+        const watchKeys = [
+            'id', 'name', 'familyId', 'memberCount',
+            'allMembers', 'waiting_members', 'status',
+            'dishProposals', 'memberDailyData', 'familySums'
+        ];
         watchKeys.forEach(key => {
             watch(() => family[key], () => {
                 saveToStorage();
@@ -153,7 +165,7 @@ export const useFamilyStore = defineStore('family', () => {
     const getFamilyDetails = async () => {
         try {
             const response = await request(createRequestConfig({
-                url: `${BASE_URL}/families/details`,
+                url: `${BASE_URL}/families/details?timezone=${encodeURIComponent(getTimeZone())}`,
                 method: 'GET'
             }));
 
@@ -194,6 +206,10 @@ export const useFamilyStore = defineStore('family', () => {
                     family.waiting_members = [];
                 }
 
+                // ============= 新增：存储每日数据与总汇数据 =============
+                family.memberDailyData = data.member_daily_data || [];
+                family.familySums = data.family_sums || {};
+
             } else if (data.status === FamilyStatus.PENDING_APPROVAL) {
                 family.id = data.id;
                 family.name = data.name;
@@ -209,6 +225,9 @@ export const useFamilyStore = defineStore('family', () => {
                 family.allMembers = [];
                 family.waiting_members = [];
                 family.dishProposals = [];
+                // 重置每日数据和汇总数据
+                family.memberDailyData = [];
+                family.familySums = {};
             }
 
             return response;
@@ -446,6 +465,8 @@ export const useFamilyStore = defineStore('family', () => {
         family.waiting_members = [];
         family.dishProposals = [];
         family.status = FamilyStatus.NOT_JOINED;
+        family.memberDailyData = [];
+        family.familySums = {};
         clearStorage();
     };
 
