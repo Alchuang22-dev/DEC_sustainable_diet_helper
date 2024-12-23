@@ -111,10 +111,10 @@ function formatToISO(date) {
 // 保存为自己计算
 const saveForSelf = () => {
   const today = new Date();
-  const haha = formatToISO(today);
-  console.log('当前时间:', haha);
+  const isoDate = formatToISO(today);
+  console.log('当前时间:', isoDate);
   const requestData = {
-    date: formatToISO(today),
+    date: isoDate,
     meal_type: mealTypesValue[selectedMealIndex.value],
     calories: nutritionData[0] || 0,
     protein: nutritionData[1] || 0,
@@ -146,7 +146,6 @@ const saveForSelf = () => {
           icon: 'success',
           duration: 2000
         });
-        uni.navigateBack();
       } else {
         const errorMsg = res.data?.error || t('save_failed');
         uni.showToast({
@@ -155,6 +154,12 @@ const saveForSelf = () => {
           duration: 2000
         });
       }
+      // 2秒后导航回上一层级
+      setTimeout(() => {
+        uni.navigateBack({
+          delta: 1 // 返回上一层级
+        });
+      }, 2000);
     },
     fail: () => {
       uni.showToast({
@@ -162,6 +167,12 @@ const saveForSelf = () => {
         icon: 'none',
         duration: 2000
       });
+      // 2秒后导航回上一层级
+      setTimeout(() => {
+        uni.navigateBack({
+          delta: 1 // 返回上一层级
+        });
+      }, 2000);
     }
   });
 };
