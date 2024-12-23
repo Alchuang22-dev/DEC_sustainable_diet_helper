@@ -26,8 +26,8 @@
                   <view class="info-grid">
                     <uni-tag :text="$t('weight') + ': ' + (food.weight || '1.2kg')" type="primary" size="small" />
                     <uni-tag :text="$t('price') + ': ' + (food.price || '5元')" type="success" size="small" />
-                    <uni-tag :text="$t(`transport_${food.transportMethod}`)" type="warning" size="small" />
-                    <uni-tag :text="$t(`source_${food.foodSource}`)" type="info" size="small" />
+                    <uni-tag v-if="food.transportMethod" :text="$t(`transport_${food.transportMethod}`)" type="warning" size="small" />
+                    <uni-tag v-if="food.foodSource" :text="$t(`source_${food.foodSource}`)" type="info" size="small" />
                   </view>
                   <view class="action-row">
                     <uni-icons type="compose" size="20" color="#2979ff" @click.stop="handleEdit(index)" />
@@ -36,6 +36,10 @@
                 </view>
               </view>
             </uni-collapse-item>
+            <!-- 空列表提示 -->
+            <view v-if="displayFoodList.length === 0" class="empty-state">
+              <text>{{ $t('no_foods_added') }}</text>
+            </view>
           </uni-collapse>
         </scroll-view>
 
