@@ -67,7 +67,8 @@
           </view>
         </view>
       </view>
-      <view class="set-goals-button-wrapper">
+      <!-- 仅在查看今天的结果时显示“设置目标”按钮 -->
+      <view class="set-goals-button-wrapper" v-if="isTodaySelected">
         <button class="set-goals-button" @click="navigateToSetGoals">
           {{ $t('set_nutrition_goals') }}
         </button>
@@ -136,7 +137,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data.js'
 
@@ -237,14 +238,14 @@ const getDataForSelectedDate = () => {
 const defaultEmptyData = () => {
   return {
     nutrients: {
-      actual: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 },
-      target: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
+      actual: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0},
+      target: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}
     },
     meals: {
-      breakfast: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
-      lunch: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
-      dinner: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
-      other: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } }
+      breakfast: {nutrients: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}},
+      lunch: {nutrients: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}},
+      dinner: {nutrients: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}},
+      other: {nutrients: {calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0}}
     }
   }
 }
@@ -313,11 +314,11 @@ const updateChartData = () => {
     color: item.color
   }))
 
-  const tempChartData = { series: tempSeries }
+  const tempChartData = {series: tempSeries}
   chartData.value = JSON.parse(JSON.stringify(tempChartData))
 }
 
-// Helper to get红色不同深浅基于营养成分
+// Helper to get 红色不同深浅基于营养成分
 const getRedShade = (nutrient) => {
   const shades = {
     'calories': '#FF4D4F',
@@ -343,13 +344,27 @@ const getNutrientColor = (nutrient) => {
 
 const scrollPosition = ref(0)
 
+// 计算今天的日期字符串
+const todayDateString = computed(() => {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+})
+
+// 计算当前选中的日期是否为今天
+const isTodaySelected = computed(() => {
+  return dateTabs.value[currentDateIndex.value]?.dateString === todayDateString.value
+})
+
 // 在 onMounted 中初始化
 onMounted(async () => {
   generateDateTabs()
   await carbonNutritionStore.getNutritionGoals()
   await carbonNutritionStore.getNutritionIntakes()
 
-  // 设置初始日期为今天（倒数第二个：i = 1）
+  // 设置初始日期为今天（倒数第二个：i = 0, index = 6）
   currentDateIndex.value = dateTabs.value.length - 2
 
   // 让滚动条自动滚到最右
@@ -379,17 +394,6 @@ const navigateToSetGoals = () => {
     url: "/pagesMy/setGoals/setGoals",
   })
 }
-
-// 再次监听
-onMounted(async () => {
-  // 如果想在初次进入页面时再次获取数据，可以保留此逻辑
-  generateDateTabs()
-  await carbonNutritionStore.getNutritionGoals()
-  await carbonNutritionStore.getNutritionIntakes()
-
-  updateSummaryNutrition()
-  updateChartData()
-})
 
 // 监听 summaryNutrition 的变化以更新图表
 watch(summaryNutrition, () => {
