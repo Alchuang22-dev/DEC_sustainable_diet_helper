@@ -28,10 +28,12 @@
     </view>
 
     <!-- 如果已加入家庭并且是管理员且有waiting_members，则显示提示框 -->
-    <uni-card v-if="isCurrentUserAdmin && family.waiting_members && family.waiting_members.length > 0"
-              class="admin-notice"
-              :is-shadow="false"
-              :border="false">
+    <uni-card
+        v-if="isCurrentUserAdmin && family.waiting_members && family.waiting_members.length > 0"
+        class="admin-notice"
+        :is-shadow="false"
+        :border="false"
+    >
       <view class="notice-content">
         <view class="notice-left">
           <uni-icons type="info-filled" size="20" color="#3A86FF"></uni-icons>
@@ -55,11 +57,17 @@
             v-model="foodNameInput"
             :candidates="filteredFoods.map(item => displayName(item))"
             @input="onComboxInput"
-        ></uni-combox>
+        >
+        </uni-combox>
 
         <!-- 偏好选择器保持不变 -->
-        <picker mode="selector" :range="dishPreferenceLevels" :value="newDish.preference"
-                @change="onDishPreferenceChange" class="picker">
+        <picker
+            mode="selector"
+            :range="dishPreferenceLevels"
+            :value="newDish.preference"
+            @change="onDishPreferenceChange"
+            class="picker"
+        >
           <view>{{ t('dish_preference') }}: {{ dishPreferenceLevels[newDish.preference] }}</view>
         </picker>
         <button class="submit-button" @click="submitDishProposal">{{ t('submit_proposal') }}</button>
@@ -108,15 +116,40 @@
       <!-- 共享家庭成员的五大营养成分达标情况 -->
       <view class="shared-data">
         <text class="section-title">{{ $t('shared_family_data') }}</text>
-        <!-- 添加家庭碳排放环形图 -->
+        <!-- 家庭碳排放环形图 -->
         <view class="charts">
-          <qiun-data-charts :canvas2d="true" canvas-id="familyCarbonChart" type="ring" :opts="carbonRingOpts"
-                            :chartData="carbonChartData" />
+          <qiun-data-charts
+              :canvas2d="true"
+              canvas-id="familyCarbonChart"
+              type="ring"
+              :opts="carbonRingOpts"
+              :chartData="carbonChartData"
+          />
         </view>
-        <!-- 添加家庭五大营养成分达标情况的图表 -->
-        <view class="charts">
-          <qiun-data-charts :canvas2d="true" canvas-id="familyNutrientChart" type="column"
-                            :opts="nutrientChartOpts" :chartData="nutrientChartData" />
+      </view>
+
+      <!-- 新增：家庭成员营养超标情况 -->
+      <view class="nutrition-over-section">
+        <text class="section-title">{{ t('nutrition_over_title') }}</text>
+        <view
+            v-for="member in membersNutritionOver"
+            :key="member.userId"
+            class="nutrition-over-row"
+        >
+          <image
+              :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+              class="member-avatar"
+          />
+          <text class="member-name">{{ member.nickname }}</text>
+
+          <!-- 若有超标营养素 -->
+          <text class="over-list" v-if="member.overs.length > 0">
+            {{ member.overs.join('、') + t('nutrition_over_suffix') }}
+          </text>
+          <!-- 若无超标 -->
+          <text class="over-list" v-else>
+            {{ t('no_nutrition_over') }}
+          </text>
         </view>
       </view>
 
@@ -352,7 +385,7 @@ const submitDishProposal = async () => {
   } catch (error) {
     if (error.message === 'DISH_ALREADY_EXISTS') {
       uni.showToast({
-        title: t('dish_already_exists'), // 确保在您的翻译文件中添加此键
+        title: t('dish_already_exists'),
         icon: 'none'
       });
     } else {
@@ -489,6 +522,86 @@ const canDeleteDish = (dish) => {
   return dish.proposer === userStore.user.nickName;
 };
 
+// ========== 家庭碳排放环形图相关 ==========
+// 环形图配置
+const carbonRingOpts = {
+  title: {
+    name: '0 / 0',
+    fontSize: 14,
+    color: '#333'
+  },
+  subtitle: {
+    name: '',
+    fontSize: 12,
+    color: '#999'
+  },
+  // 其他配置项可根据你使用的图表组件自行调整
+};
+
+// 环形图数据
+const carbonChartData = ref({
+  series: []
+});
+
+// 监听家庭每日数据，更新环形图 series
+watch(
+    () => family.value.memberDailyData,
+    (newVal) => {
+      if (!newVal || newVal.length === 0) {
+        carbonChartData.value.series = [];
+        carbonRingOpts.title.name = '0 / 0';
+        return;
+      }
+      // 构造 series 数据：每个成员的今日碳排放
+      carbonChartData.value.series = newVal.map(member => ({
+        name: member.nickname,
+        data: member.carbon_intake_sum
+      }));
+
+      // 更新环形图中心文字：“家庭总排放量 / 家庭目标量”
+      const { familySums } = family.value;
+      if (familySums && familySums.carbon_intake_sum !== undefined) {
+        carbonRingOpts.title.name = `${familySums.carbon_intake_sum || 0} / ${familySums.carbon_goal_sum || 0}`;
+      } else {
+        carbonRingOpts.title.name = '0 / 0';
+      }
+    },
+    { immediate: true, deep: true }
+);
+
+// ========== 营养超标计算 ==========
+// 定义五大营养素对应的多语言key
+const nutritionKeys = [
+  { key: 'calories', i18nKey: 'calories' },
+  { key: 'protein', i18nKey: 'protein' },
+  { key: 'fat', i18nKey: 'fat' },
+  { key: 'carbohydrates', i18nKey: 'carbohydrates' },
+  { key: 'sodium', i18nKey: 'sodium' },
+];
+
+// 计算每个成员哪些营养超标
+const membersNutritionOver = computed(() => {
+  if (!family.value.memberDailyData || family.value.memberDailyData.length === 0) {
+    return [];
+  }
+  return family.value.memberDailyData.map(item => {
+    const overList = [];
+    nutritionKeys.forEach(nut => {
+      const goalVal = item.nutrition_goal[nut.key];
+      const intakeVal = item.nutrition_intake_sum[nut.key];
+      if (intakeVal > goalVal) {
+        overList.push(t(nut.i18nKey));
+      }
+    });
+    return {
+      userId: item.user_id,
+      nickname: item.nickname,
+      avatarUrl: item.avatar_url,
+      overs: overList
+    };
+  });
+});
+
 // 页面显示时
 onShow(async () => {
   try {
@@ -512,12 +625,12 @@ onMounted(async () => {
   }
 });
 
-// 监听语言变化，重新计算食物名称显示（可选）
+// 监听语言变化，若需要可在此做额外处理
 watch(locale, () => {
-  // 任何需要响应语言变化的逻辑可以在这里添加
+  // 语言切换后的处理逻辑（可选）
 });
 
-// startStatusCheck 如果有需要请补上您的逻辑
+// 如果有需求，可以加一个轮询或类似功能
 const startStatusCheck = () => {
   // 具体实现根据项目需求
 };
@@ -811,7 +924,6 @@ const startStatusCheck = () => {
   margin-bottom: 20rpx;
 }
 
-/* uni-collapse 样式覆盖 */
 .dish-list .uni-collapse__item {
   border-bottom: 1rpx solid #eee;
 }
@@ -846,6 +958,39 @@ const startStatusCheck = () => {
   width: 100%;
   height: 300rpx;
   margin-bottom: 20rpx;
+}
+
+/* 新增：营养超标情况 */
+.nutrition-over-section {
+  background-color: var(--card-background);
+  padding: 20rpx;
+  border-radius: 10rpx;
+  box-shadow: 0 2rpx 5rpx var(--shadow-color);
+  margin-bottom: 20rpx;
+}
+
+.nutrition-over-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.nutrition-over-row .member-avatar {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  margin-right: 20rpx;
+}
+
+.nutrition-over-row .member-name {
+  font-size: 26rpx;
+  font-weight: 500;
+  margin-right: 20rpx;
+}
+
+.over-list {
+  font-size: 24rpx;
+  color: #ff4d4f;
 }
 
 /* 家庭成员部分 */
@@ -957,12 +1102,12 @@ const startStatusCheck = () => {
   background-color: #fff;
   padding: 40rpx;
   border-radius: 16rpx;
-  width: 60%;  /* 减小宽度从80%到60% */
+  width: 60%;
   box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
 }
 
 .modal-title {
-  font-size: 36rpx;  /* 增大字体从24rpx到36rpx */
+  font-size: 36rpx;
   color: #333;
   margin-bottom: 40rpx;
   text-align: center;
@@ -972,9 +1117,9 @@ const startStatusCheck = () => {
 .modal-button {
   background-color: var(--primary-color);
   color: #fff;
-  padding: 20rpx;  /* 增加内边距使按钮更大 */
+  padding: 20rpx;
   border-radius: 12rpx;
-  font-size: 24rpx;  /* 增大按钮字体从24rpx到32rpx */
+  font-size: 24rpx;
   width: 100%;
   text-align: center;
   margin-top: 20rpx;
@@ -992,34 +1137,9 @@ const startStatusCheck = () => {
     transform: translateY(-20rpx);
     opacity: 0;
   }
-
   to {
     transform: translateY(0);
     opacity: 1;
-  }
-}
-
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 
