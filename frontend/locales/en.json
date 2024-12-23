@@ -240,6 +240,8 @@
 	"intake_value": "Intake Value",
 	"target_value_today": "Target Value Today",
 	"error_fetch_family_details": "Failed to fetch family details",
+	"nutrition_over_title": "Nutrition Overview",
+	"no_nutrition_over": "No Excessive Nutrition",
 
 	"family_management": "Family Management",
 	"create_family": "Create Family",
@@ -273,7 +275,7 @@
 	"family_name": "Family Name",
 	"family_info": "Family ID: ",
 	"manage_members": "Manage Members",
-	"shared_family_data": "Today's Shared Family Data",
+	"shared_family_data": "Carbon Emission Overview",
 	"carbon_total": "Total Carbon Emission",
 	"pending_approval": "Pending Approval",
 	"cancel_join": "Cancel Join",
@@ -506,5 +508,10 @@
 	"total_ratio_less_than_one": "Total ratio is less than 1, some ratio might be unallocated",
 	"submission_success": "Submission successful",
 	"submission_failed": "Submission failed",
-	"join_family_first": "Please join a family first"
+	"join_family_first": "Please join a family first",
+
+	"setSuccess": "Set Success",
+	"setFail": "Set Failed",
+	"inputValidateFail": "Input validation failed",
+	"fetchGoalsFail": "Failed to fetch goals",
 }

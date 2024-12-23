@@ -8,7 +8,6 @@
             class="input"
             type="number"
             v-model.trim="carbonGoalStr"
-            :placeholder="t('carbonGoalPlaceholder')"
             :maxlength="10"
         />
       </view>
@@ -24,7 +23,6 @@
               class="input"
               type="number"
               v-model.trim="caloriesStr"
-              :placeholder="t('inputPlaceholder')"
               :maxlength="10"
           />
         </view>
@@ -34,7 +32,6 @@
               class="input"
               type="number"
               v-model.trim="proteinStr"
-              :placeholder="t('inputPlaceholder')"
               :maxlength="10"
           />
         </view>
@@ -44,7 +41,6 @@
               class="input"
               type="number"
               v-model.trim="fatStr"
-              :placeholder="t('inputPlaceholder')"
               :maxlength="10"
           />
         </view>
@@ -54,7 +50,6 @@
               class="input"
               type="number"
               v-model.trim="carbsStr"
-              :placeholder="t('inputPlaceholder')"
               :maxlength="10"
           />
         </view>
@@ -64,7 +59,6 @@
               class="input"
               type="number"
               v-model.trim="sodiumStr"
-              :placeholder="t('inputPlaceholder')"
               :maxlength="10"
           />
         </view>

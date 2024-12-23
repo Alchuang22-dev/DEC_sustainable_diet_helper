@@ -240,6 +240,8 @@
 	"intake_value": "摄入量",
 	"target_value_today": "今日目标值",
 	"error_fetch_family_details": "获取家庭详情失败",
+	"nutrition_over_title": "今日家庭营养概览",
+	"no_nutrition_over": "无营养成分超标",
 
 	"family_management": "家庭管理",
 	"create_family": "创建家庭",
@@ -274,7 +276,7 @@
 	"family_name": "家庭名称",
 	"family_info": "家庭ID：",
 	"manage_members": "管理成员",
-	"shared_family_data": "今日家庭数据一览",
+	"shared_family_data": "今日家庭碳排放概览",
 	"carbon_total": "碳排放总量",
 	"pending_approval": "待管理员审核",
 	"cancel_join": "取消加入",
@@ -520,6 +522,11 @@
 	"total_ratio_less_than_one": "比例总和小于1，可能有未分配的比例",
 	"submission_success": "提交成功",
 	"submission_failed": "提交失败",
-	"join_family_first": "请先加入家庭"
+	"join_family_first": "请先加入家庭",
+
+	"setSuccess": "设置成功",
+	"setFail": "设置失败",
+	"inputValidateFail": "输入验证失败",
+	"fetchGoalsFail": "获取目标失败",
 
 }
