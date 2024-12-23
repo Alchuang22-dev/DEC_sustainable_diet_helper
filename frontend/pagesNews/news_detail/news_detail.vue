@@ -1,7 +1,7 @@
 <template>
   <view class="container">
     <view class="author-header">
-      <image :src="post.authoravatar" class="author-avatar"></image>
+      <image :src="formatAvatar(post.authoravatar)" class="author-avatar"></image>
       <text class="author-username">{{ post.authorname }}</text>
       <button
         class="stable-button"
@@ -137,6 +137,11 @@ const uid = computed(() => userStore.user.nickName);
 const avatarSrc = computed(() =>
     userStore.user.avatarUrl
         ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
+        : '/static/images/index/background_img.jpg'
+);
+const avatarSrc_sh =  computed(() =>
+    userStore.user.avatarUrl
+        ? `${userStore.user.avatarUrl}`
         : '/static/images/index/background_img.jpg'
 );
 
@@ -498,7 +503,7 @@ const addComment = () => {
             text: newCommentData.content,
             liked: newCommentData.like_count > 0, // 根据需要调整
 			authorName: uid.value,
-			authorAvatar: avatarSrc.value,
+			authorAvatar: avatarSrc_sh.value,
 			publish_time: formatPublishTime(newCommentData.publish_time), // Format time
             replies: [],
           });
@@ -539,7 +544,7 @@ onLoad(async (options) => {
   // 更新 post 对象
   post.value = {
     id: PageId.value,
-    authoravatar: avatarSrc.value,
+    authoravatar: details.author.avatar_url,
     authorname: details.author.nickname,
     authorid: details.author.id,
     savetime: details.upload_time,
