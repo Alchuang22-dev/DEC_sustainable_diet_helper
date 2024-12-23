@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia';
 import { reactive, watch } from 'vue';
 
-const BASE_URL = 'http://122.51.231.155:8080';
+const BASE_URL = 'http://xcxcs.uwdjl.cn:8080';
 
 // 定义用户状态枚举（可根据需要扩展）
 export const UserStatus = {
@@ -146,6 +146,8 @@ export const useUserStore = defineStore('user', () => {
       // 调用 uni.login 获取微信登录凭证
       const loginRes = await new Promise((resolve, reject) => {
         uni.login({
+          "provider": "weixin",
+          "onlyAuthorize": true,
           success: resolve,
           fail: reject,
         });
@@ -159,6 +161,7 @@ export const useUserStore = defineStore('user', () => {
       console.log("formData", loginRes.code, nickName);
 
       const authRes = await new Promise((resolve, reject) => {
+        console.log('url:', `${BASE_URL}/users/auth`);
         uni.uploadFile({
           url: `${BASE_URL}/users/auth`, // 确保端点正确
           method: 'POST',
@@ -208,6 +211,7 @@ export const useUserStore = defineStore('user', () => {
 
   // 用户登出
   const logout = async () => {
+    console.log('url logout:', `${BASE_URL}/users/logout`);
     try {
       const response = await request(createRequestConfig({
         url: `${BASE_URL}/users/logout`,

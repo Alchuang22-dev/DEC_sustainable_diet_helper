@@ -6,11 +6,10 @@ import { useUserStore } from "./user.js";
 const BASE_URL = 'http://122.51.231.155:8095';
 const STORAGE_KEY = 'carbon_and_nutrition_store_data';
 
-// 获取 userStore 实例
-const userStore = useUserStore();
-
 // 封装request为Promise，并处理401状态码
 const request = (config) => {
+    // 获取 userStore 实例
+    const userStore = useUserStore();
     return new Promise((resolve, reject) => {
         uni.request({
             ...config,
@@ -97,6 +96,7 @@ export const useCarbonAndNutritionStore = defineStore('carbon_and_nutrition', ()
     };
 
     const createRequestConfig = (config) => {
+        const userStore = useUserStore();
         return {
             ...config,
             header: {

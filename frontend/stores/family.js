@@ -14,11 +14,12 @@ export const FamilyStatus = {
 
 const STORAGE_KEY = 'family_store_data';
 
-// 获取 userStore 实例
-const userStore = useUserStore();
+
 
 // 封装request为Promise，并处理401状态码
 const request = (config) => {
+    // 获取 userStore 实例
+    const userStore = useUserStore();
     return new Promise((resolve, reject) => {
         uni.request({
             ...config,
@@ -111,6 +112,8 @@ export const useFamilyStore = defineStore('family', () => {
     };
 
     const createRequestConfig = (config) => {
+        // 获取 userStore 实例
+        const userStore = useUserStore();
         return {
             ...config,
             header: {
@@ -355,6 +358,8 @@ export const useFamilyStore = defineStore('family', () => {
     // 离开家庭
     const leaveFamily = async () => {
         try {
+            // 获取 userStore 实例
+            const userStore = useUserStore();
             const response = await request(createRequestConfig({
                 url: `${BASE_URL}/families/leave_family`,
                 method: 'DELETE',

@@ -6,22 +6,7 @@ import { useI18n } from 'vue-i18n'; // 导入 vue-i18n
 export const useFoodListStore = defineStore('foodList', () => {
     // 定义食物列表状态（始终使用英文名称）
     const foodList = reactive([
-        {
-            name: "Pork",
-            id: "1",
-            weight: "1kg",
-            price: "5",
-            transportMethod: "land",
-            foodSource: "local",
-            image: "",
-            isAnimating: false,
-            emission: 0,
-            calories: 100,
-            protein: 200,
-            fat: 400,
-            carbohydrates: 300,
-            sodium: 500
-        },
+        // 初始食物项已移除
         // 可以预先添加更多食物项，名称为英文
     ]);
 
@@ -182,6 +167,15 @@ export const useFoodListStore = defineStore('foodList', () => {
                 price: extractNumber(food.price),
                 weight: extractNumber(food.weight)
             }));
+
+            if (requestData.length === 0) {
+                uni.showToast({
+                    title: '请先添加食物',
+                    icon: 'none',
+                    duration: 2000,
+                });
+                return;
+            }
 
             // 发送POST请求
             const response = await new Promise((resolve, reject) => {
