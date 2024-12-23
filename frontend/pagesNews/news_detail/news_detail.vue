@@ -1,100 +1,218 @@
 <template>
+  <!-- 外层容器 -->
   <view class="container">
-    <view class="author-header">
-      <image :src="formatAvatar(post.authoravatar)" class="author-avatar"></image>
-      <text class="author-username">{{ post.authorname }}</text>
-      <button
-        class="stable-button"
-        @click="toggleInteraction('follow')"
-        :style="{ 
-          color: ifFollowed ? 'black' : 'white', 
-          backgroundColor: ifFollowed ? 'lightgrey' : 'green' 
-        }"
-      >
-        {{ ifFollowed ? '已关注' : '关注' }}
-      </button>
-    </view>
+    
+    <!-- 作者信息及关注按钮 -->
+   <!-- 作者信息，无关注按钮 -->
+   <view class="author-header">
+     <image 
+       :src="formatAvatar(post.authoravatar)" 
+       class="author-avatar"
+     ></image>
+     <text class="author-username">{{ post.authorname }}</text>
+   </view>
 
     <!-- 文章标题和描述 -->
     <view class="title-container">
-      <h1 class="article-title">{{ post.title }}</h1>
-      <p class="article-description">{{ post.description }}</p>
+      <!-- 替换 h1 为 view 或 text -->
+      <view class="article-title">{{ post.title }}</view>
+      <!-- 替换 p 为 view 或 text -->
+      <view class="article-description">{{ post.description }}</view>
     </view>
 
     <!-- 内容组件展示区 -->
     <view class="components-container">
       <view v-for="component in post.components" :key="component.id">
+        
         <!-- 文本组件 -->
         <view v-if="component.style === 'text'" class="text-content">
-          <p>{{ component.content }}</p>
+          <text>{{ component.content }}</text>
         </view>
 
         <!-- 图片组件 -->
         <view v-if="component.style === 'image'" class="image-content">
-          <image :src="component.content" class="image" mode="widthFix"></image>
-          <p class="image-description">{{ component.description }}</p>
+          <image
+            :src="component.content"
+            class="image"
+            mode="widthFix"
+          ></image>
+          <text class="image-description">{{ component.description }}</text>
         </view>
       </view>
     </view>
-	
-	<!-- Display the post time -->
-	<view class="post-time">{{ formattedSaveTime }}</view>
-	<view class="post-time">阅读量：{{ post.viewCount }}</view>
+    
+    <!-- 显示发布时间和阅读量 -->
+    <view class="post-time">{{ formattedSaveTime }}</view>
+    <view class="post-time">阅读量：{{ post.viewCount }}</view>
 
-    <!-- 操作按钮 -->
-    <view class="inline-interaction-buttons">
-      <button @click="toggleInteraction('like')">👍 {{ formatCount(post.likeCount) }}</button>
-      <button @click="toggleInteraction('favorite')">⭐ {{ formatCount(post.favoriteCount) }}</button>
-      <button @click="toggleInteraction('share')">🔄 {{ formatCount(post.shareCount)}}</button>
-      <button @click="toggleInteraction('dislike')" :style="{ color: ifDislike ? 'green' : 'black' }">👎 dis</button>
-    </view>
+    <!-- 操作按钮：点赞、收藏、分享、踩等 -->
+	<view class="inline-interaction-buttons">
+	  
+	  <!-- 点赞按钮 -->
+	<button
+	  class="action-button"
+	  :class="{ active: ifLike }"
+	  @click="toggleInteraction('like')"
+	>
+	  <!-- 根据 ifLike 状态动态切换图标 -->
+	  <image 
+		:src="ifLike 
+		  ? '/pagesNews/static/liked.svg' 
+		  : '/pagesNews/static/like.svg'"
+		alt="Like" 
+		class="icon"
+	  />
+	  <text class="count-text">{{ formatCount(post.likeCount) }}</text>
+	</button>
 
-    <!-- Comments Section -->
-	<!-- Comments Section -->
-	<view class="comments-section">
-	  <view class="comments-header">评论</view>
-	  <view id="comments-container">
-		<view v-for="(comment, index) in comments" :key="comment.id" class="comment">
-		  <view class="comment-content">
-			<image class="comment-avatar" :src="formatAvatar(comment.authorAvatar)"  ></image>
-			<view>
-			  <text class="comment-username">{{ comment.authorName}}</text>
-			  <text class="comment-text">:{{ comment.text }}</text>
-			</view>
-		  </view>
-		  <view class="comment-time">{{ comment.publish_time }}</view> <!-- Display publish_time -->
-		  <view class="comment-interactions">
-			<button @click="toggleCommentLike(index)">👍 {{ comment.liked ? '已点赞' : '点赞' }}</button>
-			<button @click="replyToComment(index)">💬 回复</button>
-		  </view>
+	  <!-- 收藏按钮 -->
+	  <button
+		class="action-button"
+		:class="{ active: ifFavourite }"
+		@click="toggleInteraction('favorite')"
+	  >
+		<image 
+		  :src="ifFavourite
+		    ? '/pagesNews/static/favorited.svg' 
+		    : '/pagesNews/static/favorite.svg'"
+		  alt="Save" 
+		  class="icon"
+		></image>
+		<text class="count-text">{{ formatCount(post.favoriteCount) }}</text>
+	  </button>
 
-		  <!-- Reply Input Section -->
-		  <view v-if="replyingTo === index" class="add-reply">
-			<input type="text" v-model="newReply" placeholder="回复..." />
-			<button @click="addReply(index)">发送</button>
-		  </view>
+	  <!-- 踩（dislike）按钮 -->
+	  <button
+		class="action-button"
+		@click="toggleInteraction('dislike')"
+	  >
+		<image 
+		  :src="ifDislike
+		    ? '/pagesNews/static/disliked.svg' 
+		    : '/pagesNews/static/dislike.svg'"
+		  alt="Dislike" 
+		  class="icon"
+		></image>
+		<!-- “dis” 或者直接显示 formatCount(post.dislikeCount) 也可 -->
+		<text class="count-text">dis</text>
+	  </button>
 
-		  <!-- Replies Section -->
-		  <view v-if="comment.replies.length > 0" class="replies">
-			<view v-for="(reply, replyIndex) in comment.replies" :key="reply.id" class="reply">
-			  <text class="comment-username">{{ reply.authorName}}</text>
-			  <text class="comment-text">:{{ reply.text }}</text>
-			  <text class="comment-time">{{ reply.publish_time }}</text> <!-- Display publish_time -->
-			</view>
-		  </view>
-		</view>
-	  </view>
-	  <view class="add-comment">
-		<input type="text" v-model="newComment" placeholder="发表评论..." />
-		<button @click="addComment">评论</button>
-	  </view>
 	</view>
 
+    <!-- 评论区域 -->
+    <view class="comments-section">
+      <view class="comments-header">评论</view>
+      <view id="comments-container">
+        <view
+          v-for="(comment, index) in limitedComments"
+          :key="comment.id"
+          class="comment"
+        >
+          <view class="comment-content">
+            <image
+              class="comment-avatar"
+              :src="formatAvatar(comment.authorAvatar)"
+            ></image>
+            <view>
+              <text class="comment-username">{{ comment.authorName }}: </text>
+            </view>
+			<view>
+				<rich-text :nodes="renderCommentText(comment.text)" class="comment-text"></rich-text>
+			</view>
+          </view>
+          <view class="comment-time">{{ comment.publish_time }}</view>
+          
+          <!-- 评论交互 -->
+          <view class="comment-interactions">
+            <button @click="toggleCommentLike(index)">
+              👍 {{ comment.liked ? '已点赞' : '点赞' }}
+            </button>
+            <button @click="replyToComment(index)">
+              💬 回复
+            </button>
+          </view>
+
+          <!-- 回复输入区域 -->
+          <view v-if="replyingTo === index" class="add-reply">
+            <input
+              type="text"
+              v-model="newReply"
+              placeholder="回复..."
+            />
+            <button @click="addReply(index)">发送</button>
+          </view>
+
+          <!-- 回复内容列表 -->
+          <view
+            v-if="comment.replies.length > 0"
+            class="replies"
+          >
+			<view
+				v-for="(reply, replyIndex) in limitedReplies(comment)"
+				:key="reply.id"
+				class="reply"
+			  >
+				<!-- 这里是显示每条回复的内容 -->
+				<text class="comment-username">{{ reply.authorName }}</text>
+				<text class="comment-text">:{{ reply.text }}</text>
+				<text class="comment-time">{{ reply.publish_time }}</text>
+			</view>
+			<view
+			    v-if="comment.replies.length > 3"
+			    class="show-more-replies"
+			    @click="toggleReplies(comment)"
+			  >
+			    <text v-if="!comment.showAllReplies" class="comment-time">
+			      还有 {{ comment.replies.length - 3 }} 条回复
+			    </text>
+			    <text v-else class="comment-time">收起回复</text>
+			</view>
+			
+          </view>
+		  
+        </view>
+		<!-- 折叠/展开 按钮 -->
+		<view v-if="comments.length > 5" class="show-more-comments" @click="toggleComments">
+			<text v-if="!showAllComments" class="comment-time">还有 {{ comments.length - 5 }} 条评论</text>
+			<text v-else class="comment-time">收起评论</text>
+		</view>
+      </view>
+	  
+	  
+	  
+      <!-- 发表评论 -->
+      <view class="add-comment">
+          <!-- 评论输入框 -->
+          <input
+            type="text"
+            v-model="newComment"
+            @input="handleCommentInput"
+            placeholder="发表评论..."
+          />
+          <button @click="addComment">评论</button>
+      
+          <!-- 当检测到输入框中包含 '@' 时，弹出 popup  -->
+          <uni-popup ref="mentionPopup" type="bottom" :mask="false" class="mention-popup">
+            <view class="mention-list">
+              <view
+                v-for="(name, idx) in userListForMentions"
+                :key="idx"
+                class="mention-item"
+                @click="insertMention(name)"
+              >
+                @{{ name }}
+              </view>
+            </view>
+          </uni-popup>
+        </view>
+    </view>
   </view>
 </template>
 
+
 <script setup>
 import { ref, reactive, onMounted, computed} from "vue";
+import { getCurrentInstance } from 'vue';
 import { onLoad } from "@dcloudio/uni-app";
 import { useNewsStore } from '@/stores/news_list';
 import { useI18n } from 'vue-i18n';
@@ -122,6 +240,7 @@ const replyingTo = ref(null); // 当前正在回复的评论的索引
 const newReply = ref(""); // 回复内容
 const recommendations = ref([]);
 const loadingError = ref(false); // 加载错误标志
+const showMentionList = ref(false);
 const timeout = 15000; // 超时时间：15秒
 
 const ifLike = ref(false);
@@ -145,7 +264,40 @@ const avatarSrc_sh =  computed(() =>
         : '/static/images/index/background_img.jpg'
 );
 
-// 模拟传入的post数据
+const userListForMentions = computed(() => {
+  // 从评论和回复中收集到的所有用户名
+  let allNames = [];
+  comments.forEach((c) => {
+    allNames.push(c.authorName);
+    c.replies.forEach((r) => allNames.push(r.authorName));
+  });
+  // 去重
+  return Array.from(new Set(allNames));
+});
+
+/**
+ * 将评论文本中的 “@xx” 高亮显示
+ * 如果没有 @，则直接返回原文本
+ * @param {string} text
+ * @returns {string}
+ */
+const renderCommentText = (text) => {
+  console.log('renderCommentText input:', text);
+
+  // 如果 text 中没有 '@'，则直接返回原字符串
+  if (!text.includes('@')) {
+	  console.log('no @');
+    return text;
+  }
+
+  // 如果包含 '@'，执行替换
+  return text.replace(
+    /@(\S+)\s/g,
+    '<span style="color:blue;">@$1</span> '
+  );
+};
+
+// 传入的post数据
 const post = ref({
   components: [
   ],
@@ -153,7 +305,7 @@ const post = ref({
 
 //转换头像路径
 const formatAvatar = (path) => {
-	console.log('解析的头像路径：',`${BASE_URL}/static/${path}`);
+	//console.log('解析的头像路径：',`${BASE_URL}/static/${path}`);
 	return `${BASE_URL}/static/${path}`;
 }
 
@@ -180,20 +332,87 @@ const formattedSaveTime = computed(() => {
 });
 
 /**
- * 格式化评论和回复的发布时刻
- * @param {string} publishTime - ISO 格式的时间字符串
+ * @param {string} publishTime - ISO 格式或其他可被 Date 解析的字符串
  * @returns {string} - 格式化后的时间字符串
  */
 const formatPublishTime = (publishTime) => {
   const date = new Date(publishTime);
-  const dateStr = date.toISOString().slice(0, 10);
-  if (dateStr === systemDateStr) {
+  const now = new Date();
+
+  // 判断是否是同一天
+  const isSameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (isSameDay) {
+    // 如果是同一天，显示“今天 HH:mm”
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
     return `今天 ${hours}:${minutes}`;
   } else {
-    return dateStr;
+    // 否则显示 YYYY-MM-DD 或者你想要的其他格式
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
+};
+
+// 是否展开所有评论
+const showAllComments = ref(false);
+
+// 计算属性：根据 showAllComments 状态返回前5条或全部
+const limitedComments = computed(() => {
+	console.log('获取少量评论:',comments)
+  if (showAllComments.value) {
+    return comments;
+  } else {
+    return comments.slice(0, 5);
+  }
+});
+
+// 点击切换的方法
+const toggleComments = () => {
+  showAllComments.value = !showAllComments.value;
+};
+
+// 计算“有限回复”的方法
+const limitedReplies = (comment) => {
+  if (comment.showAllReplies) {
+    return comment.replies;
+  } else {
+    return comment.replies.slice(0, 3);
+  }
+};
+
+// 切换展开/折叠
+const toggleReplies = (comment) => {
+  comment.showAllReplies = !comment.showAllReplies;
+};
+
+const { proxy } = getCurrentInstance(); // 在 <script setup> 下获取实例
+
+const handleCommentInput = (e) => {
+  const val = e.detail.value;
+  // 如果输入含有 "@"
+  if (val.includes("@")) {
+    showMentionList.value = true;
+    // 打开 popup
+    proxy.$refs.mentionPopup.open();
+  } else {
+    // 关闭 popup
+    showMentionList.value = false;
+    proxy.$refs.mentionPopup.close();
+  }
+};
+
+// 3. 点击某个昵称将其插入输入框
+const insertMention = (name) => {
+  // 简易示例：将第一个 "@" 替换成 "@User "
+  newComment.value = newComment.value.replace("@", `@${name} `);
+  proxy.$refs.mentionPopup.close();
+  showMentionList.value = false;
 };
 
 const toggleInteraction = (type) => {
@@ -205,25 +424,7 @@ const toggleInteraction = (type) => {
   const systemDateStr = systemDate.toISOString().slice(0, 10); // YYYY-MM-DD
  
   // 处理操作
-  if (type === "view") {
-    uni.request({
-      url: `http://122.51.231.155:8080/news/${PageId.value}/view`,
-      method: "POST",
-      header: {
-        "Content-type": "application/json",
-        "Authorization": `Bearer ${jwtToken.value}`, // 直接使用 jwtToken
-      },
-      data: {},
-      success: () => {
-        console.log("News view recorded successfully");
-      },
-      fail: (err) => {
-        console.error("Error viewing news:", err);
-      },
-    });
-  }
-
-  else if (type === "like") {
+  if (type === "like") {
     if (ifLike.value === false) {
       console.log('点赞新闻');
       uni.request({
@@ -332,48 +533,6 @@ const toggleInteraction = (type) => {
       });
     }
   }
-
-  else if (type === "follow") {
-    if (ifFollowed.value === false) {
-      uni.request({
-        url: `http://122.51.231.155:8080/user/${uid.value}/follow`,
-        method: "POST",
-        header: {
-          "Content-type": "application/json",
-          "Authorization": `Bearer ${jwtToken.value}`,
-        },
-        data: { target_id: authorName },
-        success: () => {
-          ifFollowed.value = true;
-        },
-        fail: (err) => {
-          console.error("Error following user:", err);
-        },
-      });
-    } else {
-      uni.request({
-        url: `http://122.51.231.155:8080/user/${uid.value}/unfollow`,
-        method: "POST",
-        header: {
-          "Content-type": "application/json",
-          "Authorization": `Bearer ${jwtToken.value}`,
-        },
-        data: { target_id: authorName },
-        success: () => {
-          ifFollowed.value = false;
-        },
-        fail: (err) => {
-          console.error("Error unfollowing user:", err);
-        },
-      });
-    }
-  }
-
-  else if (type === "share") {
-    post.value.shareCount++;
-    // 这里您可以根据需要添加分享的逻辑，例如调用分享 API 或显示分享选项
-  }
-
   else if (type === "dislike") {
     if (ifDislike.value === false) {
       uni.request({
@@ -506,6 +665,7 @@ const addComment = () => {
 			authorAvatar: avatarSrc_sh.value,
 			publish_time: formatPublishTime(newCommentData.publish_time), // Format time
             replies: [],
+			showAllReplies: false,
           });
           newComment.value = "";
         } else {
@@ -605,6 +765,7 @@ onLoad(async (options) => {
 		  authorName: comment.author.nickname,
 		  authorAvatar: comment.author.avatar_url,
           replies: [],
+		  showAllReplies: false,
         };
   
         // Process replies if any
@@ -647,6 +808,30 @@ onLoad(async (options) => {
 	    console.error("Error viewing news:", err);
 	  },
 	});
+	uni.request({
+	  url: `http://122.51.231.155:8080/news/${PageId.value}/status`,
+	  method: "GET",
+	  header: {
+	    "Content-type": "application/json",
+	    "Authorization": `Bearer ${jwtToken.value}`, // 直接使用 jwtToken
+	  },
+	  data: {},
+	  success: (res) => {
+		  if(res.statusCode === 200){
+			  console.log(res.data);
+			  ifLike.value = res.data.liked;
+			  ifDislike.value = res.data.disliked;
+			  ifFavourite.value = res.data.favorited;
+		  }
+		  else{
+			  console.log("Error getting status");
+		  }
+	    
+	  },
+	  fail: (err) => {
+	    console.error("Error getting status:", err);
+	  },
+	});
 });
 
 // Function to get news or draft details
@@ -678,27 +863,26 @@ const getArticleDetails = async (id, isDraft = false) => {
 }
 
 /*author part form video_detail*/
+.author-header {
+  display: flex;          /* 使头像与用户名排列在同一行 */
+  align-items: center;    /* 垂直方向居中对齐 */
+  margin-bottom: 10px;    /* 根据需求设置下方间距 */
+}
+
 .author-avatar {
   width: 50px;
   height: 50px;
   background-color: #ccc;
   border-radius: 50%;
-  margin-bottom: 10px;
-}
-
-.author-details {
-  display: flex;
-  flex-direction: column;
-}
-
-.author-header {
-  display: flex;
-  margin-bottom: 10px;
+  margin-right: 10px;      /* 头像和用户名之间留出合适间距 */
 }
 
 .author-username {
   font-weight: bold;
-  margin-right: 20px;
+  /* 若需要在用户名和头像之间再留出一些距离，也可在这里增加 margin-left */
+  /* margin-left: 10px; */
+  font-size: 16px;        /* 根据需求设置文字大小 */
+  color: #333;            /* 文字颜色可自行调整 */
 }
 
 /* Title and Description styles */
@@ -736,22 +920,45 @@ const getArticleDetails = async (id, isDraft = false) => {
 /* 交互按钮 */
 .inline-interaction-buttons {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-around; 
   margin-top: 10px;
   padding: 5px 0;
 }
 
-.inline-interaction-buttons button {
+/* 公共样式：确保按钮固定大小并进行水平排列 */
+.action-button {
+  width: 70px;          /* 固定宽度，按需调整 */
+  height: 40px;         /* 固定高度，按需调整 */
+  display: inline-flex; 
+  align-items: center;  
+  justify-content: center;
   border: none;
-  background-color: transparent;
+  border-radius: 5px;
+  background-color: #f0f0f0; /* 默认背景色，可自行调整 */
+  color: #333;               /* 默认文字颜色 */
   cursor: pointer;
-  font-size: 14px;
-  color: #333;
-  transition: color 0.3s;
+  margin: 0 5px;            /* 每个按钮左右留出一点空隙 */
+  overflow: hidden;         /* 保证文字不溢出 */
+  transition: background-color 0.3s, color 0.3s;
 }
 
-.inline-interaction-buttons button:hover {
-  color: #4caf50;
+/* 激活状态下的样式：如果按钮被点击过（ifLike/ifFavourite/ifShare/ifDislike 为 true）就添加该样式 */
+.action-button.active {
+  background-color: #4caf50;  /* 激活时的背景色示例，绿色 */
+  color: #ffffff;            /* 激活时文字为白色 */
+}
+
+/* 图标样式：统一大小并与文字在一行 */
+.icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px; /* 图标与数字之间的间距 */
+}
+
+/* 数字或文字部分 */
+.count-text {
+  font-size: 14px;
+  line-height: 1;    /* 与 icon 高度相配合，避免偏移 */
 }
 
 
@@ -904,5 +1111,25 @@ const getArticleDetails = async (id, isDraft = false) => {
   color: #888;
   text-align: right;
   margin-top: 20px;
+}
+
+/* popup 容器的样式，如高度、背景等 */
+.mention-popup {
+  height: auto;
+  background-color: #ffffff;
+}
+
+/* 列表区域 */
+.mention-list {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+/* 单项 */
+.mention-item {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
 }
 </style>

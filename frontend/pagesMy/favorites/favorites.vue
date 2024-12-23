@@ -1,21 +1,36 @@
 <template>
-  <view @touchstart="refreshPage">
+  <view>
     <!-- Header Section -->
     <image src="/static/images/index/background_img.jpg" class="background-image"></image>
-	<view class="header">
-	  <text class="title">我的收藏</text>
-	  <view class="header-actions">
-	    <button class="menu-icon"></button>
-	    <button class="camera-icon"></button>
-	  </view>
-	</view>
+    <view class="header">
+	  <button @click="toggleDrawer" class="drawer-button">
+		  >
+	  </button>
+      <input
+        class="search-box"
+        v-model="searchText"
+        @input="onSearchInput"
+        :placeholder="placeholderText"
+      />
+      <button @click="onSearch" class="search-button">
+        {{$t('text_search')}}
+      </button>
+    </view>
+
+    <!-- Loading Indicator -->
+    <view v-if="isRefreshing" class="loading-overlay">
+      <text class="loading-text">正在加载...</text>
+      <!-- 可选：添加动画 -->
+      <view class="loading-spinner"></view>
+    </view>
+
     <!-- News Section -->
     <view class="news-section">
       <view
-        v-for="(item, index) in newsItems"
+        v-for="(item, index) in filteredNewsItems"
         :key="index"
         :class="['news-item', { active: activeIndex === index }]"
-        @click="navigateTo(item.link,item.title)"
+        @click="navigateTo(item.id, item.title)"
         @touchstart="pressFeedback(index)"
         @touchend="releaseFeedback()"
       >
@@ -24,252 +39,155 @@
           <image :src="item.image" :alt="item.title" mode="widthFix" />
         </view>
         <view class="news-description">{{ item.description }}</view>
+		<view class="news-description">{{ item.info }}</view>
       </view>
     </view>
+
+    <!-- Drawer Component -->
+    <uni-drawer
+      ref="drawer"
+      placement="bottom"
+      :mask="mask"
+      :width="drawWid"
+      :mask-closable="maskClick"
+      @close="handleDrawerClose"
+      :mask-style="'background-color: rgba(0, 0, 0, 0.5);'"
+      :style="'background-color: rgba(255, 255, 255, 0.9);'"
+    >
+      <view class="drawer-content">
+        <button 
+          @click="handleSort('favorite')" 
+          :class="['nav-item', { active: currentSort === 'favorite' }]"
+        >
+          我收藏的
+        </button>
+        <button 
+          @click="handleSort('viewed')" 
+          :class="['nav-item', { active: currentSort === 'viewed' }]"
+        >
+          我看过的
+        </button>
+      </view>
+    </uni-drawer>
   </view>
 </template>
 
-<script>
-	export default {
-	  data() {
-	    return {
-	      allNewsItems: [
-	        {
-	          title: "国际氢能联盟和麦肯锡联合发布《氢能洞察2024》",
-	          description: "环保要闻  |  双碳指挥  |  刚刚",
-	          link: "news_detail",
-	        },
-	        {
-	          title: "把自然讲给你听 | 什么是森林？",
-	          description: "环保科普  |  环保科普365  |  1小时前",
-	          image: "",
-	          link: "https://mp.weixin.qq.com/s/mzFR2d-17men_Lm297fweQ",
-	        },
-	        {
-	          title: "视频 | 垃圾分类",
-	          description: "环保科普  |  环保科普365  |  2024-10-14",
-	          video: true,
-	          link: "video_detail",
-	        },
-	        {
-	          title: "联合国发布2024气候计划",
-	          description: "环保要闻  |  环保科普365  |  2024-10-14",
-	          video: true,
-	          link: "news_detail",
-	        },
-			{
-			  title: "专栏 | 寂静的春天",
-			  description: "环保专栏  |  爱读夜  |  2024-10-14",
-			  video: true,
-			  link: "news_detail",
-			},
-			{
-			  title: "社团招新 | 根与芽2025",
-			  description: "环保专栏  |  公益事业  |  2024-6-16",
-			  video: true,
-			  link: "news_detail",
-			},
-	      ],
-	      newsItems: [],
-	      activeIndex: null,
-	      selectedSection: '全部', // 默认选择“全部”
-	      isRefreshing: false, // 用于显示正在更新的状态
-	    };
-	  },
-	  async created() {
-	    // 在组件创建时调用后端获取数据
-	    await this.fetchData();
-	  },
-	  methods: {
-		async fetchData() {
-		    try {
-		        uni.request({ // 模拟从后端获取数据
-		            url: 'https://122.51.231.155/news/{id}', // 模拟的后端接口URL
-		            method: 'GET',
-		            data: {
-		                id: 1,
-		            },
-		            success: (res) => {
-		                const mockResponse = {
-		                    data: [{
-		                            id: 1,
-		                            form: 'news',
-		                            newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-		                            imgsSrc: '',
-		                            tabs: ['环境保护', '环保要闻'],
-		                            time: '2024-4-17',
-		                            newsName: '测试视频',
-		                            authorName: 'user_test',
-		                            authorAvatar: '',
-		                            newsinfo: '测试测试测试测试测试',
-		                            newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中承担了重要角色。',
-		                            likeCount: 1001,
-		                            shareCount: 37,
-		                            favoriteCount: 897,
-		                            followCount: 189,
-		                            dislikeCount: 100,
-		                            type: 'main'
-		                        },
-		                        {
-		                            id: 2,
-		                            form: 'news',
-		                            newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-		                            imgsSrc: '',
-		                            tabs: ['环境保护', '环保要闻'],
-		                            time: '2024-4-17',
-		                            newsName: '测试新闻',
-		                            authorName: '中野柏',
-		                            authorAvatar: '',
-		                            newsinfo: '测试测试测试测试测试',
-		                            newsbody: '',
-		                            likeCount: 1001,
-		                            shareCount: 37,
-		                            favoriteCount: 897,
-		                            followCount: 189,
-		                            dislikeCount: 100,
-		                            type: 'reco'
-		                        },
-		                    ]
-		                };
-		                this.videoData = mockResponse.data;
-		                this.recommendations = [];
-		                this.videoData.forEach(video => this.convertVideoToItems(video));
-		            },
-		            fail: (err) => {
-		                const mockResponse = {
-		                    data: [{
-		                            id: 1,
-		                            form: 'news',
-		                            newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-		                            imgsSrc: '',
-		                            tabs: ['环境保护', '环保要闻'],
-		                            time: '2024-4-17',
-		                            newsName: '测试视频',
-		                            authorName: 'user_test',
-		                            authorAvatar: '',
-		                            newsinfo: '测试测试测试测试测试',
-		                            newsbody: '9月17日，国际氢能联盟与麦肯锡联合发布《氢能洞察2024》，分析了全球氢能行业在过去一年的重要进展。该报告显示，全球氢能项目投资显著增长，氢能在清洁能源转型中承担了重要角色。',
-		                            likeCount: 1001,
-		                            shareCount: 37,
-		                            favoriteCount: 897,
-		                            followCount: 189,
-		                            dislikeCount: 100,
-		                            type: 'main'
-		                        },
-		                        {
-		                            id: 2,
-		                            form: 'news',
-		                            newsSrc: 'http://vjs.zencdn.net/v/oceans.mp4',
-		                            imgsSrc: '',
-		                            tabs: ['环境保护', '环保要闻'],
-		                            time: '2024-4-17',
-		                            newsName: '测试新闻',
-		                            authorName: '平泽唯',
-		                            authorAvatar: '',
-		                            newsinfo: '测试测试测试测试测试',
-		                            newsbody: '',
-		                            likeCount: 1001,
-		                            shareCount: 37,
-		                            favoriteCount: 897,
-		                            followCount: 189,
-		                            dislikeCount: 100,
-		                            type: 'main'
-		                        },
-		                    ]
-		                };
-		                this.videoData = mockResponse.data;
-		                this.recommendations = [];
-		                this.videoData.forEach(video => this.convertVideoToItems(video));
-		            },
-		        });
-		    } catch (error) {
-		        console.error('Error fetching data:', error);
-		    }
-		},
-		convertVideoToItems(video) {
-		  if (video.type === 'main') {
-			if(video.form === 'web') {
-				this.allNewsItems.push({
-				  id: video.id,
-				  link: video.newsSrc,
-				  image: '',
-				  title: video.newsName,
-				  description: video.tabs.join(' | ') + ' | '+ video.time,
-				  info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount,
-				  form: video.form,
-				});
-			}
-			else if(video.form === 'news') {
-				this.allNewsItems.push({
-				  id: video.id,
-				  link: 'news_detail',
-				  image: '',
-				  title: video.newsName,
-				  description: video.tabs.join(' | ') + ' | '+ video.time,
-				  info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount,
-				  form: video.form,
-				});
-			}
-			else if(video.form === 'video') {
-				this.allNewsItems.push({
-				  id: video.id,
-				  link: 'video_detail',
-				  image: '',
-				  title: video.newsName,
-				  description: video.tabs.join(' | ') + ' | '+ video.time,
-				  info: '阅读量: ' + video.followCount + ' | 点赞量: ' + video.likeCount,
-				  form: video.form,
-				});
-			}
-		  }
-		},
-	    // 控制新闻分类的显示
-	    showSection() {
-	      this.newsItems = this.allNewsItems;
-	    },
+<script setup>
+import { ref, computed } from 'vue';
+import { useNewsStore } from '@/stores/news_list';
+import { useI18n } from 'vue-i18n';
+import { onShow, onPullDownRefresh } from '@dcloudio/uni-app';
+import { storeToRefs } from 'pinia';
+import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
 
-	    // 页面跳转方法
-	    navigateTo(link,name) {
-	      setTimeout(() => {
-	        if (link.startsWith("http")) {
-	          // 外部链接跳转
-	          uni.navigateTo({
-	            url: `/pagesNews/web_detail/web_detail?url=${encodeURIComponent(link)}`,
-	          });
-	        } else {
-	          // 内部页面跳转
-	          uni.navigateTo({
-	            url: `/pagesNews/${link}/${link}?title=${name}`,
-	          });
-	        }
-	      }, 100); // 延迟 100 毫秒
-	    },
+const newsStore = useNewsStore();
+const userStore = useUserStore(); // 使用用户存储
 
-	    // 触摸反馈
-	    pressFeedback(index) {
-	      console.log("Press feedback:", index);
-	      this.activeIndex = index;
-	    },
+const activeIndex = ref(null);
+const currentSort = ref('top-views'); // 默认排序类型
 
-	    releaseFeedback() {
-	      console.log("Release feedback");
-	      this.activeIndex = null;
-	    },
+// 计算属性从 Pinia store 获取用户状态
+const isLoggedIn = computed(() => userStore.user.isLoggedIn);
+const uid = computed(() => userStore.user.nickName);
+const avatarSrc = computed(() =>
+  userStore.user.avatarUrl
+    ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
+    : '/static/images/index/background_img.jpg'
+);
 
-	    // 页面更新方法
-	    refreshPage() {
-	      this.isRefreshing = true;
-	      setTimeout(() => {
-	        this.newsItems = this.newsItems.sort((a, b) => new Date(b.description.split('|').pop().trim()) - new Date(a.description.split('|').pop().trim()));
-	        this.isRefreshing = false;
-	      }, 1000); // 模拟1秒的加载时间
-	    },
-	  },
-	  mounted() {
-	    // 默认加载“全部”新闻
-	    this.showSection();
-	  },
-	};
+// 从 Store 获取数据和方法
+const { filteredNewsItems, selectedSection, isRefreshing } = storeToRefs(newsStore);
+const { setSection, refreshNews, fetchNews } = newsStore;
+
+const { t } = useI18n();
+
+// 新增：Drawer显示状态通过ref控制
+const drawer = ref(null);
+const mask = true;
+const drawWid = '50%'; // 根据需要调整宽度
+const maskClick = true;
+
+// 切换Drawer显示/隐藏的方法
+function toggleDrawer() {
+  if (drawer.value) {
+    drawer.value.open();
+    isDrawerVisible.value = true;
+  }
+}
+
+// 隐藏Drawer的方法
+function hideDrawer() {
+  if (drawer.value) {
+    drawer.value.close();
+    isDrawerVisible.value = false;
+  }
+}
+
+// 处理Drawer关闭事件
+function handleDrawerClose() {
+  // 可以在这里处理关闭后的逻辑，如重置状态等
+  isDrawerVisible.value = false;
+  console.log('Drawer closed');
+}
+
+// 新增：isDrawerVisible 状态管理
+const isDrawerVisible = ref(false);
+
+// 页面跳转方法
+function navigateTo(link, name) {
+  console.log('跳转至：', link);
+  setTimeout(() => {
+    uni.navigateTo({
+      url: `/pagesNews/news_detail/news_detail?id=${link}`,
+    });
+  }, 100);
+}
+
+// 触摸反馈
+function pressFeedback(index) {
+  activeIndex.value = index;
+}
+
+function releaseFeedback() {
+  activeIndex.value = null;
+}
+
+// 跳转至新建图文页面
+function createNews() {
+  uni.navigateTo({
+    url: "/pagesNews/create_news/create_news",
+  });
+}
+
+// 排序功能
+function handleSort(sortType) {
+  currentSort.value = sortType;
+  fetchNews(1, sortType); // 根据排序类型获取新闻
+  hideDrawer(); // 排序后关闭抽屉
+}
+
+// 异步函数处理下拉刷新
+const handlePullDownRefresh = async () => {
+  console.log('正在处理下拉刷新...');
+  try {
+    await newsStore.refreshNews();  // 等待 refreshNews 完成
+    uni.stopPullDownRefresh();      // 完成后停止下拉刷新动画
+  } catch (error) {
+    console.error('Error during refresh:', error);
+    uni.stopPullDownRefresh();      // 即使出错也停止刷新
+  }
+};
+
+// 使用 uni.onPullDownRefresh() 将处理函数绑定到下拉刷新事件
+onPullDownRefresh(handlePullDownRefresh);
+
+onShow(() => {
+  console.log("用户进入收藏");
+  // 根据需求，这里设置为false，可能需要根据实际登录状态调整
+  isLoggedIn.value = false; // 显式设置为未登录状态
+  console.log("in onShow");
+  fetchNews();
+});
 </script>
 
 <style scoped>
@@ -290,47 +208,131 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: 0;
+  z-index: -1;
   opacity: 0.1;
 }
 
+/* Header Section */
 .header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0 16px;
-  height: 60px;
-  background-color: #fff;
-  border-bottom: 1px solid #ebebeb;
+  padding: 10px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  justify-content: flex-start;
+  position: fixed; /* 固定头部 */
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 10; /* 确保在页面的最上层 */
+  overflow-x: scroll; /* 允许水平滚动 */
+  white-space: nowrap; /* 防止内容换行 */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 可选，增加阴影效果 */
 }
-.title {
-  font-size: 18px;
-  font-weight: bold;
-}
-.header-actions button {
-  background: none;
+
+/* 防止按钮换行，确保每个按钮都保持在一行 */
+.header button {
   border: none;
+  margin-left: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.3s;
+  white-space: nowrap; /* 防止按钮文本换行 */
+  padding: 5px 15px;
+  flex-shrink: 0; /* 防止按钮被压缩 */
+}
+
+.search-box {
+  flex: 1;
+  padding: 13px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.drawer-button {
+  background-color: #ffffff;
+  color: black;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.3s;
+  white-space: nowrap; /* 防止按钮文本换行 */
+  margin-left: 0;
+  padding: 5px 15px;
+  flex-shrink: 0; /* 防止按钮被压缩 */
+}
+
+.search-button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.3s;
+  white-space: nowrap; /* 防止按钮文本换行 */
+  padding: 5px 15px;
+  flex-shrink: 0; /* 防止按钮被压缩 */
+}
+
+.create-button {
+  background-color: #ffffff;
+  color: black;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.3s;
+  white-space: nowrap; /* 防止按钮文本换行 */
+  padding: 5px 15px;
+  margin-right: 20px;
+  flex-shrink: 0; /* 防止按钮被压缩 */
+}
+
+/* 选中的按钮样式 */
+.header button.active {
+  color: #4caf50; /* 选中状态颜色 */
+  font-weight: bold; /* 选中状态加粗 */
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(240, 244, 247, 0.8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10; /* 确保在最上层 */
+}
+
+.loading-text {
+  font-size: 18px;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+/* 加载动画 */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #ccc;
+  border-top-color: #4caf50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* News Section */
 .news-section {
   padding: 20px;
-  position: relative;
-}
-
-.news-section::before {
-  content: "正在更新...";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 16px;
-  color: #333;
-  display: none;
-}
-
-.news-section[data-refreshing="true"]::before {
-  display: block;
+  padding-top: 70px; /* 根据header的高度调整，确保内容不被遮挡 */
+  padding-bottom: 80px;
 }
 
 .news-item {
@@ -341,8 +343,8 @@ body {
   margin-bottom: 20px;
   cursor: pointer;
   transition: transform 0.1s, box-shadow 0.1s;
-  position: relative;  /* 确保其层级设置有效 */
-  z-index: 1;          /* 确保点击事件可以被接收 */
+  position: relative;              /* 确保其层级设置有效 */
+  z-index: 1;                      /* 确保点击事件可以被接收 */
 }
 
 .news-item.active {
@@ -366,19 +368,14 @@ body {
   margin-bottom: 10px;
 }
 
-/* Footer Section */
-.footer {
-  background-color: #ffffff;
-  padding: 10px 0;
-  border-top: 1px solid #e0e0e0;
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-}
+/* Footer Toggle Button */
 
-.footer-nav {
+/* Drawer Content */
+.drawer-content {
   display: flex;
-  justify-content: space-around;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
 }
 
 .nav-item {
@@ -386,9 +383,43 @@ body {
   color: #333;
   font-weight: bold;
   cursor: pointer;
+  height: 40px;
+  transition: color 0.3s, background-color 0.3s;
+  margin-bottom: 10px;
+  width: 80%; /* 适应抽屉宽度 */
+  border-radius: 5px;
 }
 
 .nav-item:hover {
   color: #4caf50;
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.nav-item.active {
+  color: #4caf50;
+  border-bottom: 2px solid #4caf50;
+}
+
+/* 关闭按钮样式 */
+.close-button {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  width: 80%;
+  text-align: center;
+}
+
+.close-button:hover {
+  background-color: #d32f2f;
+}
+
+/* 确保uni-drawer有足够的z-index */
+.uni-drawer {
+  transition: all 0.3s ease;
+  z-index: 1000;
 }
 </style>
