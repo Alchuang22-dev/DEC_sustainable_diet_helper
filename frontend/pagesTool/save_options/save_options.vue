@@ -167,24 +167,42 @@ const saveForSelf = () => {
 };
 
 // 保存为家人计算
-const saveForFamily = () => {
-  familyStore.getFamilyDetails();
-  if (familyStatus.value !== FamilyStatus.JOINED) {
+const saveForFamily = async () => {
+  try {
+    // 等待获取家庭详情完成
+    await familyStore.getFamilyDetails();
+
+    console.log('家庭状态:', familyStore.family.status);
+
+    // 检查家庭状态
+    if (familyStore.family.status !== FamilyStatus.JOINED) {
+      uni.showToast({
+        title: t('join_family_first'),
+        icon: 'none',
+        duration: 2000
+      });
+      return;
+    }
+
+    // 跳转到分享页面
+    uni.navigateTo({
+      url: `/pagesTool/family_share/family_share?data=${encodeURIComponent(JSON.stringify({
+        carbonEmission: totalEmission.value,
+        nutrition: nutritionData,
+        mealType: mealTypesValue[selectedMealIndex.value]
+      }))}`
+    });
+  } catch (error) {
+    console.error('获取家庭详情失败:', error);
     uni.showToast({
-      title: t('join_family_first'),
+      title: t('error_fetch_family_details'), // 确保在国际化文件中添加对应的键值
       icon: 'none',
       duration: 2000
     });
-    return;
   }
-  uni.navigateTo({
-    url: `/pagesTool/family_share/family_share?data=${encodeURIComponent(JSON.stringify({
-      carbonEmission: totalEmission.value,
-      nutrition: nutritionData,
-      mealType: mealTypesValue[selectedMealIndex.value]
-    }))}`
-  });
 };
+
+
 
 // 当前选择的餐食类型
 const currentMealType = computed(() => {

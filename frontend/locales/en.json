@@ -239,6 +239,7 @@
 	"results": "Results",
 	"intake_value": "Intake Value",
 	"target_value_today": "Target Value Today",
+	"error_fetch_family_details": "Failed to fetch family details",
 
 	"family_management": "Family Management",
 	"create_family": "Create Family",

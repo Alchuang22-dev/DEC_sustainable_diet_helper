@@ -239,6 +239,7 @@
 	"results": "结果",
 	"intake_value": "摄入量",
 	"target_value_today": "今日目标值",
+	"error_fetch_family_details": "获取家庭详情失败",
 
 	"family_management": "家庭管理",
 	"create_family": "创建家庭",
