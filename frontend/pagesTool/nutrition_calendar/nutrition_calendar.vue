@@ -186,7 +186,7 @@ const generateDateTabs = () => {
     const date = new Date()
     date.setDate(today.getDate() + i)
 
-    // 获取星期几的简称（假设getWeekdayKey返回的是类似 'Mon', 'Tue' 的值）
+    // 获取星期几
     const day = getWeekdayKey(date.getDay())
     const dateNumber = date.getDate()
 
@@ -196,14 +196,6 @@ const generateDateTabs = () => {
     const dayOfMonth = String(date.getDate()).padStart(2, '0')
     const dateString = `${year}-${month}-${dayOfMonth}`
 
-    // console.log('日期：', dateString)
-    // console.log('星期：', day)
-    // console.log('年份：', year)
-    // console.log('月份：', month)
-    // console.log('日期数字：', dateNumber)
-    // console.log('日期字符串：', dateString)
-
-    // 添加到tabs数组
     tabs.push({
       day: t(day),
       date: dateNumber,
@@ -228,62 +220,64 @@ const getDataByDate = (dateString) => {
 // 获取当前选中日期的数据
 const getDataForSelectedDate = () => {
   if (currentDateIndex.value < 0 || currentDateIndex.value >= dateTabs.value.length) {
-    return {
-      nutrients: {
-        actual: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 },
-        target: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
-      },
-      meals: {
-        breakfast: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
-        lunch: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
-        dinner: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
-        other: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } }
-      }
-    }
+    return defaultEmptyData()
   }
-
   const selectedDate = dateTabs.value[currentDateIndex.value].dateString
   const dateData = getDataByDate(selectedDate)
 
   if (dateData) {
     return dateData
   } else {
-    return {
-      nutrients: {
-        actual: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 },
-        target: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
-      },
-      meals: {
-        breakfast: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
-        lunch: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
-        dinner: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
-        other: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } }
-      }
+    // 如果获取不到数据，就返回空数据结构
+    return defaultEmptyData()
+  }
+}
+
+// 当找不到数据时，返回这个空结构，避免 undefined 出错
+const defaultEmptyData = () => {
+  return {
+    nutrients: {
+      actual: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 },
+      target: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
+    },
+    meals: {
+      breakfast: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+      lunch: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+      dinner: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } },
+      other: { nutrients: { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 } }
     }
   }
 }
 
 // 更新五大营养的过量标志
 const updateSummaryNutrition = () => {
+  // 获取当前日期的数据
   const dateData = getDataForSelectedDate()
+
+  // 处理实际与目标的安全取值
+  const actualNutrients = dateData?.nutrients?.actual || {}
+  const targetNutrients = dateData?.nutrients?.target || {}
 
   const nutrients = ['calories', 'protein', 'fat', 'carbohydrates', 'sodium']
   const tempSummary = nutrients.map(nutrient => {
-    const intake = dateData.nutrients.actual[nutrient] || 0
-    const plan = dateData.nutrients.target[nutrient] || 0
+    const intake = actualNutrients[nutrient] || 0
+    const plan = targetNutrients[nutrient] || 0
     let ratio = 0
+
     if (plan > 0) {
       ratio = intake / plan
       if (ratio > 1) {
-        ratio = 1 // 确保比例不超过1
+        ratio = 1 // 确保比例不超过 1
       }
     } else {
-      ratio = intake > 0 ? 1 : 0 // 如果计划为0且摄入大于0，设置为1，否则为0
+      ratio = intake > 0 ? 1 : 0
     }
+
     const over = plan > 0 && intake > plan
     const color = over ? getRedShade(nutrient) : getNutrientColor(nutrient)
+
     return {
-      nutrient: nutrient, // 新增字段，用于颜色映射
+      nutrient: nutrient, // 用于颜色映射
       label: t(`${nutrient}_unit`),
       intake: intake,
       plan: plan,
@@ -293,15 +287,14 @@ const updateSummaryNutrition = () => {
     }
   })
 
-  // 使用临时变量整体赋值
   summaryNutrition.value = JSON.parse(JSON.stringify(tempSummary))
 
-  // 更新每餐营养
-  const m = dateData.meals
-  breakfastNutrients.value = mapMealNutrients(m.breakfast.nutrients)
-  lunchNutrients.value = mapMealNutrients(m.lunch.nutrients)
-  dinnerNutrients.value = mapMealNutrients(m.dinner.nutrients)
-  otherNutrients.value = mapMealNutrients(m.other.nutrients)
+  // 每餐的营养数据
+  const m = dateData.meals || {}
+  breakfastNutrients.value = mapMealNutrients(m.breakfast?.nutrients || {})
+  lunchNutrients.value = mapMealNutrients(m.lunch?.nutrients || {})
+  dinnerNutrients.value = mapMealNutrients(m.dinner?.nutrients || {})
+  otherNutrients.value = mapMealNutrients(m.other?.nutrients || {})
 }
 
 // 映射每餐的营养数据
@@ -316,15 +309,11 @@ const mapMealNutrients = (mealN) => {
 // 更新图表数据（五大营养arcbar图）
 const updateChartData = () => {
   const tempSeries = summaryNutrition.value.map(item => ({
-    data: item.ratio, // 已在 summaryNutrition 中处理过比例
+    data: item.ratio,
     color: item.color
   }))
 
-  // 使用临时变量整体赋值
-  const tempChartData = {
-    series: tempSeries
-  }
-
+  const tempChartData = { series: tempSeries }
   chartData.value = JSON.parse(JSON.stringify(tempChartData))
 }
 
@@ -354,18 +343,18 @@ const getNutrientColor = (nutrient) => {
 
 const scrollPosition = ref(0)
 
-// 在 onMounted 中添加初始滚动位置设置
+// 在 onMounted 中初始化
 onMounted(async () => {
   generateDateTabs()
   await carbonNutritionStore.getNutritionGoals()
   await carbonNutritionStore.getNutritionIntakes()
 
-  // 设置初始日期为今天
+  // 设置初始日期为今天（倒数第二个：i = 1）
   currentDateIndex.value = dateTabs.value.length - 2
 
-  // 设置初始滚动位置
+  // 让滚动条自动滚到最右
   nextTick(() => {
-    scrollPosition.value = 9999 // 一个足够大的值确保滚动到最右边
+    scrollPosition.value = 9999
   })
 
   updateSummaryNutrition()
@@ -391,8 +380,9 @@ const navigateToSetGoals = () => {
   })
 }
 
-// 初始化数据
+// 再次监听
 onMounted(async () => {
+  // 如果想在初次进入页面时再次获取数据，可以保留此逻辑
   generateDateTabs()
   await carbonNutritionStore.getNutritionGoals()
   await carbonNutritionStore.getNutritionIntakes()
