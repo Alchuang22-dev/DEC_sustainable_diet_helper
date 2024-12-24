@@ -278,7 +278,6 @@ onShow(async () => {
   await carbonNutritionStore.getCarbonIntakes()
 
   // 更新今日数据
-
   const today = new Date()
   console.log('today', today)
   const dateString = today.getFullYear() + '-'
