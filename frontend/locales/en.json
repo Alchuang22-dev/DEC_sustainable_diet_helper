@@ -536,6 +536,7 @@
 	"success": "Success",
 	"fail": "Failed",
 	"failed": "Failed",
-	"input_specification": "Up to one decimal place allowed"
+	"input_specification": "Up to one decimal place allowed",
+	"no_matching_food": "No matching food"
 
 }
