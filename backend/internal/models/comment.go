@@ -15,4 +15,10 @@ type Comment struct {
     Replies    []Comment `gorm:"foreignKey:ParentID" json:"replies"`
     ParentID   *uint     `json:"parent_id"`
     IsReply    bool      `json:"is_reply"`
+    Author      User      `gorm:"foreignKey:UserID" json:"author"`  // 绑定 User 类型的 Author 字段
+
+    LikedByUsers []User `gorm:"many2many:user_likes_comments;" json:"-"`
+
+    // 是否已点赞（不存数据库）
+    DidLike  bool  `gorm:"-" json:"did_like"`
 }
