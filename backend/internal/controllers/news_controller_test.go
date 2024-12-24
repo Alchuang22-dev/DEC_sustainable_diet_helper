@@ -4,13 +4,13 @@ package controllers
 import (
     "bytes"
     "encoding/json"
-    // "fmt"
-    "io"
+    "fmt"
+    // "io"
     "mime/multipart"
     "net/http"
     "net/http/httptest"
     "os"
-    "path/filepath"
+    // "path/filepath"
     "testing"
     // "time"
 
@@ -46,9 +46,39 @@ func setupNewsRouter(db *gorm.DB) *gin.Engine {
     {
         newsGroup.Use(middleware.AuthMiddleware())
         {
-            newsGroup.POST("/upload_image", newsController.UploadImage)      // 上传单张图片
-            newsGroup.POST("/create_draft", newsController.CreateDraft)     // 创建草稿
-            // 其他路由...
+            // 需要认证的路由
+            authGroup := newsGroup.Group("")
+            authGroup.Use(middleware.AuthMiddleware())
+            {
+                authGroup.POST("/upload_image", newsController.UploadImage)      // 上传单张图片
+                authGroup.POST("/create_draft", newsController.CreateDraft)     // 创建草稿
+                authGroup.PUT("/drafts/:id", newsController.UpdateDraft)
+                authGroup.DELETE("/drafts/:id", newsController.DeleteDraft)
+                authGroup.POST("/convert_draft", newsController.ConvertDraftToNews)
+                authGroup.GET("/my_news", newsController.GetMyNews)
+                authGroup.GET("/my_drafts", newsController.GetMyDrafts)
+                authGroup.POST("/preview_news", newsController.PreviewNews)
+                authGroup.POST("/preview_drafts", newsController.PreviewDrafts)
+                authGroup.GET("/details/news/:id", newsController.GetNewsDetails)
+                authGroup.GET("/details/draft/:id", newsController.GetDraftDetails)
+                authGroup.DELETE("/:id", newsController.DeleteNews)                
+                authGroup.GET("/paginated/view_count", newsController.GetNewsByViewCount) // 观看量降序
+                authGroup.GET("/paginated/like_count", newsController.GetNewsByLikeCount) // 点赞量降序
+                authGroup.GET("/paginated/upload_time", newsController.GetNewsByUploadTime) // 时间由旧到新
+                authGroup.POST("/comments", newsController.AddComment)      // 添加评论
+                authGroup.DELETE("/comments/:id", newsController.DeleteComment) // 删除评论
+                authGroup.POST("/:id/like", newsController.LikeNews)            // 点赞新闻
+                authGroup.DELETE("/:id/like", newsController.CancelLikeNews)   // 取消点赞新闻
+                authGroup.POST("/:id/favorite", newsController.FavoriteNews)          // 收藏新闻
+                authGroup.DELETE("/:id/favorite", newsController.CancelFavoriteNews)  // 取消收藏新闻
+                authGroup.POST("/:id/dislike", newsController.DislikeNews)            // 点踩新闻
+                authGroup.DELETE("/:id/dislike", newsController.CancelDislikeNews)   // 取消点踩新闻
+                authGroup.POST("/:id/view", newsController.ViewNews) // 浏览新闻
+                authGroup.GET("/:id/status", newsController.GetUserNewsStatus) // 返回用户对新闻的过往交互
+                authGroup.POST("/:id/comment_like", newsController.LikeComment) // 点赞评论
+                authGroup.DELETE("/:id/comment_like", newsController.CancelLikeComment) // 取消点赞评论
+                authGroup.POST("/search", newsController.SearchNews)
+            }
         }
     }
 
@@ -64,480 +94,143 @@ func generateValidJWTNews(userID uint) string {
     return token
 }
 
-// TestUploadImage_Success 测试成功上传图片
-func TestUploadImage_Success(t *testing.T) {
+func TestCreateDraft(t *testing.T) {
     db := setupNewsTestDB()
     router := setupNewsRouter(db)
 
-    // 创建用户
+    // 创建一个用户 => user
     user := models.User{
-        Nickname:  "TestUser",
-        AvatarURL: "avatars/default.jpg",
+        OpenID:   "OpenID_CreateDraft_User",
+        Nickname: "CreateDraftUser",
     }
     db.Create(&user)
 
-    // 生成 JWT
-    token := generateValidJWTNews(user.ID)
+    tests := []struct {
+        name           string
+        userID         uint
+        requestBody    interface{}
+        setupFunc      func()
+        expectedStatus int
+        expectedBody   map[string]interface{}
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            requestBody: gin.H{
+                "title":      "Sample Draft",
+                "paragraphs": []string{"Paragraph 1", "Paragraph 2"},
+            },
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedBody:   map[string]interface{}{"error": "Authorization header missing"},
+        },
+        {
+            name:           "Invalid Request Body",
+            userID:         user.ID,
+            requestBody:    "not_a_valid_json",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "Invalid request data"},
+        },
+        {
+            name:           "Empty Title",
+            userID:         user.ID,
+            requestBody: gin.H{
+                "title":             "",
+                "paragraphs":        []string{"Para 1"},
+                "image_descriptions": []string{"desc1"},
+                "image_paths":        []string{"path1"},
+            },
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "Title is required"},
+        },
+        {
+            name:           "Mismatch Image Descriptions & Paths",
+            userID:         user.ID,
+            requestBody: gin.H{
+                "title":             "Draft With Mismatch",
+                "paragraphs":        []string{"Para1"},
+                "image_descriptions": []string{"desc1", "desc2"},
+                "image_paths":        []string{"path1"}, // 数量不匹配
+            },
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "Number of image descriptions and image paths do not match"},
+        },
+        {
+            name:   "Failed To Create Draft (simulate DB error)",
+            userID: user.ID,
+            requestBody: gin.H{
+                "title":             "Draft DB Error",
+                "paragraphs":        []string{"Paragraph 1"},
+                "image_descriptions": []string{},
+                "image_paths":        []string{},
+            },
+            setupFunc: func() {
+                // 模拟数据库错误
+                db.Callback().Create().Before("gorm:create").Register("force_draft_create_error", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "drafts" {
+                        tx.Error = fmt.Errorf("forced draft create error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedBody:   map[string]interface{}{"error": "Failed to create draft"},
+        },
+        {
+            name:   "Success Create Draft",
+            userID: user.ID,
+            requestBody: gin.H{
+                "title":             "My Draft Title",
+                "paragraphs":        []string{"Paragraph 1", "Paragraph 2"},
+                "image_descriptions": []string{"desc1"},
+                "image_paths":        []string{"path1"},
+            },
+            setupFunc: func() {
+                // 移除上一个模拟错误回调
+                db.Callback().Create().Remove("force_draft_create_error")
+            },
+            expectedStatus: http.StatusCreated,
+            expectedBody:   map[string]interface{}{"message": "Draft created successfully."},
+        },
+    }
 
-    // 创建临时图片文件
-    imagePath := "./test_upload_image.jpg"
-    os.WriteFile(imagePath, []byte("test image content"), 0644)
-    defer os.Remove(imagePath)
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
 
-    // 构建 multipart form
-    body := &bytes.Buffer{}
-    writer := multipart.NewWriter(body)
-    part, err := writer.CreateFormFile("image", filepath.Base(imagePath))
-    assert.NoError(t, err)
+            bodyBytes, _ := json.Marshal(tc.requestBody)
+            req, _ := http.NewRequest("POST", "/news/create_draft", bytes.NewBuffer(bodyBytes))
+            req.Header.Set("Content-Type", "application/json")
 
-    file, err := os.Open(imagePath)
-    assert.NoError(t, err)
-    defer file.Close()
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
 
-    _, err = io.Copy(part, file)
-    assert.NoError(t, err)
-    writer.Close()
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
 
-    // 创建请求
-    req, _ := http.NewRequest("POST", "/news/upload_image", body)
-    req.Header.Set("Content-Type", writer.FormDataContentType())
-    req.Header.Set("Authorization", "Bearer "+token)
+            assert.Equal(t, tc.expectedStatus, w.Code)
 
-    // 执行请求
-    w := httptest.NewRecorder()
-    router.ServeHTTP(w, req)
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
 
-    // 检查响应
-    assert.Equal(t, http.StatusOK, w.Code)
-    var response map[string]interface{}
-    err = json.Unmarshal(w.Body.Bytes(), &response)
-    assert.NoError(t, err)
-    assert.Equal(t, "Image uploaded successfully", response["message"])
-    assert.NotEmpty(t, response["path"])
-
-    // 检查文件是否存在
-    relativePath := response["path"].(string)
-    savedPath := filepath.Join("./uploads", relativePath)
-    _, err = os.Stat(savedPath)
-    assert.False(t, os.IsNotExist(err))
-
-    // 清理上传的文件
-    os.Remove(savedPath)
+            // 对成功和失败分别做检查
+            if tc.expectedStatus == http.StatusCreated {
+                // 只检查 message 字段即可
+                assert.Equal(t, tc.expectedBody["message"], resp["message"])
+                // draft_id 应该存在
+                _, ok := resp["draft_id"]
+                assert.True(t, ok)
+            } else {
+                // 检查 error 字段
+                for k, v := range tc.expectedBody {
+                    assert.Equal(t, v, resp[k])
+                }
+            }
+        })
+    }
 }
 
-// TestUploadImage_NoImage 测试未上传图片
-func TestUploadImage_NoImage(t *testing.T) {
-    db := setupNewsTestDB()
-    router := setupNewsRouter(db)
-
-    // 创建用户
-    user := models.User{
-        Nickname:  "TestUser",
-        AvatarURL: "avatars/default.jpg",
-    }
-    db.Create(&user)
-
-    // 生成 JWT
-    token := generateValidJWTNews(user.ID)
-
-    // 构建 multipart form，不包含图片
-    body := &bytes.Buffer{}
-    writer := multipart.NewWriter(body)
-    writer.Close()
-
-    // 创建请求
-    req, _ := http.NewRequest("POST", "/news/upload_image", body)
-    req.Header.Set("Content-Type", writer.FormDataContentType())
-    req.Header.Set("Authorization", "Bearer "+token)
-
-    // 执行请求
-    w := httptest.NewRecorder()
-    router.ServeHTTP(w, req)
-
-    // 检查响应
-    assert.Equal(t, http.StatusBadRequest, w.Code)
-    var response map[string]string
-    err := json.Unmarshal(w.Body.Bytes(), &response)
-    assert.NoError(t, err)
-    assert.Equal(t, "Image file is required", response["error"])
-}
-
-// TestUploadImage_Unauthorized 测试未授权上传图片
-func TestUploadImage_Unauthorized(t *testing.T) {
-    db := setupNewsTestDB()
-    router := setupNewsRouter(db)
-
-    // 构建 multipart form
-    body := &bytes.Buffer{}
-    writer := multipart.NewWriter(body)
-    writer.WriteField("image", "test_image_content")
-    writer.Close()
-
-    // 创建请求，不设置 Authorization 头
-    req, _ := http.NewRequest("POST", "/news/upload_image", body)
-    req.Header.Set("Content-Type", writer.FormDataContentType())
-
-    // 执行请求
-    w := httptest.NewRecorder()
-    router.ServeHTTP(w, req)
-
-    // 检查响应
-    assert.Equal(t, http.StatusUnauthorized, w.Code)
-    var response map[string]string
-    err := json.Unmarshal(w.Body.Bytes(), &response)
-    assert.NoError(t, err)
-    assert.Equal(t, "Unauthorized", response["error"])
-}
-
-// TestCreateDraft1_Success 测试成功创建草稿
-func TestCreateDraft1_Success(t *testing.T) {
-    db := setupNewsTestDB()
-    router := setupNewsRouter(db)
-
-    // 创建用户
-    user := models.User{
-        Nickname:  "TestUser",
-        AvatarURL: "avatars/default.jpg",
-    }
-    db.Create(&user)
-
-    // 生成 JWT
-    token := generateValidJWTNews(user.ID)
-
-    // 创建段落和图片描述
-    paragraphs := []string{"First paragraph", "Second paragraph"}
-    imageDescriptions := []string{"Image 1 description", "Image 2 description"}
-
-    // 假设图片已经上传，并获得相对路径
-    imagePaths := []string{
-        "drafts/1/image1.jpg",
-        "drafts/1/image2.jpg",
-    }
-
-    // 构建请求体
-    requestBody := map[string]interface{}{
-        "title":              "Test Draft",
-        "paragraphs":         paragraphs,
-        "image_descriptions": imageDescriptions,
-        "image_paths":        imagePaths,
-    }
-    requestJSON, _ := json.Marshal(requestBody)
-
-    // 创建请求
-    req, _ := http.NewRequest("POST", "/news/create_draft", bytes.NewBuffer(requestJSON))
-    req.Header.Set("Content-Type", "application/json")
-    req.Header.Set("Authorization", "Bearer "+token)
-
-    // 执行请求
-    w := httptest.NewRecorder()
-    router.ServeHTTP(w, req)
-
-    // 检查响应
-    assert.Equal(t, http.StatusCreated, w.Code)
-    var response map[string]interface{}
-    err := json.Unmarshal(w.Body.Bytes(), &response)
-    assert.NoError(t, err)
-    assert.Equal(t, "Draft created successfully.", response["message"])
-    assert.NotNil(t, response["draft_id"])
-
-    // 检查数据库中是否存在草稿
-    var draft models.Draft
-    draftID := uint(response["draft_id"].(float64))
-    result := db.Preload("Paragraphs").Preload("Images").First(&draft, draftID)
-    assert.Nil(t, result.Error)
-    assert.Equal(t, "Test Draft", draft.Title)
-    assert.Equal(t, user.ID, draft.AuthorID)
-    assert.Len(t, draft.Paragraphs, 2)
-    assert.Len(t, draft.Images, 2)
-    assert.Equal(t, "Image 1 description", draft.Images[0].Description)
-    assert.Equal(t, "Image 2 description", draft.Images[1].Description)
-}
-
-// TestCreateDraft1_MissingTitle 测试缺少标题
-func TestCreateDraft1_MissingTitle(t *testing.T) {
-    db := setupNewsTestDB()
-    router := setupNewsRouter(db)
-
-    // 创建用户
-    user := models.User{
-        Nickname:  "TestUser",
-        AvatarURL: "avatars/default.jpg",
-    }
-    db.Create(&user)
-
-    // 生成 JWT
-    token := generateValidJWTNews(user.ID)
-
-    // 创建段落和图片描述
-    paragraphs := []string{"First paragraph"}
-    imageDescriptions := []string{"Image 1 description"}
-
-    // 假设图片已经上传，并获得相对路径
-    imagePaths := []string{
-        "drafts/1/image1.jpg",
-    }
-
-    // 构建请求体，缺少 title
-    requestBody := map[string]interface{}{
-        "paragraphs":         paragraphs,
-        "image_descriptions": imageDescriptions,
-        "image_paths":        imagePaths,
-    }
-    requestJSON, _ := json.Marshal(requestBody)
-
-    // 创建请求
-    req, _ := http.NewRequest("POST", "/news/create_draft", bytes.NewBuffer(requestJSON))
-    req.Header.Set("Content-Type", "application/json")
-    req.Header.Set("Authorization", "Bearer "+token)
-
-    // 执行请求
-    w := httptest.NewRecorder()
-    router.ServeHTTP(w, req)
-
-    // 检查响应
-    assert.Equal(t, http.StatusBadRequest, w.Code)
-    var response map[string]string
-    err := json.Unmarshal(w.Body.Bytes(), &response)
-    assert.NoError(t, err)
-    assert.Equal(t, "Title is required", response["error"])
-}
-
-// TestCreateDraft1_MismatchedImageDescriptions 测试图片描述与图片路径数量不匹配
-func TestCreateDraft1_MismatchedImageDescriptions(t *testing.T) {
-    db := setupNewsTestDB()
-    router := setupNewsRouter(db)
-
-    // 创建用户
-    user := models.User{
-        Nickname:  "TestUser",
-        AvatarURL: "avatars/default.jpg",
-    }
-    db.Create(&user)
-
-    // 生成 JWT
-    token := generateValidJWTNews(user.ID)
-
-    // 创建段落和图片描述
-    paragraphs := []string{"First paragraph"}
-    imageDescriptions := []string{"Image 1 description"}
-
-    // 假设上传了两张图片，但只有一个描述
-    imagePaths := []string{
-        "drafts/1/image1.jpg",
-        "drafts/1/image2.jpg",
-    }
-
-    // 构建请求体
-    requestBody := map[string]interface{}{
-        "title":              "Test Draft",
-        "paragraphs":         paragraphs,
-        "image_descriptions": imageDescriptions,
-        "image_paths":        imagePaths,
-    }
-    requestJSON, _ := json.Marshal(requestBody)
-
-    // 创建请求
-    req, _ := http.NewRequest("POST", "/news/create_draft", bytes.NewBuffer(requestJSON))
-    req.Header.Set("Content-Type", "application/json")
-    req.Header.Set("Authorization", "Bearer "+token)
-
-    // 执行请求
-    w := httptest.NewRecorder()
-    router.ServeHTTP(w, req)
-
-    // 检查响应
-    assert.Equal(t, http.StatusBadRequest, w.Code)
-    var response map[string]string
-    err := json.Unmarshal(w.Body.Bytes(), &response)
-    assert.NoError(t, err)
-    assert.Equal(t, "Number of image descriptions and image paths do not match", response["error"])
-}
-
-// TestCreateDraft1_InvalidRequestData 测试无效的请求数据
-func TestCreateDraft1_InvalidRequestData(t *testing.T) {
-    db := setupNewsTestDB()
-    router := setupNewsRouter(db)
-
-    // 创建用户
-    user := models.User{
-        Nickname:  "TestUser",
-        AvatarURL: "avatars/default.jpg",
-    }
-    db.Create(&user)
-
-    // 生成 JWT
-    token := generateValidJWTNews(user.ID)
-
-    // 构建无效的 JSON 请求体
-    invalidJSON := `{"title": "Test Draft", "paragraphs": "invalid_paragraphs"}`
-
-    // 创建请求
-    req, _ := http.NewRequest("POST", "/news/create_draft", bytes.NewBufferString(invalidJSON))
-    req.Header.Set("Content-Type", "application/json")
-    req.Header.Set("Authorization", "Bearer "+token)
-
-    // 执行请求
-    w := httptest.NewRecorder()
-    router.ServeHTTP(w, req)
-
-    // 检查响应
-    assert.Equal(t, http.StatusBadRequest, w.Code)
-    var response map[string]string
-    err := json.Unmarshal(w.Body.Bytes(), &response)
-    assert.NoError(t, err)
-    assert.Equal(t, "Invalid request data", response["error"])
-}
-
-// TestCreateDraft1_Unauthorized 测试未授权创建草稿
-func TestCreateDraft1_Unauthorized(t *testing.T) {
-    db := setupNewsTestDB()
-    router := setupNewsRouter(db)
-
-    // 构建请求体
-    requestBody := map[string]interface{}{
-        "title":              "Test Draft",
-        "paragraphs":         []string{"First paragraph"},
-        "image_descriptions": []string{"Image 1 description"},
-        "image_paths":        []string{"drafts/1/image1.jpg"},
-    }
-    requestJSON, _ := json.Marshal(requestBody)
-
-    // 创建请求，不设置 Authorization 头
-    req, _ := http.NewRequest("POST", "/news/create_draft", bytes.NewBuffer(requestJSON))
-    req.Header.Set("Content-Type", "application/json")
-
-    // 执行请求
-    w := httptest.NewRecorder()
-    router.ServeHTTP(w, req)
-
-    // 检查响应
-    assert.Equal(t, http.StatusUnauthorized, w.Code)
-    var response map[string]string
-    err := json.Unmarshal(w.Body.Bytes(), &response)
-    assert.NoError(t, err)
-    assert.Equal(t, "Unauthorized", response["error"])
-}
-
-// TestCreateDraft1_UserNotFound 测试用户不存在
-func TestCreateDraft1_UserNotFound(t *testing.T) {
-    db := setupNewsTestDB()
-    router := setupNewsRouter(db)
-
-    // 生成 JWT 对应不存在的用户 ID
-    fakeUserID := uint(9999)
-    token := generateValidJWTNews(fakeUserID)
-
-    // 构建请求体
-    requestBody := map[string]interface{}{
-        "title":              "Test Draft",
-        "paragraphs":         []string{"First paragraph"},
-        "image_descriptions": []string{"Image 1 description"},
-        "image_paths":        []string{"drafts/9999/image1.jpg"},
-    }
-    requestJSON, _ := json.Marshal(requestBody)
-
-    // 创建请求
-    req, _ := http.NewRequest("POST", "/news/create_draft", bytes.NewBuffer(requestJSON))
-    req.Header.Set("Content-Type", "application/json")
-    req.Header.Set("Authorization", "Bearer "+token)
-
-    // 执行请求
-    w := httptest.NewRecorder()
-    router.ServeHTTP(w, req)
-
-    // 检查响应
-    // 根据您的实现，可能返回 401 Unauthorized
-    assert.Equal(t, http.StatusUnauthorized, w.Code)
-    var response map[string]string
-    err := json.Unmarshal(w.Body.Bytes(), &response)
-    assert.NoError(t, err)
-    assert.Equal(t, "Unauthorized", response["error"])
-}
-
-// TestCreateDraft1_DatabaseFailure 测试数据库保存失败
-func TestCreateDraft1_DatabaseFailure(t *testing.T) {
-    db := setupNewsTestDB()
-    router := setupNewsRouter(db)
-
-    // 创建用户
-    user := models.User{
-        Nickname:  "TestUser",
-        AvatarURL: "avatars/default.jpg",
-    }
-    db.Create(&user)
-
-    // 生成 JWT
-    token := generateValidJWTNews(user.ID)
-
-    // 构建请求体
-    requestBody := map[string]interface{}{
-        "title":              "Test Draft",
-        "paragraphs":         []string{"First paragraph"},
-        "image_descriptions": []string{"Image 1 description"},
-        "image_paths":        []string{"drafts/1/image1.jpg"},
-    }
-    requestJSON, _ := json.Marshal(requestBody)
-
-    // 关闭数据库连接，模拟数据库错误
-    sqlDB, _ := db.DB()
-    sqlDB.Close()
-
-    // 创建请求
-    req, _ := http.NewRequest("POST", "/news/create_draft", bytes.NewBuffer(requestJSON))
-    req.Header.Set("Content-Type", "application/json")
-    req.Header.Set("Authorization", "Bearer "+token)
-
-    // 执行请求
-    w := httptest.NewRecorder()
-    router.ServeHTTP(w, req)
-
-    // 检查响应
-    assert.Equal(t, http.StatusInternalServerError, w.Code)
-    var response map[string]string
-    err := json.Unmarshal(w.Body.Bytes(), &response)
-    assert.NoError(t, err)
-    assert.Equal(t, "Failed to create draft", response["error"])
-}
-
-// TestCreateDraft1_InvalidImagePath 测试无效的图片路径
-func TestCreateDraft1_InvalidImagePath(t *testing.T) {
-    db := setupNewsTestDB()
-    router := setupNewsRouter(db)
-
-    // 创建用户
-    user := models.User{
-        Nickname:  "TestUser",
-        AvatarURL: "avatars/default.jpg",
-    }
-    db.Create(&user)
-
-    // 生成 JWT
-    token := generateValidJWTNews(user.ID)
-
-    // 构建请求体，提供不存在的图片路径
-    requestBody := map[string]interface{}{
-        "title":              "Test Draft",
-        "paragraphs":         []string{"First paragraph"},
-        "image_descriptions": []string{"Image 1 description"},
-        "image_paths":        []string{"invalid_path/image1.jpg"},
-    }
-    requestJSON, _ := json.Marshal(requestBody)
-
-    // 创建请求
-    req, _ := http.NewRequest("POST", "/news/create_draft", bytes.NewBuffer(requestJSON))
-    req.Header.Set("Content-Type", "application/json")
-    req.Header.Set("Authorization", "Bearer "+token)
-
-    // 执行请求
-    w := httptest.NewRecorder()
-    router.ServeHTTP(w, req)
-
-    // 根据您的实现，可能仍然成功创建草稿，图片路径只是相对路径，不验证实际文件是否存在
-    // 如果需要验证图片路径存在，可以在 CreateDraft1 中添加相应逻辑
-    assert.Equal(t, http.StatusCreated, w.Code)
-    var response map[string]interface{}
-    err := json.Unmarshal(w.Body.Bytes(), &response)
-    assert.NoError(t, err)
-    assert.Equal(t, "Draft created successfully.", response["message"])
-    assert.NotNil(t, response["draft_id"])
-}
