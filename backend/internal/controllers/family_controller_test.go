@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	// "os"
 	"testing"
-	"time"
+	// "time"
 
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/middleware"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
@@ -882,481 +882,196 @@ func TestAdmitJoinFamily(t *testing.T) {
 }
 
 // TestRejectJoinFamily_InvalidRequestBody 测试无效的请求体
-func TestRejectJoinFamily_InvalidRequestBody(t *testing.T) {
-	db := setupFamilyTestDB()
-	router := setupFamilyRouter(db)
+func TestRejectJoinFamily(t *testing.T) {
+    db := setupFamilyTestDB()
+    router := setupFamilyRouter(db)
 
-	// 创建管理员用户
-	admin := models.User{
-		Nickname: "AdminUser",
-	}
-	if err := db.Create(&admin).Error; err != nil {
-		t.Fatalf("failed to create admin user: %v", err)
-	}
+    // 准备家庭 & 管理员
+    family := models.Family{
+        Name:        "RejectFamily",
+        Token:       "reject_family_token",
+        MemberCount: 0,
+    }
+    db.Create(&family)
 
-	// 创建家庭并关联管理员
-	family := models.Family{
-		Name:        "TestFamily",
-		Token:       "testtoken",
-		MemberCount: 1,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-	if err := db.Create(&family).Error; err != nil {
-		t.Fatalf("failed to create family: %v", err)
-	}
-	if err := db.Model(&family).Association("Admins").Append(&admin); err != nil {
-		t.Fatalf("failed to associate admin with family: %v", err)
-	}
+    adminUser := models.User{
+        OpenID:   "OpenID_RejectJoin_Admin",
+        Nickname: "AdminUserReject",
+        FamilyID: &family.ID,
+    }
+    db.Create(&adminUser)
+    db.Model(&family).Association("Admins").Append(&adminUser)
+    family.MemberCount++
+    db.Save(&family)
 
-	// 设置管理员的 FamilyID
-	admin.FamilyID = &family.ID
-	if err := db.Save(&admin).Error; err != nil {
-		t.Fatalf("failed to update admin's FamilyID: %v", err)
-	}
+    memberUser := models.User{
+        OpenID:   "OpenID_RejectJoin_Member",
+        Nickname: "AdminUserReject",
+        FamilyID: &family.ID,
+    }
+    db.Create(&memberUser)
+    db.Model(&family).Association("Members").Append(&memberUser)
+    family.MemberCount++
+    db.Save(&family)
 
-	// 构建请求体，缺少 user_id
-	reqBody := map[string]interface{}{
-		// "user_id" 缺失
-	}
-	bodyBytes, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest("POST", "/families/reject", bytes.NewBuffer(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	withAuth(req, admin.ID)
+    // 用户: userWaiting
+    userWaiting := models.User{
+        OpenID:          "OpenID_RejectJoin_Waiting",
+        Nickname:        "RejectJoinWaitingUser",
+        PendingFamilyID: &family.ID,
+    }
+    db.Create(&userWaiting)
+    db.Model(&family).Association("WaitingList").Append(&userWaiting)
 
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+    // 用户: adminNoFamily
+    adminNoFamily := models.User{
+        OpenID: "OpenID_RejectJoin_AdminNoFamily",
+    }
+    db.Create(&adminNoFamily)
 
-	// 断言响应
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "Invalid request body")
-}
+    tests := []struct {
+        name           string
+        adminID        uint
+        requestBody    interface{}
+        setupFunc      func()
+        expectedStatus int
+        expectedBody   map[string]interface{}
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            adminID:        0,
+            requestBody:    gin.H{"user_id": userWaiting.ID},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedBody:   map[string]interface{}{"error": "Authorization header missing"},
+        },
+        {
+            name:           "Invalid Request Body",
+            adminID:        adminUser.ID,
+            requestBody:    gin.H{},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "Invalid request body"},
+        },
+        {
+            name:           "Failed To Retrieve Admin User (simulate error)",
+            adminID:        adminUser.ID,
+            requestBody:    gin.H{"user_id": userWaiting.ID},
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_retrieve_admin_err_reject", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "users" {
+                        tx.Error = fmt.Errorf("forced retrieve admin user error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedBody:   map[string]interface{}{"error": "Failed to retrieve admin user"},
+        },
+        {
+            name:           "Admin User Not In Any Family",
+            adminID:        adminNoFamily.ID,
+            requestBody:    gin.H{"user_id": userWaiting.ID},
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_retrieve_admin_err_reject")
+            },
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "You are not part of any family"},
+        },
+        {
+            name:           "Not Admin Of This Family",
+            adminID:        memberUser.ID,
+            requestBody:    gin.H{"user_id": userWaiting.ID},
+            setupFunc: func() {
+                // 用 userWaiting 或者新用户 => 只要不是 admin 就好
+                db.Callback().Query().Remove("force_retrieve_family_err_reject")
+            },
+            expectedStatus: http.StatusForbidden,
+            expectedBody:   map[string]interface{}{"error": "You are not an admin of this family"},
+        },
+        {
+            name:           "User Not Found",
+            adminID:        adminUser.ID,
+            requestBody:    gin.H{"user_id": 99999},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedBody:   map[string]interface{}{"error": "User not found"},
+        },
+        {
+            name:           "User Not In Waiting List",
+            adminID:        adminUser.ID,
+            requestBody:    gin.H{"user_id": adminNoFamily.ID},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "User is not in the waiting list of your family"},
+        },
+        {
+            name:           "Failed To Update User's PendingFamilyID (simulate error)",
+            adminID:        adminUser.ID,
+            requestBody:    gin.H{"user_id": userWaiting.ID},
+            setupFunc: func() {
+                db.Callback().Update().Remove("force_remove_waiting_err")
+                db.Model(&family).Association("WaitingList").Append(&userWaiting)
+                userWaiting.PendingFamilyID = &family.ID
+                db.Save(&userWaiting)
 
-// TestRejectJoinFamily_AdminUserNotFound 测试管理员用户不存在
-func TestRejectJoinFamily_AdminUserNotFound(t *testing.T) {
-	db := setupFamilyTestDB()
-	router := setupFamilyRouter(db)
+                db.Callback().Update().Before("gorm:update").Register("force_update_pending_reject", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "users" {
+                        tx.Error = fmt.Errorf("forced user pendingFamilyID update error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedBody:   map[string]interface{}{"error": "Failed to update user's pending family information"},
+        },
+        {
+            name:           "Success Reject Join",
+            adminID:        adminUser.ID,
+            requestBody:    gin.H{"user_id": userWaiting.ID},
+            setupFunc: func() {
+                db.Callback().Update().Remove("force_update_pending_reject")
+                // 再次添加到 waitingList
+                db.Model(&family).Association("WaitingList").Append(&userWaiting)
+                userWaiting.PendingFamilyID = &family.ID
+                db.Save(&userWaiting)
+            },
+            expectedStatus: http.StatusOK,
+            expectedBody: map[string]interface{}{
+                "message":   "User's join request rejected successfully",
+                "family_id": float64(family.ID),
+                "user_id":   float64(userWaiting.ID),
+            },
+        },
+    }
 
-	// 使用不存在的管理员用户 ID
-	nonExistentAdminID := uint(999)
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
 
-	// 创建家庭和被拒绝用户
-	family := models.Family{
-		Name:        "TestFamily",
-		Token:       "testtoken",
-		MemberCount: 1,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-	if err := db.Create(&family).Error; err != nil {
-		t.Fatalf("failed to create family: %v", err)
-	}
+            bodyBytes, _ := json.Marshal(tc.requestBody)
+            req, _ := http.NewRequest("POST", "/families/reject", bytes.NewBuffer(bodyBytes))
+            req.Header.Set("Content-Type", "application/json")
 
-	user := models.User{
-		Nickname:        "WaitingUser",
-		PendingFamilyID: &family.ID,
-	}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("failed to create waiting user: %v", err)
-	}
-	if err := db.Model(&family).Association("WaitingList").Append(&user); err != nil {
-		t.Fatalf("failed to add user to waiting list: %v", err)
-	}
+            if tc.adminID != 0 {
+                // 注意: 这里为了模拟 "Not Admin Of This Family" 的测试，我们传 adminID=0 
+                // 也会导致 Unauthorized => 401。若要模拟 "不是管理员" 但在家庭中，可以再造一个
+                // userInFamilyButNotAdmin.
+                withAuth(req, tc.adminID)
+            }
 
-	// 构建请求体
-	reqBody := map[string]uint{"user_id": user.ID}
-	bodyBytes, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest("POST", "/families/reject", bytes.NewBuffer(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	withAuth(req, nonExistentAdminID)
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
 
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
 
-	// 断言响应
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	assert.Contains(t, w.Body.String(), "Failed to retrieve admin user")
-}
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
 
-// TestRejectJoinFamily_AdminNotPartOfAnyFamily 测试管理员不属于任何家庭
-func TestRejectJoinFamily_AdminNotPartOfAnyFamily(t *testing.T) {
-	db := setupFamilyTestDB()
-	router := setupFamilyRouter(db)
-
-	// 创建新管理员用户，不属于任何家庭
-	newAdmin := models.User{
-		Nickname: "NewAdminUser",
-        OpenID: "1",
-	}
-	if err := db.Create(&newAdmin).Error; err != nil {
-		t.Fatalf("failed to create new admin user: %v", err)
-	}
-
-	// 创建家庭和被拒绝用户，并将被拒绝用户添加到等待列表
-	family := models.Family{
-		Name:        "TestFamily",
-		Token:       "testtoken",
-		MemberCount: 1,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-	if err := db.Create(&family).Error; err != nil {
-		t.Fatalf("failed to create family: %v", err)
-	}
-
-	user := models.User{
-		Nickname:        "WaitingUser",
-		PendingFamilyID: &family.ID,
-        OpenID: "2",
-	}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("failed to create waiting user: %v", err)
-	}
-	if err := db.Model(&family).Association("WaitingList").Append(&user); err != nil {
-		t.Fatalf("failed to add user to waiting list: %v", err)
-	}
-
-	// 构建请求体
-	reqBody := map[string]uint{"user_id": user.ID}
-	bodyBytes, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest("POST", "/families/reject", bytes.NewBuffer(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	withAuth(req, newAdmin.ID)
-
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	// 断言响应
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "You are not part of any family")
-}
-
-// TestRejectJoinFamily_AdminNotFamilyAdmin 测试管理员用户不是家庭管理员
-func TestRejectJoinFamily_AdminNotFamilyAdmin(t *testing.T) {
-	db := setupFamilyTestDB()
-	router := setupFamilyRouter(db)
-
-	// 创建管理员用户
-	admin := models.User{
-		Nickname: "AdminUser",
-        OpenID: "1",
-	}
-	if err := db.Create(&admin).Error; err != nil {
-		t.Fatalf("failed to create admin user: %v", err)
-	}
-
-	// 创建家庭并关联管理员
-	family := models.Family{
-		Name:        "TestFamily",
-		Token:       "testtoken",
-		MemberCount: 1,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-	if err := db.Create(&family).Error; err != nil {
-		t.Fatalf("failed to create family: %v", err)
-	}
-	if err := db.Model(&family).Association("Admins").Append(&admin); err != nil {
-		t.Fatalf("failed to associate admin with family: %v", err)
-	}
-
-	// 设置管理员的 FamilyID
-	admin.FamilyID = &family.ID
-	if err := db.Save(&admin).Error; err != nil {
-		t.Fatalf("failed to update admin's FamilyID: %v", err)
-	}
-
-	// 创建家庭成员但不是管理员
-	member := models.User{
-		Nickname: "FamilyMember",
-		FamilyID: &family.ID,
-        OpenID: "2",
-	}
-	if err := db.Create(&member).Error; err != nil {
-		t.Fatalf("failed to create family member: %v", err)
-	}
-
-	// 创建被拒绝用户，并添加到等待列表
-	user := models.User{
-		Nickname:        "WaitingUser",
-		PendingFamilyID: &family.ID,
-	}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("failed to create waiting user: %v", err)
-	}
-	if err := db.Model(&family).Association("WaitingList").Append(&user); err != nil {
-		t.Fatalf("failed to add user to waiting list: %v", err)
-	}
-
-	// 构建请求体
-	reqBody := map[string]uint{"user_id": user.ID}
-	bodyBytes, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest("POST", "/families/reject", bytes.NewBuffer(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	withAuth(req, member.ID) // 使用非管理员成员
-
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	// 断言响应
-	assert.Equal(t, http.StatusForbidden, w.Code)
-	assert.Contains(t, w.Body.String(), "You are not an admin of this family")
-}
-
-// TestRejectJoinFamily_FamilyNotFound 测试家庭不存在
-func TestRejectJoinFamily_FamilyNotFound(t *testing.T) {
-	db := setupFamilyTestDB()
-	router := setupFamilyRouter(db)
-
-	// 创建管理员用户
-	admin := models.User{
-		Nickname: "AdminUser",
-        OpenID: "1",
-	}
-	if err := db.Create(&admin).Error; err != nil {
-		t.Fatalf("failed to create admin user: %v", err)
-	}
-
-	// 创建家庭并关联管理员
-	family := models.Family{
-		Name:        "TestFamily",
-		Token:       "testtoken",
-		MemberCount: 1,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-	if err := db.Create(&family).Error; err != nil {
-		t.Fatalf("failed to create family: %v", err)
-	}
-	if err := db.Model(&family).Association("Admins").Append(&admin); err != nil {
-		t.Fatalf("failed to associate admin with family: %v", err)
-	}
-
-	// 设置管理员的 FamilyID
-	admin.FamilyID = &family.ID
-	if err := db.Save(&admin).Error; err != nil {
-		t.Fatalf("failed to update admin's FamilyID: %v", err)
-	}
-
-	// 创建被拒绝用户，并添加到等待列表
-	user := models.User{
-		Nickname:        "WaitingUser",
-		PendingFamilyID: &family.ID,
-        OpenID: "2",
-	}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("failed to create waiting user: %v", err)
-	}
-	if err := db.Model(&family).Association("WaitingList").Append(&user); err != nil {
-		t.Fatalf("failed to add user to waiting list: %v", err)
-	}
-
-	// 删除家庭以模拟家庭不存在
-	if err := db.Delete(&family).Error; err != nil {
-		t.Fatalf("failed to delete family: %v", err)
-	}
-
-	// 构建请求体
-	reqBody := map[string]uint{"user_id": user.ID}
-	bodyBytes, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest("POST", "/families/reject", bytes.NewBuffer(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	withAuth(req, admin.ID)
-
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	// 断言响应
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	assert.Contains(t, w.Body.String(), "Failed to retrieve family")
-}
-
-// TestRejectJoinFamily_UserNotFound 测试被拒绝用户不存在
-func TestRejectJoinFamily_UserNotFound(t *testing.T) {
-	db := setupFamilyTestDB()
-	router := setupFamilyRouter(db)
-
-	// 创建管理员用户
-	admin := models.User{
-		Nickname: "AdminUser",
-	}
-	if err := db.Create(&admin).Error; err != nil {
-		t.Fatalf("failed to create admin user: %v", err)
-	}
-
-	// 创建家庭并关联管理员
-	family := models.Family{
-		Name:        "TestFamily",
-		Token:       "testtoken",
-		MemberCount: 1,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-	if err := db.Create(&family).Error; err != nil {
-		t.Fatalf("failed to create family: %v", err)
-	}
-	if err := db.Model(&family).Association("Admins").Append(&admin); err != nil {
-		t.Fatalf("failed to associate admin with family: %v", err)
-	}
-
-	// 设置管理员的 FamilyID
-	admin.FamilyID = &family.ID
-	if err := db.Save(&admin).Error; err != nil {
-		t.Fatalf("failed to update admin's FamilyID: %v", err)
-	}
-
-	// 构建请求体，使用不存在的用户 ID
-	reqBody := map[string]uint{"user_id": 999}
-	bodyBytes, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest("POST", "/families/reject", bytes.NewBuffer(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	withAuth(req, admin.ID)
-
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	// 断言响应
-	assert.Equal(t, http.StatusNotFound, w.Code)
-	assert.Contains(t, w.Body.String(), "User not found")
-}
-
-// TestRejectJoinFamily_UserNotInWaitingList 测试用户不在等待列表中
-func TestRejectJoinFamily_UserNotInWaitingList(t *testing.T) {
-	db := setupFamilyTestDB()
-	router := setupFamilyRouter(db)
-
-	// 创建管理员用户
-	admin := models.User{
-		Nickname: "AdminUser",
-        OpenID: "1",
-	}
-	if err := db.Create(&admin).Error; err != nil {
-		t.Fatalf("failed to create admin user: %v", err)
-	}
-
-	// 创建家庭并关联管理员
-	family := models.Family{
-		Name:        "TestFamily",
-		Token:       "testtoken",
-		MemberCount: 1,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-	if err := db.Create(&family).Error; err != nil {
-		t.Fatalf("failed to create family: %v", err)
-	}
-	if err := db.Model(&family).Association("Admins").Append(&admin); err != nil {
-		t.Fatalf("failed to associate admin with family: %v", err)
-	}
-
-	// 设置管理员的 FamilyID
-	admin.FamilyID = &family.ID
-	if err := db.Save(&admin).Error; err != nil {
-		t.Fatalf("failed to update admin's FamilyID: %v", err)
-	}
-
-	// 创建用户，不在等待列表中
-	userNotWaiting := models.User{
-		Nickname: "NonWaitingUser",
-		FamilyID: &family.ID, // 已属于家庭，但不在等待列表
-        OpenID: "2",
-	}
-	if err := db.Create(&userNotWaiting).Error; err != nil {
-		t.Fatalf("failed to create user not in waiting list: %v", err)
-	}
-
-	// 构建请求体
-	reqBody := map[string]uint{"user_id": userNotWaiting.ID}
-	bodyBytes, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest("POST", "/families/reject", bytes.NewBuffer(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	withAuth(req, admin.ID)
-
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	// 断言响应
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "User is not in the waiting list of your family")
-}
-
-// TestRejectJoinFamily_Success 测试成功拒绝用户加入家庭
-func TestRejectJoinFamily_Success(t *testing.T) {
-	db := setupFamilyTestDB()
-	router := setupFamilyRouter(db)
-
-	// 创建管理员用户
-	admin := models.User{
-		Nickname: "AdminUser",
-		OpenID: "1",
-	}
-	if err := db.Create(&admin).Error; err != nil {
-		t.Fatalf("failed to create admin user: %v", err)
-	}
-
-	// 创建家庭并关联管理员
-	family := models.Family{
-		Name:        "TestFamily",
-		Token:       "testtoken",
-		MemberCount: 1,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-	if err := db.Create(&family).Error; err != nil {
-		t.Fatalf("failed to create family: %v", err)
-	}
-	if err := db.Model(&family).Association("Admins").Append(&admin); err != nil {
-		t.Fatalf("failed to associate admin with family: %v", err)
-	}
-
-	// 设置管理员的 FamilyID
-	admin.FamilyID = &family.ID
-	if err := db.Save(&admin).Error; err != nil {
-		t.Fatalf("failed to update admin's FamilyID: %v", err)
-	}
-
-	// 创建被拒绝用户，并添加到等待列表
-	waitingUser := models.User{
-		Nickname:        "WaitingUser",
-		PendingFamilyID: &family.ID,
-		OpenID: "2",
-	}
-	if err := db.Create(&waitingUser).Error; err != nil {
-		t.Fatalf("failed to create waiting user: %v", err)
-	}
-	if err := db.Model(&family).Association("WaitingList").Append(&waitingUser); err != nil {
-		t.Fatalf("failed to add user to waiting list: %v", err)
-	}
-
-	// 构建请求体
-	reqBody := map[string]uint{"user_id": waitingUser.ID}
-	bodyBytes, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest("POST", "/families/reject", bytes.NewBuffer(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	withAuth(req, admin.ID)
-
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	// 断言响应
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "User's join request rejected successfully")
-
-	// 检查用户的 PendingFamilyID 是否被清除
-	var updatedUser models.User
-	if err := db.First(&updatedUser, waitingUser.ID).Error; err != nil {
-		t.Fatalf("failed to retrieve updated user: %v", err)
-	}
-	assert.Nil(t, updatedUser.PendingFamilyID)
-
-	// 检查用户是否从等待列表中移除
-	var waitingUsers []models.User
-	if err := db.Model(&family).Association("WaitingList").Find(&waitingUsers); err != nil {
-		t.Fatalf("failed to retrieve waiting list: %v", err)
-	}
-	for _, wu := range waitingUsers {
-		assert.NotEqual(t, waitingUser.ID, wu.ID)
-	}
+            for k, v := range tc.expectedBody {
+                assert.Equal(t, v, resp[k])
+            }
+        })
+    }
 }
 
 func TestCancelJoinFamily(t *testing.T) {
