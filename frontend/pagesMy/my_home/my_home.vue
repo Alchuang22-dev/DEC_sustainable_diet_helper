@@ -164,9 +164,6 @@ const avatarSrc = computed(() =>
 const { filteredNewsItems, selectedSection, isRefreshing } = storeToRefs(newsStore);
 const { setSection, refreshNews, fetchNews } = newsStore;
 
-
-
-
 // 模拟数据
 const articles = ref([]);
 const { t, locale, messages } = useI18n();
@@ -411,7 +408,11 @@ const deleteDraft = async (index) => {
 	    });
 	
 	    if (res.data && res.data.message === 'Draft deleted successfully.') {
-	      console.log('草稿删除成功');
+        uni.showToast({
+          title: '删除成功',
+          icon: 'none',
+          duration: 2000
+        });
 	      // 从数据中删除该文章
 	      articles.value.splice(index, 1); 
 	    } else {
@@ -420,6 +421,7 @@ const deleteDraft = async (index) => {
 	  } catch (error) {
 	    console.error('Error deleting draft article', error);
 	  }
+    await fetchArticles();
 };
 
 </script>
