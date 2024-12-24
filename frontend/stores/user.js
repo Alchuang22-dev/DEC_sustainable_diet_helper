@@ -335,11 +335,6 @@ export const useUserStore = defineStore('user', () => {
     return user.uid;
   };
 
-  // 返回用户access_token
-  const getAccessToken = () => {
-      return user.token;
-  }
-
   // 清除本地存储数据
   const clearStorage = () => {
     try {
