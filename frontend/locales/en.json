@@ -511,6 +511,14 @@
 	"submission_failed": "Submission failed",
 	"join_family_first": "Please join a family first",
 
+	
+	"draft":"draft",
+	"post":"post",
+	"creation": "creation",
+	"pieces": "pieces",
+	"today": "today",
+	"emptyArticles": "The user did not add any post."
+
 	"setSuccess": "Set Success",
 	"setFail": "Set Failed",
 	"inputValidateFail": "Input validation failed",

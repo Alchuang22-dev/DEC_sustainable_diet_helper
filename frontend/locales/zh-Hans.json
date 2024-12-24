@@ -524,6 +524,15 @@
 	"submission_success": "提交成功",
 	"submission_failed": "提交失败",
 	"join_family_first": "请先加入家庭",
+	
+	//新闻部分
+	"draft":"草稿",
+	"post":"已发布",
+	"creation": "创作",
+	"pieces": "作品",
+	"today": "今天",
+	"emptyArticles": "这个人很神秘，什么也没写..."
+
 
 	"setSuccess": "设置成功",
 	"setFail": "设置失败",
