@@ -1,9 +1,10 @@
 package models
 
 import (
-    "gorm.io/gorm"
-    "fmt"
-    "math"
+	"fmt"
+	"strconv"
+
+	"gorm.io/gorm"
 )
 
 type Food struct {
@@ -133,16 +134,29 @@ func CalculateFoodNutritionAndEmission(db *gorm.DB, items []FoodCalculateItem) (
             return nil, fmt.Errorf("food with id %d not found", item.ID)
         }
 
-        // 计算结果
+        // 计算结果并使用 fmt.Sprintf 和 strconv.ParseFloat 来控制精度
+        emissionStr := fmt.Sprintf("%.1f", food.GHG*item.Weight*item.Price/food.Price)
+        caloriesStr := fmt.Sprintf("%.1f", food.Calories*item.Weight)
+        proteinStr := fmt.Sprintf("%.1f", food.Protein*item.Weight)
+        fatStr := fmt.Sprintf("%.1f", food.Fat*item.Weight)
+        carbsStr := fmt.Sprintf("%.1f", food.Carbohydrates*item.Weight)
+        sodiumStr := fmt.Sprintf("%.1f", food.Sodium*item.Weight)
+
+        emission, _ := strconv.ParseFloat(emissionStr, 64)
+        calories, _ := strconv.ParseFloat(caloriesStr, 64)
+        protein, _ := strconv.ParseFloat(proteinStr, 64)
+        fat, _ := strconv.ParseFloat(fatStr, 64)
+        carbs, _ := strconv.ParseFloat(carbsStr, 64)
+        sodium, _ := strconv.ParseFloat(sodiumStr, 64)
+
         result := FoodCalculateResult{
-            ID: item.ID,
-            // 使用 math.Round 保留1位小数
-            Emission: math.Round((food.GHG*item.Weight*item.Price/food.Price)*10) / 10,
-            Calories: math.Round(food.Calories*item.Weight*10) / 10,
-            Protein: math.Round(food.Protein*item.Weight*10) / 10,
-            Fat: math.Round(food.Fat*item.Weight*10) / 10,
-            Carbohydrates: math.Round(food.Carbohydrates*item.Weight*10) / 10,
-            Sodium: math.Round(food.Sodium*item.Weight*10) / 10,
+            ID:            item.ID,
+            Emission:      emission,
+            Calories:      calories,
+            Protein:       protein,
+            Fat:          fat,
+            Carbohydrates: carbs,
+            Sodium:        sodium,
         }
 
         results = append(results, result)

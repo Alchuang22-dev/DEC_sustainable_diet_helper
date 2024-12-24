@@ -54,13 +54,15 @@ type SharedNutritionCarbonIntakeRequest struct {
 // 验证日期,需要保证起始是今天，且连续往后
 func validateDate(data []time.Time) (bool, error) {
     // 获取今天的日期（去除时间部分）
-    now := time.Now()
-    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+    cst, _ := time.LoadLocation("Asia/Shanghai")
+    now := time.Now().In(cst)
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, cst)
     
     // 处理每个日期
     for i, date := range data {
         // 将输入日期转换为当天零点
-        dateStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+        log.Printf("date %v", data)
+        dateStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, cst)
         
         // 验证日期不早于今天
         if dateStart.Before(today) {
@@ -69,7 +71,7 @@ func validateDate(data []time.Time) (bool, error) {
         
         // 验证日期连续性（仅当不是第一个日期时）
         if i > 0 {
-            prevDate := time.Date(data[i-1].Year(), data[i-1].Month(), data[i-1].Day(), 0, 0, 0, 0, data[i-1].Location())
+            prevDate := time.Date(data[i-1].Year(), data[i-1].Month(), data[i-1].Day(), 0, 0, 0, 0, cst)
             // 计算两个日期之间的天数差
             daysDiff := dateStart.Sub(prevDate).Hours() / 24
             if daysDiff != 1 {
@@ -82,9 +84,10 @@ func validateDate(data []time.Time) (bool, error) {
 
 // 计算时间范围
 func calculateTimeRange() (startDate, endDate time.Time) {
-    now := time.Now()
+    cst, _ := time.LoadLocation("Asia/Shanghai")
+    now := time.Now().In(cst)
     // 将当前时间调整为当天的零点
-    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, cst)
     
     // 计算开始时间（6天前的零点）
     startDate = today.AddDate(0, 0, -6)
@@ -158,6 +161,9 @@ func (nc *NutritionCarbonController) validateUserShares(currentUserID uint, shar
     return true, nil
 }
 
+// 删除过去数据
+
+
 // ======================Set Goals API=========================
 // 设置营养目标
 func (nc *NutritionCarbonController) SetNutritionGoals(c *gin.Context){
@@ -194,7 +200,11 @@ func (nc *NutritionCarbonController) SetNutritionGoals(c *gin.Context){
     tx := nc.DB.Begin()
 
     // 删除一周前的目标
-    if err := tx.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.NutritionGoal{}).Error; err != nil {
+    cst, _ := time.LoadLocation("Asia/Shanghai")
+    now := time.Now().In(cst)
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, cst)
+
+    if err := tx.Where("user_id = ? AND date < ?", userID, today.AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.NutritionGoal{}).Error; err != nil {
         tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "删除一周前的目标失败"})
         return
@@ -203,8 +213,20 @@ func (nc *NutritionCarbonController) SetNutritionGoals(c *gin.Context){
     // 处理每个目标
     for _, goal := range goals {
         // 检查该日期是否已存在目标
+        // 将日期标准化为当天的零点时间（UTC）
+        normalizedDate := time.Date(
+            goal.Date.Year(),
+            goal.Date.Month(),
+            goal.Date.Day(),
+            0, 0, 0, 0,
+            cst,
+        )
         var existingGoal models.NutritionGoal
-        result := tx.Where("user_id = ? AND date = ?", userID, goal.Date).First(&existingGoal)
+        result := tx.Where(
+            "user_id = ? AND DATE(date) = DATE(?)",
+            userID,
+            normalizedDate,
+        ).First(&existingGoal)
         
         if result.Error == nil {
             log.Printf("目标已存在，更新目标")
@@ -225,7 +247,7 @@ func (nc *NutritionCarbonController) SetNutritionGoals(c *gin.Context){
             // 目标不存在，创建新目标
             newGoal := models.NutritionGoal{
                 UserID: userID.(uint),
-                Date: goal.Date,
+                Date: normalizedDate,
                 Calories: goal.Calories,
                 Protein: goal.Protein,
                 Fat: goal.Fat,
@@ -281,19 +303,34 @@ func (nc *NutritionCarbonController) SetCarbonGoals(c *gin.Context) {
     // 开启事务
     tx := nc.DB.Begin()
 
-    // 删除一周前的目标 
-    if err := tx.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.CarbonGoal{}).Error; err != nil {
+    // 删除一周前的目标
+    cst, _ := time.LoadLocation("Asia/Shanghai")
+    now := time.Now().In(cst)
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, cst)
+    if err := tx.Where("user_id = ? AND date < ?", userID, today.AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.CarbonGoal{}).Error; err != nil {
         tx.Rollback()
         c.JSON(http.StatusInternalServerError, gin.H{"error": "删除一周前的目标失败"})
         return
     }
     log.Printf("删除一周前的目标成功")
     // 处理每个目标
+    
     for _, goal := range goals {
         // 检查该日期是否已存在目标
+        normalizedDate := time.Date(
+            goal.Date.Year(),
+            goal.Date.Month(),
+            goal.Date.Day(),
+            0, 0, 0, 0,
+            cst,
+        )
         var existingGoal models.CarbonGoal
-        result := tx.Where("user_id = ? AND date = ?", userID, goal.Date).First(&existingGoal)
-        
+        result := tx.Where(
+            "user_id = ? AND DATE(date) = DATE(?)",
+            userID,
+            normalizedDate,
+        ).First(&existingGoal)
+
         if result.Error == nil {
             log.Printf("目标已存在，更新目标")
             // 目标已存在，更新目标
@@ -304,12 +341,12 @@ func (nc *NutritionCarbonController) SetCarbonGoals(c *gin.Context) {
                 c.JSON(http.StatusInternalServerError, gin.H{"error": "更新目标失败"})
                 return
             }
-        } else {
+        }  else {
             log.Printf("目标不存在，创建新目标")
             // 目标不存在，创建新目标
             newGoal := models.CarbonGoal{
                 UserID: userID.(uint),
-                Date: goal.Date,
+                Date: normalizedDate,
                 Emission: goal.Emission,
             }
             if err := tx.Create(&newGoal).Error; err != nil {
@@ -341,7 +378,10 @@ func (nc *NutritionCarbonController) GetNutritionGoals(c *gin.Context) {
     log.Printf("userID: %v", userID)
 
     // 删除一周前的目标
-    if err := nc.DB.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.NutritionGoal{}).Error; err != nil {
+    cst, _ := time.LoadLocation("Asia/Shanghai")
+    now := time.Now().In(cst)
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, cst)
+    if err := nc.DB.Where("user_id = ? AND date < ?", userID, today.AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.NutritionGoal{}).Error; err != nil {
         log.Printf("删除一周前的目标失败: %v", err)
         c.JSON(http.StatusInternalServerError, gin.H{"error": "删除一周前的目标失败"})
         return
@@ -400,7 +440,10 @@ func (nc *NutritionCarbonController) GetCarbonGoals(c *gin.Context) {
     log.Printf("userID: %v", userID)
 
     // 删除一周前的目标
-    if err := nc.DB.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.CarbonGoal{}).Error; err != nil {
+    cst, _ := time.LoadLocation("Asia/Shanghai")
+    now := time.Now().In(cst)
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, cst)
+    if err := nc.DB.Where("user_id = ? AND date < ?", userID, today.AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.CarbonGoal{}).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "删除一周前的目标失败"})
         return
     }
@@ -410,6 +453,8 @@ func (nc *NutritionCarbonController) GetCarbonGoals(c *gin.Context) {
 
     // 创建一个包含8天的目标数组(从6天前到明天)
     goals := make([]models.CarbonGoal, 8)
+    log.Printf("startDate: %v",startDate)
+    log.Printf("endDate: %v",endDate)
 
     // 初始化每一天的基础数据
     for i := 0; i < 8; i++ {
@@ -437,6 +482,7 @@ func (nc *NutritionCarbonController) GetCarbonGoals(c *gin.Context) {
         dayDiff := existingGoal.Date.Sub(startDate).Hours() / 24
         if dayIndex := int(dayDiff); dayIndex >= 0 && dayIndex < 8 {
             goals[dayIndex] = existingGoal
+            log.Printf("goals %v,%v,%v",goals[dayIndex].UserID,goals[dayIndex].Date,goals[dayIndex].Emission)
         }
     }
     log.Printf("用存在的数据覆盖对应日期的默认值成功")
@@ -453,7 +499,10 @@ func (nc *NutritionCarbonController) GetActualNutrition(c *gin.Context) {
     }
     log.Printf("userID: %v", userID)
     // 删除7天前的摄入记录
-    if err := nc.DB.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.NutritionIntake{}).Error; err != nil {
+    cst, _ := time.LoadLocation("Asia/Shanghai")
+    now := time.Now().In(cst)
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, cst)
+    if err := nc.DB.Where("user_id = ? AND date < ?", userID, today.AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.NutritionIntake{}).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "删除7天前的摄入记录失败"})
         return
     }
@@ -535,7 +584,10 @@ func (nc *NutritionCarbonController) GetCarbonIntakes(c *gin.Context) {
     }
     log.Printf("userID: %v", userID)
     // 删除7天前的碳排放记录
-    if err := nc.DB.Where("user_id = ? AND date < ?", userID, time.Now().AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.CarbonIntake{}).Error; err != nil {
+    cst, _ := time.LoadLocation("Asia/Shanghai")
+    now := time.Now().In(cst)
+    today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, cst)
+    if err := nc.DB.Where("user_id = ? AND date < ?", userID, today.AddDate(0, 0, -7).Format("2006-01-02")).Delete(&models.CarbonIntake{}).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "删除7天前的碳排放记录失败"})
         return
     }
