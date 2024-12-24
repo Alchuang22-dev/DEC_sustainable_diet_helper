@@ -15,12 +15,12 @@
       </view>
       <view class="form-group">
         <text class="label">{{ $t('total_weight') }}</text>
-        <input class="input" type="number" v-model="food.weight" :placeholder="$t('please_enter_food_weight')" :error="weightError" />
+        <input class="input" type="digit" v-model="food.weight" :placeholder="$t('please_enter_food_weight')" :error="weightError" />
         <text v-if="weightError" class="error-message">{{ $t('weight_must_be_positive_integer') }}</text>
       </view>
       <view class="form-group">
         <text class="label">{{ $t('total_price') }}</text>
-        <input class="input" type="number" v-model="food.price" :placeholder="$t('please_enter_food_price')" :error="priceError" />
+        <input class="input" type="digit" v-model="food.price" :placeholder="$t('please_enter_food_price')" :error="priceError" />
         <text v-if="priceError" class="error-message">{{ $t('price_must_be_positive_integer') }}</text>
       </view>
       <view class="form-group">
