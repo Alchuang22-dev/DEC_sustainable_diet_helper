@@ -530,6 +530,18 @@
 	"inputValidateFail": "输入验证失败",
 	"fetchGoalsFail": "获取目标失败",
 	"nutrition_over_suffix": "超标",
-	"actual_target": "实际 / 目标"
+	"actual_target": "实际 / 目标",
 
+	"nutrition_guidelines_title": "营养摄入参考值",
+	"adult_male_guidelines": "成年男性（18-49岁）建议值：",
+	"calories_range_male": "· 热量：2250-2400千卡/天",
+	"protein_range_male": "· 蛋白质：65-75克/天",
+	"carbs_range_male": "· 碳水化合物：320-370克/天",
+	"fat_range_male": "· 脂肪：60-70克/天",
+	"sodium_range": "· 钠：2000毫克/天",
+	"adult_female_guidelines": "成年女性（18-49岁）建议值：",
+	"calories_range_female": "· 热量：1800-2000千卡/天",
+	"protein_range_female": "· 蛋白质：55-65克/天",
+	"carbs_range_female": "· 碳水化合物：250-300克/天",
+	"fat_range_female": "· 脂肪：50-60克/天"
 }

@@ -516,5 +516,19 @@
 	"inputValidateFail": "Input validation failed",
 	"fetchGoalsFail": "Failed to fetch goals",
 	"nutrition_over_suffix": "Excessive",
-	"actual_target": "Actual / Target"
+	"actual_target": "Actual / Target",
+
+	"nutrition_guidelines_title": "Recommended Nutrient Intake",
+	"adult_male_guidelines": "Recommended values for adult males (18-49 years):",
+	"calories_range_male": "· Calories: 2250-2400 kcal/day",
+	"protein_range_male": "· Protein: 65-75 grams/day",
+	"carbs_range_male": "· Carbohydrates: 320-370 grams/day",
+	"fat_range_male": "· Fat: 60-70 grams/day",
+	"sodium_range": "· Sodium: 2000 milligrams/day",
+	"adult_female_guidelines": "Recommended values for adult females (18-49 years):",
+	"calories_range_female": "· Calories: 1800-2000 kcal/day",
+	"protein_range_female": "· Protein: 55-65 grams/day",
+	"carbs_range_female": "· Carbohydrates: 250-300 grams/day",
+	"fat_range_female": "· Fat: 50-60 grams/day"
+
 }
