@@ -41,6 +41,8 @@
 			}, {
 				"path": "login_old/login_old"
 			}, {
+				"path": "stranger/stranger"
+			}, {
 				"path": "appSettings/appSettings"
 			}, {
 				"path": "favorites/favorites"

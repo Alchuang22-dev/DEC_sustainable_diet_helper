@@ -88,12 +88,7 @@
           <view class="popup-header">
             <image :src="authorAvatar" class="avatar" />
             <span class="nickname">{{ authorNickname }}</span>
-          </view>
-    
-          <view class="popup-body">
-            <button @click="confirmPublish" class="confirm-btn">{{ t('ano_issue') }}</button>
-          </view>
-    
+          </view>  
           <view class="popup-footer">
             <button @click="confirmPublish" class="confirm-btn">{{ t('confirm_issue') }}</button>
             <button @click="cancelPublish" class="cancel-btn">{{ t('cancel') }}</button>

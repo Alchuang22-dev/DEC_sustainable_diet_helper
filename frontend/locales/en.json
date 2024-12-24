@@ -505,5 +505,12 @@
 	"total_ratio_less_than_one": "Total ratio is less than 1, some ratio might be unallocated",
 	"submission_success": "Submission successful",
 	"submission_failed": "Submission failed",
-	"join_family_first": "Please join a family first"
+	"join_family_first": "Please join a family first",
+	
+	"draft":"draft",
+	"post":"post",
+	"creation": "creation",
+	"pieces": "pieces",
+	"today": "today",
+	"emptyArticles": "The user did not add any post."
 }
