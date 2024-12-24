@@ -11,6 +11,7 @@
 	"loginWithCode": "Login with verification code",
 	"forgotPassword": "Forgot password?",
 	"loginWithWeChat": "Login with WeChat authorization",
+	"loginWithOthers": "Other Login Methods",
 	"welcome_title": "Welcome to our site!",
 
 	"and": "&",

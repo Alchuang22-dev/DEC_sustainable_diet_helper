@@ -10,7 +10,8 @@
 	"repeatPassword": "请重复输入密码",
 	"loginWithCode": "用验证码登录",
 	"forgotPassword": "忘记密码?",
-	"loginWithWeChat": "用微信用户授权登录",
+	"loginWithWeChat": "微信登录",
+	"loginWithOthers": "其他方式登录",
 	"welcome_title": "欢迎来到我们的站点！",
 
 	"and": "和",
