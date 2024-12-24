@@ -19,18 +19,18 @@
       <view class="divider">
         <text class="divider-text">{{ $t('settings_storage_data') }}</text>
       </view>
-      <view class="list-item" @click="navigateTo('DeleteData')">
+      <view class="list-item" @click="Seal()">
         <text>{{ $t('settings_clear_data') }}</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item" @click="navigateTo('Storage')">
+      <view class="list-item" @click="Seal()">
         <text>{{ $t('settings_storage_space') }}</text>
         <text class="arrow">></text>
       </view>
       <view class="divider">
         <text class="divider-text">{{ $t('settings_accessibility') }}</text>
       </view>
-      <view class="list-item" @click="navigateTo('DevelopingFunc')">
+      <view class="list-item" @click="Seal()">
         <text>{{ $t('settings_development_features') }}</text>
         <text class="arrow">></text>
       </view>
@@ -63,6 +63,15 @@ function navigateTo(link) {
     url: `/pagesSetting/${link}/${link}`,
   });
 }
+
+function Seal() {
+	uni.showToast({
+	  title: '正在开发',
+	  icon: "error",
+	  duration: 2000,
+	});
+}
+
 const dividerText = ""; // Set this to the desired text to add text to dividers
 </script>
 
