@@ -47,12 +47,8 @@
 			}, {
 				"path": "favorites/favorites"
 			}, {
-				"path": "foodPreferences/foodPreferences"
-			}, {
 				"path": "historyData/historyData"
-			}, {
-				"path": "myFamily/myFamily"
-			}, {
+			},{
 				"path": "searchTools/searchTools",
 				"style": {
 					"navigationBarTitleText": "搜索工具"
@@ -176,6 +172,9 @@
 					}
 				},
 				{
+					"path": "foodPreferences/foodPreferences"
+				}, 
+				{
 					"path": "nutrition_calendar/nutrition_calendar",
 					"style": {
 						"navigationBarTitleText": "营养目标"
@@ -211,6 +210,9 @@
 						"navigationBarTitleText": "食谱详情"
 					}
 				},
+				{
+					"path": "myFamily/myFamily"
+				}, 
 				{
 					"path" : "save_options/save_options",
 					"style" : 

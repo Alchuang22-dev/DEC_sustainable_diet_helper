@@ -217,10 +217,10 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useFamilyStore, FamilyStatus } from '../../stores/family.js';
-import { useUserStore } from "../../stores/user.js";
+import { useFamilyStore, FamilyStatus } from '../stores/family.js';
+import { useUserStore } from "@/stores/user";
 import { onShow } from '@dcloudio/uni-app';
-import { useFoodListStore } from '../../stores/food_list'; // 引入食物列表store
+import { useFoodListStore } from '../stores/food_list'; // 引入食物列表store
 
 const { t, locale } = useI18n();
 
@@ -459,7 +459,7 @@ const handleCancelJoin = async () => {
 
 // 跳转到 myFamily 页面
 const goToMyFamily = () => {
-  uni.navigateTo({ url: '/pagesMy/myFamily/myFamily' });
+  uni.navigateTo({ url: '/pagesTool/myFamily/myFamily' });
 };
 
 // 退出家庭
@@ -484,7 +484,7 @@ const handleBreakFamily = async () => {
 
 // 处理成员管理
 const manageMembers = () => {
-  uni.navigateTo({ url: '/pagesMy/myFamily/myFamily' });
+  uni.navigateTo({ url: '/pagesTool/myFamily/myFamily' });
 };
 
 // 使用foodStore的getFoodName，根据dish_id返回正确的名称

@@ -41,7 +41,7 @@ import {
 } from 'vue';
 import {
 	useFamilyStore
-} from "@/stores/family.js";
+} from "../stores/family.js";
 import {
 	useUserStore
 } from "@/stores/user.js";
