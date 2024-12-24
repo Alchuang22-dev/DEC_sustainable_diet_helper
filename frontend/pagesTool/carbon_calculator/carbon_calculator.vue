@@ -25,8 +25,8 @@
                 />
                 <view class="food-info">
                   <view class="info-grid">
-                    <uni-tag :text="$t('weight') + ': ' + (food.weight || '1.2kg')" type="primary" size="small" />
-                    <uni-tag :text="$t('price') + ': ' + (food.price || '5元')" type="success" size="small" />
+                    <uni-tag :text="$t('weight') + ': ' + (food.weight + 'kg' || '1.2kg')" type="primary" size="small" />
+                    <uni-tag :text="$t('price') + ': ' + (food.price + t('yuan') || '5元')" type="success" size="small" />
                     <uni-tag v-if="food.transportMethod" :text="$t(`transport_${food.transportMethod}`)" type="warning" size="small" />
                     <uni-tag v-if="food.foodSource" :text="$t(`source_${food.foodSource}`)" type="info" size="small" />
                   </view>
