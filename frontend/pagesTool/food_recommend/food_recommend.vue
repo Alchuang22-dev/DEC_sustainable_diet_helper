@@ -46,7 +46,7 @@
 <script setup>
 import { onMounted, ref, reactive, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
+import { useFoodListStore } from '../stores/food_list'; // 引入 Pinia Store
 import { useUserStore } from "@/stores/user.js"; // 引入用户 Store
 
 const { t, locale } = useI18n();

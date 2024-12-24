@@ -40,7 +40,7 @@
 import { reactive, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useUserStore } from "@/stores/user.js";
-import { FamilyStatus, useFamilyStore } from "@/stores/family.js";
+import { FamilyStatus, useFamilyStore } from "../stores/family.js";
 import { onLoad } from "@dcloudio/uni-app";
 import {formatDate} from "../../uni_modules/uni-dateformat/components/uni-dateformat/date-format";
 

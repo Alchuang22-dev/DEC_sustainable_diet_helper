@@ -77,8 +77,8 @@
 <script setup>
 import { onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useFamilyStore } from '@/stores/family.js';
-import { useUserStore } from "../../stores/user.js";
+import { useFamilyStore } from '../stores/family.js';
+import { useUserStore } from "@/stores/user";
 import { onShow } from '@dcloudio/uni-app';
 
 const { t } = useI18n();
