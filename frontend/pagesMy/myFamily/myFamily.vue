@@ -110,43 +110,43 @@ onShow(async () => {
   try {
     await familyStore.getFamilyDetails();
   } catch (error) {
-    uni.showToast({ title: t('fetch_family_details_failed'), icon: 'none' });
+    uni.showToast({ title: t('failed'), icon: 'none' });
   }
 });
 
 const setAsAdmin = async (userId) => {
   try {
     await familyStore.setAdmin(userId);
-    uni.showToast({ title: t('set_admin_success'), icon: 'success' });
+    uni.showToast({ title: t('success'), icon: 'success' });
   } catch (error) {
-    uni.showToast({ title: t('set_admin_failed'), icon: 'error' });
+    uni.showToast({ title: t('failed'), icon: 'error' });
   }
 };
 
 const removeMember = async (userId) => {
   try {
     await familyStore.removeFamilyMember(userId);
-    uni.showToast({ title: t('remove_member_success'), icon: 'success' });
+    uni.showToast({ title: t('success'), icon: 'success' });
   } catch (error) {
-    uni.showToast({ title: t('remove_member_failed'), icon: 'error' });
+    uni.showToast({ title: t('failed'), icon: 'error' });
   }
 };
 
 const admitMember = async (userId) => {
   try {
     await familyStore.admitJoinRequest(userId);
-    uni.showToast({ title: t('admit_success'), icon: 'success' });
+    uni.showToast({ title: t('success'), icon: 'success' });
   } catch (error) {
-    uni.showToast({ title: t('admit_failed'), icon: 'error' });
+    uni.showToast({ title: t('failed'), icon: 'error' });
   }
 };
 
 const rejectMember = async (userId) => {
   try {
     await familyStore.rejectJoinRequest(userId);
-    uni.showToast({ title: t('reject_success'), icon: 'success' });
+    uni.showToast({ title: t('success'), icon: 'success' });
   } catch (error) {
-    uni.showToast({ title: t('reject_failed'), icon: 'error' });
+    uni.showToast({ title: t('failed'), icon: 'error' });
   }
 };
 </script>

@@ -40,10 +40,10 @@
         <text class="arrow">></text>
       </view>
       <view class="divider"></view>
-      <view class="list-item centered" @click="navigateTo('Bend')">  
+      <view class="list-item centered" @click="Seal()">  
         <text>{{ $t('settings_account_binding') }}</text>
       </view>
-      <view class="list-item centered red-text" @click="navigateTo('DeleteId')">
+      <view class="list-item centered red-text" @click="Seal()">
         <text>{{ $t('settings_account_cancellation') }}</text>
       </view>
     </view>
@@ -59,6 +59,14 @@ function navigateTo(link) {
   uni.navigateTo({
     url: `/pagesSetting/${link}/${link}`,
   });
+}
+
+function Seal() {
+	uni.showToast({
+	  title: '正在开发',
+	  icon: "error",
+	  duration: 2000,
+	});
 }
 </script>
 

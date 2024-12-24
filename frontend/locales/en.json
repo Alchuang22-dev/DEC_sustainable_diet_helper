@@ -511,6 +511,14 @@
 	"submission_failed": "Submission failed",
 	"join_family_first": "Please join a family first",
 
+	
+	"draft":"draft",
+	"post":"post",
+	"creation": "creation",
+	"pieces": "pieces",
+	"today": "today",
+	"emptyArticles": "The user did not add any post."
+
 	"setSuccess": "Set Success",
 	"setFail": "Set Failed",
 	"inputValidateFail": "Input validation failed",
@@ -530,6 +538,13 @@
 	"protein_range_female": "· Protein: 55-65 grams/day",
 	"carbs_range_female": "· Carbohydrates: 250-300 grams/day",
 	"fat_range_female": "· Fat: 50-60 grams/day",
-	"yuan": "¥"
+	"yuan": "¥",
+	"remove_member_success": "Success",
+	"remove_member_fail": "Failed",
+	"success": "Success",
+	"fail": "Failed",
+	"failed": "Failed",
+	"input_specification": "Up to one decimal place allowed",
+	"no_matching_food": "No matching food"
 
 }

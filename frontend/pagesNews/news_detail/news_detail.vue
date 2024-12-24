@@ -8,6 +8,7 @@
      <image 
        :src="formatAvatar(post.authoravatar)" 
        class="author-avatar"
+	   @click="switchtoStranger(post.authorid)"
      ></image>
      <text class="author-username">{{ post.authorname }}</text>
    </view>
@@ -112,6 +113,7 @@
             <image
               class="comment-avatar"
               :src="formatAvatar(comment.authorAvatar)"
+			  @click="switchtoStranger(comment.authorid)"
             ></image>
             <view>
               <text class="comment-username">{{ comment.authorName }}: </text>
@@ -262,6 +264,7 @@ const activeIndex = ref(null);
 // 计算属性从 Pinia store 获取用户状态
 const isLoggedIn = computed(() => userStore.user.isLoggedIn);
 const uid = computed(() => userStore.user.nickName);
+const user_id = computed(() => userStore.user.uid);
 const avatarSrc = computed(() =>
     userStore.user.avatarUrl
         ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
@@ -423,6 +426,12 @@ const insertMention = (name) => {
   proxy.$refs.mentionPopup.close();
   showMentionList.value = false;
 };
+
+const switchtoStranger = (id) => {
+	uni.navigateTo({
+	  url: `/pagesMy/stranger/stranger?id=${id}`,
+	});
+}
 
 const toggleInteraction = (type) => {
   // 确保 post 是一个 ref，并正确访问其属性
@@ -705,9 +714,10 @@ const addComment = () => {
             id: newCommentData.id,
             text: newCommentData.content,
             liked: newCommentData.like_count > 0, // 根据需要调整
-			likecount: 10,
+			likecount: 0,
 			authorName: uid.value,
 			authorAvatar: avatarSrc_sh.value,
+			authorid: user_id.value,
 			publish_time: formatPublishTime(newCommentData.publish_time), // Format time
             replies: [],
 			showAllReplies: false,
@@ -810,6 +820,7 @@ onLoad(async (options) => {
           publish_time: formattedTime,
 		  authorName: comment.author.nickname,
 		  authorAvatar: comment.author.avatar_url,
+		  authorid: comment.author.id,
           replies: [],
 		  showAllReplies: false,
         };

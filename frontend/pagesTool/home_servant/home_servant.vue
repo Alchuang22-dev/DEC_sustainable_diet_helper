@@ -1,7 +1,7 @@
 <template>
   <view class="container">
     <!-- 全屏背景图片 -->
-    <image src="/static/images/index/background_index_new.png" class="background-image"></image>
+    <image src="/static/images/index/background_img.jpg" class="background-image"></image>
 
     <!-- 头部标题 -->
     <view v-if="family.status === FamilyStatus.JOINED" class="header">
@@ -88,12 +88,12 @@
                 <view class="collapse-title">
                   <text class="dish-name">{{ dish.name }}</text>
                   <view class="dish-info">
+                    <text class="proposer-text">{{ dish.proposer }}</text>
                     <uni-tag
                         :text="dishPreferenceLevels[dish.preference]"
                         :type="getPreferenceTagType(dish.preference)"
                         size="small"
                     />
-                    <text class="proposer-text">{{ dish.proposer }}</text>
                   </view>
                 </view>
               </template>
@@ -693,8 +693,9 @@ const startStatusCheck = () => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: -1;
-  opacity: 0.1;
+  z-index: 0;
+  opacity: 0.08;
+  pointer-events: none;
 }
 
 /* 头部标题 */
@@ -921,13 +922,13 @@ const startStatusCheck = () => {
 }
 
 .picker {
-  width: 100%;
   padding: 10rpx;
   border: 1rpx solid #ccc;
   border-radius: 5rpx;
   margin-bottom: 20rpx;
   margin-top: 20rpx;
   color: #666666;
+  z-index: 1;
 }
 
 .submit-button {
@@ -1120,7 +1121,6 @@ const startStatusCheck = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 10;
 }
 
 .modal-content {

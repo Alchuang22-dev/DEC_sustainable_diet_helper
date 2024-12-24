@@ -13,7 +13,7 @@
     <view class="profile-info">
       <image :src="avatarSrc" class="avatar" alt="用户头像"></image>
       <text class="nickname">{{ uid }}</text>
-      <text class="userid">id：{{ userStore.user.id || 'test_user' }}</text>
+      <text class="userid">uid：{{ user_id || 'test_user' }}</text>
 
       <!-- 创作统计 -->
       <view class="stats">
@@ -77,13 +77,13 @@
         </view>
         <view class="card-footer">
           <!-- 这里使用原先的按钮: 查看、编辑、删除等 -->
-          <button @click="viewArticleByIndex(index, 'published')" class="action-btn">
+          <button @click="viewArticle(index)" class="action-btn">
             <image src="@/pagesMy/static/view.svg" class="icon" alt="View" ></image>
           </button>
-          <button @click="editArticleByIndex(index, 'published')" class="action-btn">
+          <button @click="editArticle(index)" class="action-btn">
             <image src="@/pagesMy/static/edit.svg" class="icon" alt="Edit" ></image>
           </button>
-          <button @click="deleteArticleByIndex(index, 'published')" class="action-btn">
+          <button @click="deleteArticle(index)" class="action-btn">
             <image src="@/pagesMy/static/delete.svg" class="icon" alt="Delete" ></image>
           </button>
         </view>
@@ -117,13 +117,13 @@
           </view>
         </view>
         <view class="card-footer">
-          <button @click="viewArticleByIndex(index, 'draft')" class="action-btn">
+          <button @click="viewDraft(index)" class="action-btn">
             <image src="@/pagesMy/static/view.svg" class="icon" alt="View" ></image>
           </button>
-          <button @click="editArticleByIndex(index, 'draft')" class="action-btn">
+          <button @click="editDraft(index)" class="action-btn">
             <image src="@/pagesMy/static/edit.svg" class="icon" alt="Edit" ></image>
           </button>
-          <button @click="deleteArticleByIndex(index, 'draft')" class="action-btn">
+          <button @click="deleteDraft(index)" class="action-btn">
             <image src="@/pagesMy/static/delete.svg" class="icon" alt="Delete" ></image>
           </button>
         </view>
@@ -147,6 +147,7 @@ const userStore = useUserStore(); // 使用用户存储
 const systemDate = new Date();
 const systemDateStr = systemDate.toISOString().slice(0, 10); // 获取当前系统日期，格式：YYYY-MM-DD
 const BASE_URL = ref('http://122.51.231.155:8080');
+const user_id = computed(() => userStore.user.uid);
 
 const activeIndex = ref(null);
 // 计算属性从 Pinia store 获取用户状态
@@ -355,66 +356,39 @@ onShow(() => {
 // View article function 仅限草稿
 const viewArticle = (index) => {
   const article = articles.value[index];
-  console.log('查看文章:', articles.value[index]);
-  // 跳转到文章详情页
-  // 将文章的 ID 作为查询参数传递到新页面
-  if(article.status === '草稿'){
-	  uni.navigateTo({
-		url: `/pagesNews/preview_draft/preview_draft?id=${article.id}`,
-	});
-  } else if(article.status === '已发布'){
 	  uni.navigateTo({
 	  	url: `/pagesNews/news_detail/news_detail?id=${article.id}`,
 	  });
-  }
-  
+};
+
+const viewDraft = (index) => {
+	const draft = draftArticles.value[index];
+	uni.navigateTo({
+		url: `/pagesNews/preview_draft/preview_draft?id=${draft.id}`,
+	});
 };
 
 // Edit article function
 const editArticle = (index) => {
   const article = articles.value[index];
-  console.log('编辑文章:', article);
-  if(article.status === '草稿'){
-	// 将文章的 ID 作为查询参数传递到新页面
-	uni.navigateTo({
-	  url: `/pagesNews/edit_draft/edit_draft?id=${article.id}`,
-	});
-  } else if(article.status === '已发布'){
   	  uni.showToast({
   	    title: '发布后不可编辑',
   	    icon: 'none',
   	    duration: 2000
   	  });
-  }
+};
+
+const editDraft = (index) => {
+	const draft = draftArticles.value[index];
+	uni.navigateTo({
+	  url: `/pagesNews/edit_draft/edit_draft?id=${draft.id}`,
+	});
 };
 
 // Delete article function
 // Delete article function
 const deleteArticle = async (index) => {
-  const article = articles.value[index];
-
-  if (article.status === '草稿') {
-    // 如果状态是草稿，发送删除请求
-    try {
-      const res = await uni.request({
-        url: `${BASE_URL.value}/news/drafts/${article.id}`,
-        method: 'DELETE',
-        header: {
-          'Authorization': `Bearer ${jwtToken.value}`
-        }
-      });
-
-      if (res.data && res.data.message === 'Draft deleted successfully.') {
-        console.log('草稿删除成功');
-        // 从数据中删除该文章
-        articles.value.splice(index, 1); 
-      } else {
-        console.error('删除失败:', res.data.message);
-      }
-    } catch (error) {
-      console.error('Error deleting draft article', error);
-    }
-  } else if (article.status === '已发布') {
+    const article = articles.value[index];
     // 如果状态是已发布，提示用户联系管理员
     console.log('请联系管理员删除');
     uni.showToast({
@@ -422,7 +396,30 @@ const deleteArticle = async (index) => {
       icon: 'none',
       duration: 2000
     });
-  }
+};
+
+const deleteDraft = async (index) => {
+	const article = draftArticles.value[index];
+	  // 如果状态是草稿，发送删除请求
+	  try {
+	    const res = await uni.request({
+	      url: `${BASE_URL.value}/news/drafts/${article.id}`,
+	      method: 'DELETE',
+	      header: {
+	        'Authorization': `Bearer ${jwtToken.value}`
+	      }
+	    });
+	
+	    if (res.data && res.data.message === 'Draft deleted successfully.') {
+	      console.log('草稿删除成功');
+	      // 从数据中删除该文章
+	      articles.value.splice(index, 1); 
+	    } else {
+	      console.error('删除失败:', res.data.message);
+	    }
+	  } catch (error) {
+	    console.error('Error deleting draft article', error);
+	  }
 };
 
 </script>

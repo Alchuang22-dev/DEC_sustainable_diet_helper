@@ -88,11 +88,6 @@
             <image :src="authorAvatar" class="avatar" />
             <span class="nickname">{{ authorNickname }}</span>
           </view>
-    
-          <view class="popup-body">
-            <button @click="confirmPublish" class="confirm-btn">{{ t('ano_issue') }}</button>
-          </view>
-    
           <view class="popup-footer">
             <button @click="confirmPublish" class="confirm-btn">{{ t('confirm_issue') }}</button>
             <button @click="cancelPublish" class="cancel-btn">{{ t('cancel') }}</button>
@@ -119,6 +114,7 @@ const authorAvatar = computed(() =>
         ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
         : '/static/images/index/background_img.jpg'
 );
+const user_id = computed(() => userStore.user.uid);
 const token = computed(() => userStore.user.token);
 const { t } = useI18n()
 
@@ -333,6 +329,11 @@ const saveDraft = async () => {
         if (res.data.message === 'Draft created successfully.') {
           PageId.value = res.data.draft_id;
           resolve(PageId.value); // 成功时返回 draft_id
+		  uni.showToast({
+		    title: '草稿已保存',
+		    icon: "fail",
+		    duration: 2000,
+		  });
         } else {
           reject('保存草稿失败'); // 失败时拒绝 Promise
         }
