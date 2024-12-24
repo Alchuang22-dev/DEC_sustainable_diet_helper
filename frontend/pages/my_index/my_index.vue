@@ -32,7 +32,8 @@
             >
               {{ isLoggedIn ? nickname : $t('profile_greeting') }}
             </text>
-            <image src="@/pages/static/editor.svg" class="edit-icon"></image>
+            <!-- 仅在登录状态下显示编辑图标 -->
+            <image v-if="isLoggedIn" src="@/pages/static/editor.svg" class="edit-icon"></image>
           </view>
           <input
             v-else
@@ -57,8 +58,6 @@
         {{ $t('profile_register_login') }}
       </button>
     </view>
-
-    <!-- 删除了底部的 nickname-input-section -->
 
     <!-- 菜单部分 -->
     <view class="menu-section">
@@ -229,13 +228,13 @@ async function handleLogout() {
   try {
     await userStore.logout();
     uni.showToast({
-      title: t('profile_logout_success'),
+      title: t('success'),
       icon: 'success',
       duration: 2000,
     });
   } catch (error) {
     uni.showToast({
-      title: error.message || t('profile_logout_fail'),
+      title: error.message || t('fail'),
       icon: 'none',
       duration: 2000,
     });
@@ -256,14 +255,14 @@ async function onChooseAvatar(e) {
     await userStore.setAvatar(chosenAvatarUrl);
 
     uni.showToast({
-      title: t('profile_avatar_update_success'),
+      title: t('success'),
       icon: 'success',
       duration: 2000,
     });
   } catch (error) {
     console.error('选择头像/上传头像失败:', error);
     uni.showToast({
-      title: error.message || t('profile_avatar_update_fail'),
+      title: error.message || t('fail'),
       icon: 'none',
       duration: 2000,
     });
@@ -276,13 +275,7 @@ async function onChooseAvatar(e) {
 function enableNicknameEdit() {
   if (isLoggedIn.value) {
     isEditingNickname.value = true;
-    // 延迟聚焦，确保 input 已渲染
-    setTimeout(() => {
-      const input = document.querySelector('.nickname-input-inline');
-      if (input) {
-        input.focus();
-      }
-    }, 100);
+    // 移除了 querySelector 相关逻辑
   }
 }
 
@@ -386,6 +379,8 @@ async function onNicknameBlur() {
 /* 修改后的头像按钮，透明且无边框 */
 .avatar-button {
   background: transparent;
+  padding: 0;
+  margin-bottom: -40rpx;
 }
 
 .avatar-button:after {
