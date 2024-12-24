@@ -2132,8 +2132,18 @@ func (nc *NewsController) GetUserNewsStatus(c *gin.Context) {
 }
 
 func (nc *NewsController) SearchNews(c *gin.Context) {
-    // 获取查询字符串
-    query := c.Query("q")
+    // 定义请求体结构
+    var requestBody struct {
+        Query string `json:"query"`
+    }
+
+    // 解析请求体
+    if err := c.ShouldBindJSON(&requestBody); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+        return
+    }
+
+    query := requestBody.Query
     if query == "" {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Query string cannot be empty"})
         return
@@ -2163,7 +2173,7 @@ func (nc *NewsController) SearchNews(c *gin.Context) {
     results := make([]gin.H, len(newsList))
     for i, news := range newsList {
         results[i] = gin.H{
-            "id":          news.ID,
+            "id": news.ID,
         }
     }
 
