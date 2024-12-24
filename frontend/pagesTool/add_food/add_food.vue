@@ -15,12 +15,12 @@
       </view>
       <view class="form-group">
         <text class="label">{{ $t('total_weight') }}</text>
-        <input class="input" type="number" v-model="food.weight" :placeholder="$t('please_enter_food_weight')" :error="weightError" />
+        <input class="input" type="digit" v-model="food.weight" :placeholder="$t('please_enter_food_weight')" :error="weightError" />
         <text v-if="weightError" class="error-message">{{ $t('weight_must_be_positive_integer') }}</text>
       </view>
       <view class="form-group">
         <text class="label">{{ $t('total_price') }}</text>
-        <input class="input" type="number" v-model="food.price" :placeholder="$t('please_enter_food_price')" :error="priceError" />
+        <input class="input" type="digit" v-model="food.price" :placeholder="$t('please_enter_food_price')" :error="priceError" />
         <text v-if="priceError" class="error-message">{{ $t('price_must_be_positive_integer') }}</text>
       </view>
       <view class="form-group">
@@ -194,18 +194,18 @@ const submitFoodDetails = () => {
 
   const matchedFood = availableFoods.find((f) => displayName(f) === foodNameInput.value);
 
-if (matchedFood) {
-  // 如果找到匹配的食物项，使用 selectFood 方法
-  selectFood(matchedFood);
-} else {
-  // 如果没有找到，提醒用户
-  uni.showToast({
-    title: t('no_matching_food'),
-    icon: 'none',
-    duration: 2000,
-  });
-  return; // 终止提交
-}
+  if (matchedFood) {
+    // 如果找到匹配的食物项，使用 selectFood 方法
+    selectFood(matchedFood);
+  } else {
+    // 如果没有找到，提醒用户
+    uni.showToast({
+      title: t('no_matching_food'),
+      icon: 'none',
+      duration: 2000,
+    });
+    return; // 终止提交
+  }
 
   // 重置错误状态
   weightError.value = false;
@@ -223,14 +223,14 @@ if (matchedFood) {
   // 输入验证
   let valid = true;
 
-  // 验证重量：必须是正整数
-  if (!/^\d+$/.test(weight) || parseInt(weight) <= 0) {
+  // 验证重量：必须是正数（允许小数）
+  if (!/^\d+(\.\d+)?$/.test(weight) || parseFloat(weight) <= 0) {
     weightError.value = true;
     valid = false;
   }
 
-  // 验证价格：必须是正整数
-  if (!/^\d+$/.test(price) || parseInt(price) <= 0) {
+  // 验证价格：必须是正数（允许小数）
+  if (!/^\d+(\.\d+)?$/.test(price) || parseFloat(price) <= 0) {
     priceError.value = true;
     valid = false;
   }
@@ -251,8 +251,8 @@ if (matchedFood) {
   const newFood = {
     name, // 始终为英文名称
     id: food.id, // 添加 id
-    weight: parseInt(weight),
-    price: parseInt(price),
+    weight: parseFloat(weight), // 使用 parseFloat
+    price: parseFloat(price),   // 使用 parseFloat
     transportMethod,
     foodSource,
     image: imagePath,

@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia';
 import { reactive, watch } from 'vue';
 
-const BASE_URL = 'http://122.51.231.155:8080';
+const BASE_URL = 'http://xcxcs.uwdjl.cn:8080';
 
 // 定义用户状态枚举（可根据需要扩展）
 export const UserStatus = {
@@ -91,6 +91,7 @@ export const useUserStore = defineStore('user', () => {
         nickName: '',
         status: UserStatus.LOGGED_OUT,
         tokenExpiry: null, // 新增字段，记录 access_token 过期时间
+        registered_days: 0 // 新增字段，用于存储注册天数
       };
     } catch (error) {
       console.error('获取存储的用户数据失败:', error);
@@ -102,6 +103,7 @@ export const useUserStore = defineStore('user', () => {
         nickName: '',
         status: UserStatus.LOGGED_OUT,
         tokenExpiry: null, // 新增字段
+        registered_days: 0 // 新增字段
       };
     }
   };
@@ -118,7 +120,7 @@ export const useUserStore = defineStore('user', () => {
   };
 
   const watchUser = () => {
-    const watchKeys = ['uid', 'isLoggedIn', 'token', 'avatarUrl', 'nickName', 'status', 'tokenExpiry'];
+    const watchKeys = ['uid', 'isLoggedIn', 'token', 'avatarUrl', 'nickName', 'status', 'tokenExpiry', 'registered_days']; // 添加 'registered_days'
     watchKeys.forEach(key => {
       watch(() => user[key], () => {
         saveToStorage();
@@ -146,6 +148,8 @@ export const useUserStore = defineStore('user', () => {
       // 调用 uni.login 获取微信登录凭证
       const loginRes = await new Promise((resolve, reject) => {
         uni.login({
+          "provider": "weixin",
+          "onlyAuthorize": true,
           success: resolve,
           fail: reject,
         });
@@ -159,6 +163,7 @@ export const useUserStore = defineStore('user', () => {
       console.log("formData", loginRes.code, nickName);
 
       const authRes = await new Promise((resolve, reject) => {
+        console.log('url:', `${BASE_URL}/users/auth`);
         uni.uploadFile({
           url: `${BASE_URL}/users/auth`, // 确保端点正确
           method: 'POST',
@@ -195,6 +200,7 @@ export const useUserStore = defineStore('user', () => {
       user.isLoggedIn = true;
       user.status = UserStatus.LOGGED_IN;
       user.tokenExpiry = Date.now() + ACCESS_TOKEN_EXPIRES_IN * 1000; // 设置过期时间
+      user.registered_days = returnData.registered_days || 0; // 设置注册天数
 
       saveToStorage();
       scheduleTokenRefresh();
@@ -208,6 +214,7 @@ export const useUserStore = defineStore('user', () => {
 
   // 用户登出
   const logout = async () => {
+    console.log('url logout:', `${BASE_URL}/users/logout`);
     try {
       const response = await request(createRequestConfig({
         url: `${BASE_URL}/users/logout`,
@@ -300,13 +307,14 @@ export const useUserStore = defineStore('user', () => {
       }));
 
       if (response.statusCode === 200) {
-        const { access_token, refresh_token: newRefreshToken } = response.data;
+        const { access_token, refresh_token: newRefreshToken, registered_days } = response.data;
         user.token = access_token;
         // 更新 refresh_token 至安全存储
         secureStorage.setRefreshToken(newRefreshToken);
         user.tokenExpiry = Date.now() + ACCESS_TOKEN_EXPIRES_IN * 1000; // 更新过期时间
         user.isLoggedIn = true;
         user.status = UserStatus.LOGGED_IN;
+        user.registered_days = registered_days || user.registered_days; // 更新注册天数
 
         saveToStorage();
         scheduleTokenRefresh();
@@ -331,11 +339,6 @@ export const useUserStore = defineStore('user', () => {
     return user.uid;
   };
 
-  // 返回用户access_token
-  const getAccessToken = () => {
-      return user.token;
-  }
-
   // 清除本地存储数据
   const clearStorage = () => {
     try {
@@ -355,6 +358,7 @@ export const useUserStore = defineStore('user', () => {
     user.nickName = '';
     user.status = UserStatus.LOGGED_OUT;
     user.tokenExpiry = null;
+    user.registered_days = 0; // 重置注册天数
     clearStorage();
     clearTokenRefreshTimer();
   };
@@ -372,6 +376,7 @@ export const useUserStore = defineStore('user', () => {
         user.nickName = parsedData.nickName;
         user.status = parsedData.status;
         user.tokenExpiry = parsedData.tokenExpiry;
+        user.registered_days = parsedData.registered_days || 0; // 加载注册天数
         if (user.isLoggedIn && user.token && user.tokenExpiry) {
           console.log('已加载本地用户数据:', user);
         }
@@ -405,10 +410,11 @@ export const useUserStore = defineStore('user', () => {
 
       if (response.statusCode === 200) {
         const data = response.data;
-        // 假设返回的数据结构为 { id, nickname, avatar_url }
+        // 假设返回的数据结构为 { id, nickname, avatar_url, registered_days }
         user.uid = data.id;
         user.nickName = data.nickname;
         user.avatarUrl = data.avatar_url || '/static/images/default_avatar.jpg';
+        user.registered_days = data.registered_days || 0; // 设置注册天数
         user.isLoggedIn = true;
         user.status = UserStatus.LOGGED_IN;
         user.tokenExpiry = Date.now() + ACCESS_TOKEN_EXPIRES_IN * 1000; // 更新过期时间
@@ -432,7 +438,7 @@ export const useUserStore = defineStore('user', () => {
     if (user.tokenExpiry) {
       const currentTime = Date.now();
       const timeToExpiry = user.tokenExpiry - currentTime;
-      const timeBeforeRefresh = timeToExpiry - (20 * 1000); // 5分钟前
+      const timeBeforeRefresh = timeToExpiry - (20 * 1000); // 20 秒前刷新
 
       if (timeBeforeRefresh > 0) {
         tokenRefreshTimer = setTimeout(() => {
@@ -442,7 +448,7 @@ export const useUserStore = defineStore('user', () => {
         }, timeBeforeRefresh);
         console.log(`将在 ${timeBeforeRefresh / 1000} 秒后刷新token`);
       } else {
-        // 如果时间已经不足5分钟，立即刷新
+        // 如果时间已经不足，立即刷新
         refreshToken().catch(err => {
           console.error('自动刷新token失败:', err);
         });

@@ -1,14 +1,18 @@
 <template>
   <view class="container">
+    <!-- 输入规范提示 -->
+    <view class="input-specification">
+      <text class="input-spec-text">{{ t('input_specification') }}</text>
+    </view>
     <view class="goals-wrapper">
       <!-- 碳目标输入框 -->
       <view class="goal-section">
         <text class="label">{{ t('carbon_goal_label') }}</text>
         <input
             class="input"
-            type="number"
+            type="digit"
+            step="0.1"
             v-model.trim="carbonGoalStr"
-            :placeholder="t('carbonGoalPlaceholder')"
             :maxlength="10"
         />
       </view>
@@ -22,9 +26,9 @@
           <text class="label">{{ t('calories_unit') }}</text>
           <input
               class="input"
-              type="number"
+              type="digit"
+              step="0.1"
               v-model.trim="caloriesStr"
-              :placeholder="t('inputPlaceholder')"
               :maxlength="10"
           />
         </view>
@@ -32,9 +36,9 @@
           <text class="label">{{ t('protein_unit') }}</text>
           <input
               class="input"
-              type="number"
+              type="digit"
+              step="0.1"
               v-model.trim="proteinStr"
-              :placeholder="t('inputPlaceholder')"
               :maxlength="10"
           />
         </view>
@@ -42,9 +46,9 @@
           <text class="label">{{ t('fat_unit') }}</text>
           <input
               class="input"
-              type="number"
+              type="digit"
+              step="0.1"
               v-model.trim="fatStr"
-              :placeholder="t('inputPlaceholder')"
               :maxlength="10"
           />
         </view>
@@ -52,9 +56,9 @@
           <text class="label">{{ t('carbohydrates_unit') }}</text>
           <input
               class="input"
-              type="number"
+              type="digit"
+              step="0.1"
               v-model.trim="carbsStr"
-              :placeholder="t('inputPlaceholder')"
               :maxlength="10"
           />
         </view>
@@ -62,9 +66,9 @@
           <text class="label">{{ t('sodium_unit') }}</text>
           <input
               class="input"
-              type="number"
+              type="digit"
+              step="0.1"
               v-model.trim="sodiumStr"
-              :placeholder="t('inputPlaceholder')"
               :maxlength="10"
           />
         </view>
@@ -82,21 +86,21 @@
 
       <!-- 营养建议说明 -->
       <view class="nutrition-guidelines">
-        <text class="guidelines-title">营养摄入参考值</text>
+        <text class="guidelines-title">{{ t('nutrition_guidelines_title') }}</text>
         <view class="guidelines-content">
-          <text class="guideline-item">成年男性（18-49岁）建议值：</text>
-          <text class="guideline-details">· 热量：2250-2400千卡/天</text>
-          <text class="guideline-details">· 蛋白质：65-75克/天</text>
-          <text class="guideline-details">· 碳水化合物：320-370克/天</text>
-          <text class="guideline-details">· 脂肪：60-70克/天</text>
-          <text class="guideline-details">· 钠：2000毫克/天</text>
+          <text class="guideline-item">{{ t('adult_male_guidelines') }}</text>
+          <text class="guideline-details">{{ t('calories_range_male') }}</text>
+          <text class="guideline-details">{{ t('protein_range_male') }}</text>
+          <text class="guideline-details">{{ t('carbs_range_male') }}</text>
+          <text class="guideline-details">{{ t('fat_range_male') }}</text>
+          <text class="guideline-details">{{ t('sodium_range') }}</text>
 
-          <text class="guideline-item">成年女性（18-49岁）建议值：</text>
-          <text class="guideline-details">· 热量：1800-2000千卡/天</text>
-          <text class="guideline-details">· 蛋白质：55-65克/天</text>
-          <text class="guideline-details">· 碳水化合物：250-300克/天</text>
-          <text class="guideline-details">· 脂肪：50-60克/天</text>
-          <text class="guideline-details">· 钠：2000毫克/天</text>
+          <text class="guideline-item">{{ t('adult_female_guidelines') }}</text>
+          <text class="guideline-details">{{ t('calories_range_female') }}</text>
+          <text class="guideline-details">{{ t('protein_range_female') }}</text>
+          <text class="guideline-details">{{ t('carbs_range_female') }}</text>
+          <text class="guideline-details">{{ t('fat_range_female') }}</text>
+          <text class="guideline-details">{{ t('sodium_range') }}</text>
         </view>
       </view>
 
@@ -121,7 +125,7 @@ const userStore = useUserStore();
 // 从 store 中获取 token（如果需要手动使用）
 const token = computed(() => userStore.user.token);
 
-// 碳目标和五大营养目标的绑定值（以字符串形式做双向绑定，提交前再转成整数）
+// 碳目标和五大营养目标的绑定值（以字符串形式做双向绑定，提交前再转成浮点数）
 const carbonGoalStr = ref('0');
 const caloriesStr = ref('0');
 const proteinStr = ref('0');
@@ -151,9 +155,9 @@ onMounted(async () => {
       return item.date.startsWith(dateString);
     });
     if (carbonGoalObj) {
-      carbonGoalStr.value = String(Math.round(carbonGoalObj.emission || 0));
+      carbonGoalStr.value = String(carbonGoalObj.emission ? parseFloat(carbonGoalObj.emission).toFixed(1) : 0);
     } else {
-      carbonGoalStr.value = '0';
+      carbonGoalStr.value = '0.0';
     }
 
     // 找到当天的营养目标
@@ -161,17 +165,17 @@ onMounted(async () => {
       return item.date.startsWith(dateString);
     });
     if (nutritionGoalObj) {
-      caloriesStr.value = String(Math.round(nutritionGoalObj.calories || 0));
-      proteinStr.value = String(Math.round(nutritionGoalObj.protein || 0));
-      fatStr.value = String(Math.round(nutritionGoalObj.fat || 0));
-      carbsStr.value = String(Math.round(nutritionGoalObj.carbohydrates || 0));
-      sodiumStr.value = String(Math.round(nutritionGoalObj.sodium || 0));
+      caloriesStr.value = String(nutritionGoalObj.calories ? parseFloat(nutritionGoalObj.calories).toFixed(1) : 0);
+      proteinStr.value = String(nutritionGoalObj.protein ? parseFloat(nutritionGoalObj.protein).toFixed(1) : 0);
+      fatStr.value = String(nutritionGoalObj.fat ? parseFloat(nutritionGoalObj.fat).toFixed(1) : 0);
+      carbsStr.value = String(nutritionGoalObj.carbohydrates ? parseFloat(nutritionGoalObj.carbohydrates).toFixed(1) : 0);
+      sodiumStr.value = String(nutritionGoalObj.sodium ? parseFloat(nutritionGoalObj.sodium).toFixed(1) : 0);
     } else {
-      caloriesStr.value = '0';
-      proteinStr.value = '0';
-      fatStr.value = '0';
-      carbsStr.value = '0';
-      sodiumStr.value = '0';
+      caloriesStr.value = '0.0';
+      proteinStr.value = '0.0';
+      fatStr.value = '0.0';
+      carbsStr.value = '0.0';
+      sodiumStr.value = '0.0';
     }
 
   } catch (err) {
@@ -185,7 +189,7 @@ onMounted(async () => {
 
 /**
  * 点击「为今天设置」
- * 1. 检验输入是否合法（都应是整数且>=0）。
+ * 1. 检验输入是否合法（都是非负数，最多1位小数）。
  * 2. 构造仅当天的 goals 数组并调用 setNutritionGoals、setCarbonGoals。
  */
 const setGoalsForToday = async () => {
@@ -197,17 +201,17 @@ const setGoalsForToday = async () => {
   const carbonGoals = [
     {
       date: `${dateString}T00:00:00Z`,
-      emission: parseInt(carbonGoalStr.value, 10),
+      emission: parseFloat(carbonGoalStr.value),
     }
   ];
   const nutritionGoals = [
     {
       date: `${dateString}T00:00:00Z`,
-      calories: parseInt(caloriesStr.value, 10),
-      protein: parseInt(proteinStr.value, 10),
-      fat: parseInt(fatStr.value, 10),
-      carbohydrates: parseInt(carbsStr.value, 10),
-      sodium: parseInt(sodiumStr.value, 10)
+      calories: parseFloat(caloriesStr.value),
+      protein: parseFloat(proteinStr.value),
+      fat: parseFloat(fatStr.value),
+      carbohydrates: parseFloat(carbsStr.value),
+      sodium: parseFloat(sodiumStr.value)
     }
   ];
 
@@ -215,7 +219,7 @@ const setGoalsForToday = async () => {
     await carbonAndNutritionStore.setCarbonGoals(carbonGoals);
     await carbonAndNutritionStore.setNutritionGoals(nutritionGoals);
     uni.showToast({
-      title: t('setSuccess'),
+      title: t('success'),
       icon: 'success'
     });
   } catch (err) {
@@ -226,7 +230,7 @@ const setGoalsForToday = async () => {
 
 /**
  * 点击「为一周设置」
- * 1. 检验输入是否合法（都应是整数且>=0）。
+ * 1. 检验输入是否合法（都是非负数，最多1位小数）。
  * 2. 从今天开始，连续 7 天（今天 + 后面 6 天）都设置相同的目标。
  */
 const setGoalsForWeek = async () => {
@@ -245,15 +249,15 @@ const setGoalsForWeek = async () => {
 
     carbonGoals.push({
       date: `${dateString}T00:00:00Z`,
-      emission: parseInt(carbonGoalStr.value, 10),
+      emission: parseFloat(carbonGoalStr.value),
     });
     nutritionGoals.push({
       date: `${dateString}T00:00:00Z`,
-      calories: parseInt(caloriesStr.value, 10),
-      protein: parseInt(proteinStr.value, 10),
-      fat: parseInt(fatStr.value, 10),
-      carbohydrates: parseInt(carbsStr.value, 10),
-      sodium: parseInt(sodiumStr.value, 10)
+      calories: parseFloat(caloriesStr.value),
+      protein: parseFloat(proteinStr.value),
+      fat: parseFloat(fatStr.value),
+      carbohydrates: parseFloat(carbsStr.value),
+      sodium: parseFloat(sodiumStr.value)
     });
   }
 
@@ -261,18 +265,18 @@ const setGoalsForWeek = async () => {
     await carbonAndNutritionStore.setCarbonGoals(carbonGoals);
     await carbonAndNutritionStore.setNutritionGoals(nutritionGoals);
     uni.showToast({
-      title: t('setSuccess'),
+      title: t('success'),
       icon: 'success'
     });
   } catch (err) {
     console.error(err);
-    uni.showToast({title: t('setFail'), icon: 'none'});
+    uni.showToast({title: t('fail'), icon: 'none'});
   }
 };
 
-// 校验输入框是否都是有效整数
+// 校验输入框是否都是有效数字，且最多1位小数
 function validateInputs() {
-  // 如果有非数字或负数或非整数
+  const regex = /^\d+(\.\d)?$/; // 正则表达式：非负数，最多1位小数
   const items = [
     carbonGoalStr.value,
     caloriesStr.value,
@@ -286,7 +290,7 @@ function validateInputs() {
         val === '' ||
         isNaN(Number(val)) ||
         Number(val) < 0 ||
-        !Number.isInteger(Number(val))
+        !regex.test(val)
     ) {
       uni.showToast({title: t('inputValidateFail'), icon: 'none'});
       return false;
@@ -303,6 +307,23 @@ function validateInputs() {
   min-height: 100vh;
   background-color: #f5f7fa;
   padding: 12px 8px;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+  padding: 12px 8px;
+}
+
+.input-specification {
+  margin-bottom: 16px; /* 增加底部间距 */
+}
+
+.input-spec-text {
+  font-size: 12px;
+  color: #6b7280; /* 略浅的颜色 */
 }
 
 .goals-wrapper {
