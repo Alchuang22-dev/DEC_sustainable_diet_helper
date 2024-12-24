@@ -3,6 +3,7 @@ package controllers
 
 import (
 	// "fmt"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"sort"
@@ -24,7 +25,6 @@ func NewFamilyController(db *gorm.DB) *FamilyController {
 }
 
 // 创建家庭
-// TODO maybe不需要在函数内判断是否 exists
 func (fc *FamilyController) CreateFamily(c *gin.Context) {
     // 从 JWT 中解析用户 ID
     userID, exists := c.Get("user_id")
@@ -40,10 +40,10 @@ func (fc *FamilyController) CreateFamily(c *gin.Context) {
         return
     }
     // TODO 改回来
-    // if user.FamilyID != nil {
-    //     c.JSON(http.StatusBadRequest, gin.H{"error": "User already belongs to a family"})
-    //     return
-    // }
+    if user.FamilyID != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "User already belongs to a family"})
+        return
+    }
 
     // 解析请求体
     var request struct {
@@ -111,6 +111,12 @@ func (fc *FamilyController) CreateFamily(c *gin.Context) {
     })
 }
 
+// 获取今日日期
+func getStartOfDay(t time.Time, loc *time.Location) time.Time {
+    year, month, day := t.In(loc).Date()
+    return time.Date(year, month, day, 0, 0, 0, 0, loc)
+}
+
 // 查看自己的家庭的信息, 如果自己不在家庭或在 waiting list 也要相应显示
 func (fc *FamilyController) FamilyDetails(c *gin.Context) {
     // 从 JWT 中解析用户 ID
@@ -122,29 +128,45 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
 
     // 查询用户信息并预加载家庭信息
     var user models.User
-    if err := fc.DB.Preload("Family.Admins").Preload("Family.Members").Preload("Family.WaitingList").Preload("PendingFamily").
-    Preload("NutritionGoals").Preload("NutritionIntakes").Preload("CarbonGoals").Preload("CarbonIntakes").First(&user, userID).Error; err != nil {
+    if err := fc.DB.Preload("Family.Admins").Preload("Family.Members").Preload("Family.WaitingList").Preload("PendingFamily").First(&user, userID).Error; err != nil {
         c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
         return
     }
 
+    // 获取前端传来的时区
+    timezone := c.Query("timezone")
+    if timezone == "" {
+        timezone = "Local" // 默认本地时区
+    }
+    loc, err := time.LoadLocation(timezone)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid timezone"})
+        return
+    }
+
+    now := time.Now().In(loc)
+    today := getStartOfDay(now, loc)
+
+    utcToday := today.UTC()
+
+    // fmt.Println(utcToday)
+
     if user.PendingFamilyID != nil { // 用户在某个家庭的 waiting list 中
         c.JSON(http.StatusOK, gin.H{
-            "status":  "waiting",
-            "id":      user.PendingFamily.ID,
-            "name":    user.PendingFamily.Name,
-            "family_id":   user.PendingFamily.Token,
+            "status":    "waiting",
+            "id":        user.PendingFamily.ID,
+            "name":      user.PendingFamily.Name,
+            "family_id": user.PendingFamily.Token,
         })
         return
     } else if user.Family != nil { // 用户已在某个家庭中
         // 准备管理员和成员的信息
         admins := make([]gin.H, len(user.Family.Admins))
         for i, admin := range user.Family.Admins {
-
             admins[i] = gin.H{
                 "id":         admin.ID,
                 "nickname":   admin.Nickname,
-                "avatar_url": admin.AvatarURL, // TODO 应该传递图片，暂时用avatar_url替代
+                "avatar_url": admin.AvatarURL,
             }
         }
 
@@ -165,22 +187,137 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
                 "avatar_url": waiting_member.AvatarURL,
             }
         }
-        
-        // 返回家庭信息
+
+        // 3. 遍历所有“真实成员”（Members 和 Admins 合并）
+        realMembers := user.Family.Members
+        realMembers = append(realMembers, user.Family.Admins...)
+
+        memberDailyData := make([]gin.H, 0, len(realMembers))
+
+        var (
+            totalCarbonGoalSum   float64
+            totalCarbonIntakeSum float64
+
+            totalNutritionGoal = struct {
+                Calories, Protein, Fat, Carbohydrates, Sodium float64
+            }{}
+            totalNutritionIntake = struct {
+                Calories, Protein, Fat, Carbohydrates, Sodium float64
+            }{}
+        )
+
+        for _, m := range realMembers {
+            var carbonGoal models.CarbonGoal
+            if err := fc.DB.Where("user_id = ? AND DATE(date) = DATE(?)", m.ID, utcToday).First(&carbonGoal).Error; err != nil {
+                carbonGoal.Emission = 0
+            }
+
+            var carbonIntakes []models.CarbonIntake
+            if err := fc.DB.Where("user_id = ? AND DATE(date) = DATE(?)", m.ID, utcToday).Find(&carbonIntakes).Error; err != nil {
+                carbonIntakes = nil
+            }
+            var carbonIntakeSum float64
+            for _, ci := range carbonIntakes {
+                carbonIntakeSum += ci.Emission
+            }
+
+            var nutritionGoal models.NutritionGoal
+            if err := fc.DB.Where("user_id = ? AND DATE(date) = DATE(?)", m.ID, utcToday).First(&nutritionGoal).Error; err != nil {
+                nutritionGoal = models.NutritionGoal{}
+            }
+
+            var nutritionIntakes []models.NutritionIntake
+            if err := fc.DB.Where("user_id = ? AND DATE(date) = DATE(?)", m.ID, utcToday).Find(&nutritionIntakes).Error; err != nil {
+                nutritionIntakes = nil
+            }
+            var (
+                niCals, niProtein, niFat, niCarbs, niSodium float64
+            )
+            for _, ni := range nutritionIntakes {
+                niCals += ni.Calories
+                niProtein += ni.Protein
+                niFat += ni.Fat
+                niCarbs += ni.Carbohydrates
+                niSodium += ni.Sodium
+            }
+
+            singleMemberData := gin.H{
+                "user_id": m.ID,
+                "nickname": m.Nickname,
+                "avatar_url": m.AvatarURL,
+
+                "carbon_goal_emission": carbonGoal.Emission,
+                "carbon_intake_sum":    carbonIntakeSum,
+
+                "nutrition_goal": gin.H{
+                    "calories":      nutritionGoal.Calories,
+                    "protein":       nutritionGoal.Protein,
+                    "fat":           nutritionGoal.Fat,
+                    "carbohydrates": nutritionGoal.Carbohydrates,
+                    "sodium":        nutritionGoal.Sodium,
+                },
+                "nutrition_intake_sum": gin.H{
+                    "calories":      niCals,
+                    "protein":       niProtein,
+                    "fat":           niFat,
+                    "carbohydrates": niCarbs,
+                    "sodium":        niSodium,
+                },
+            }
+            memberDailyData = append(memberDailyData, singleMemberData)
+
+            totalCarbonGoalSum += carbonGoal.Emission
+            totalCarbonIntakeSum += carbonIntakeSum
+
+            totalNutritionGoal.Calories += nutritionGoal.Calories
+            totalNutritionGoal.Protein += nutritionGoal.Protein
+            totalNutritionGoal.Fat += nutritionGoal.Fat
+            totalNutritionGoal.Carbohydrates += nutritionGoal.Carbohydrates
+            totalNutritionGoal.Sodium += nutritionGoal.Sodium
+
+            totalNutritionIntake.Calories += niCals
+            totalNutritionIntake.Protein += niProtein
+            totalNutritionIntake.Fat += niFat
+            totalNutritionIntake.Carbohydrates += niCarbs
+            totalNutritionIntake.Sodium += niSodium
+        }
+
+        familySumData := gin.H{
+            "carbon_goal_sum":   totalCarbonGoalSum,
+            "carbon_intake_sum": totalCarbonIntakeSum,
+            "nutrition_goal_sum": gin.H{
+                "calories":      totalNutritionGoal.Calories,
+                "protein":       totalNutritionGoal.Protein,
+                "fat":           totalNutritionGoal.Fat,
+                "carbohydrates": totalNutritionGoal.Carbohydrates,
+                "sodium":        totalNutritionGoal.Sodium,
+            },
+            "nutrition_intake_sum": gin.H{
+                "calories":      totalNutritionIntake.Calories,
+                "protein":       totalNutritionIntake.Protein,
+                "fat":           totalNutritionIntake.Fat,
+                "carbohydrates": totalNutritionIntake.Carbohydrates,
+                "sodium":        totalNutritionIntake.Sodium,
+            },
+        }
+
         c.JSON(http.StatusOK, gin.H{
-            "status":  "family",
-            "id":      user.Family.ID,
-            "name":    user.Family.Name,
-            "family_id":   user.Family.Token,
-            "member_count": user.Family.MemberCount,
-            "admins":  admins,
-            "members": members,
-            "waiting_members": waiting_members,
+            "status":           "family",
+            "id":               user.Family.ID,
+            "name":             user.Family.Name,
+            "family_id":        user.Family.Token,
+            "member_count":     user.Family.MemberCount,
+            "admins":           admins,
+            "members":          members,
+            "waiting_members":  waiting_members,
+            "today_date":       today.Format("2006-01-02"),
+            "member_daily_data": memberDailyData,
+            "family_sums":       familySumData,
         })
         return
     } else {
         c.JSON(http.StatusOK, gin.H{
-            "status":  "empty",
+            "status": "empty",
         })
         return
     }
@@ -783,58 +920,73 @@ func (fc *FamilyController) LeaveFamily(c *gin.Context) {
         return
     }
 
-    // Start transaction to ensure atomicity
+    // 开始事务
     if err := fc.DB.Transaction(func(tx *gorm.DB) error {
-        // Remove user from Admins
+        // 1. 删除用户提出的菜品（FamilyDish 表中 ProposerUserID 为该用户的记录）
+        if err := tx.Where("proposer_user_id = ?", user.ID).Delete(&models.FamilyDish{}).Error; err != nil {
+            return err
+        }
+
+        // 2. 更新菜品状态（删除孤立菜品）
+        var remainingDishes []models.FamilyDish
+        if err := tx.Where("family_id = ?", family.ID).Find(&remainingDishes).Error; err != nil {
+            return err
+        }
+        for _, dish := range remainingDishes {
+            var proposerCount int64
+            if err := tx.Model(&models.FamilyDish{}).
+                Where("family_id = ? AND dish_id = ?", dish.FamilyID, dish.DishID).
+                Count(&proposerCount).Error; err != nil {
+                return err
+            }
+            // 删除没有提议者的菜品
+            if proposerCount == 0 {
+                if err := tx.Delete(&dish).Error; err != nil {
+                    return err
+                }
+            }
+        }
+
         if err := tx.Model(&family).Association("Admins").Delete(&user); err != nil {
             return err
         }
 
-        // Remove user from Members
         if err := tx.Model(&family).Association("Members").Delete(&user); err != nil {
             return err
         }
 
-        // Decrease member count
         family.MemberCount--
         if err := tx.Save(&family).Error; err != nil {
             return err
         }
 
-        // Set user's FamilyID to nil
         user.FamilyID = nil
         if err := tx.Save(&user).Error; err != nil {
             return err
         }
 
-        // Check the number of remaining admins
         adminCount := tx.Model(&family).Association("Admins").Count()
 
         if adminCount == 0 && family.MemberCount > 0 {
-            // Promote another member to admin
             var members []models.User
             if err := tx.Model(&family).Association("Members").Find(&members); err != nil {
                 return err
             }
 
             if len(members) > 0 {
-                // 随机选择一位成员作为新的管理员
-                rand.Seed(time.Now().UnixNano())
+                // 随机指派用户为管理员
                 newAdmin := members[rand.Intn(len(members))]
 
-                // Remove the new admin from Members
                 if err := tx.Model(&family).Association("Members").Delete(&newAdmin); err != nil {
                     return err
                 }
 
-                // Add the new admin to Admins
                 if err := tx.Model(&family).Association("Admins").Append(&newAdmin); err != nil {
                     return err
                 }
             }
         }
 
-        // If no members left, delete the family
         if family.MemberCount == 0 {
             if err := tx.Delete(&family).Error; err != nil {
                 return err
@@ -843,6 +995,7 @@ func (fc *FamilyController) LeaveFamily(c *gin.Context) {
 
         return nil
     }); err != nil {
+        fmt.Println(err)
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to leave family"})
         return
     }
@@ -913,16 +1066,45 @@ func (fc *FamilyController) DeleteFamilyMember(c *gin.Context) {
 
     // 移除用户并减少家庭成员计数
     if err := fc.DB.Transaction(func(tx *gorm.DB) error {
+        // 删除用户提出的菜品
+        if err := tx.Where("proposer_user_id = ?", user.ID).Delete(&models.FamilyDish{}).Error; err != nil {
+            return err
+        }
+
+        // 更新菜品列表，删除没有提议者的菜品
+        var remainingDishes []models.FamilyDish
+        if err := tx.Where("family_id = ?", family.ID).Find(&remainingDishes).Error; err != nil {
+            return err
+        }
+        for _, dish := range remainingDishes {
+            var proposerCount int64
+            if err := tx.Model(&models.FamilyDish{}).
+                Where("family_id = ? AND dish_id = ?", dish.FamilyID, dish.DishID).
+                Count(&proposerCount).Error; err != nil {
+                return err
+            }
+            if proposerCount == 0 {
+                if err := tx.Delete(&dish).Error; err != nil {
+                    return err
+                }
+            }
+        }
+
+        // 从家庭中移除用户
         if err := tx.Model(&family).Association("Admins").Delete(&user); err != nil {
             return err
         }
         if err := tx.Model(&family).Association("Members").Delete(&user); err != nil {
             return err
         }
+
+        // 减少家庭成员计数
         family.MemberCount--
         if err := tx.Save(&family).Error; err != nil {
             return err
         }
+
+        // 将用户的 FamilyID 设置为 nil
         user.FamilyID = nil
         return tx.Save(&user).Error
     }); err != nil {
@@ -935,21 +1117,18 @@ func (fc *FamilyController) DeleteFamilyMember(c *gin.Context) {
 
 // 解散家庭
 func (fc *FamilyController) BreakFamily(c *gin.Context) {
-    // 从 JWT 中解析用户 ID
     adminUserID, exists := c.Get("user_id")
     if !exists {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
         return
     }
 
-    // 查询当前用户信息并预加载家庭信息
     var adminUser models.User
     if err := fc.DB.Preload("Family.Admins").Preload("Family.Members").First(&adminUser, adminUserID).Error; err != nil {
         c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
         return
     }
 
-    // 检查用户是否属于某个家庭
     if adminUser.Family == nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "You are not part of any family"})
         return
@@ -971,8 +1150,12 @@ func (fc *FamilyController) BreakFamily(c *gin.Context) {
         return
     }
 
-    // 使用事务保证解散家庭的原子性
-    err := fc.DB.Transaction(func(tx *gorm.DB) error {
+    if err := fc.DB.Transaction(func(tx *gorm.DB) error {
+        // 删除家庭中所有菜品
+        if err := tx.Where("family_id = ?", family.ID).Delete(&models.FamilyDish{}).Error; err != nil {
+            return err
+        }
+
         // 从所有用户中解除家庭关联
         if err := tx.Model(&models.User{}).Where("family_id = ?", family.ID).Update("family_id", nil).Error; err != nil {
             return err
@@ -995,14 +1178,11 @@ func (fc *FamilyController) BreakFamily(c *gin.Context) {
         }
 
         return nil
-    })
-
-    if err != nil {
+    }); err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to dissolve the family"})
         return
     }
 
-    // 返回成功响应
     c.JSON(http.StatusOK, gin.H{
         "message": "Family dissolved successfully",
         "family_id": family.ID,
@@ -1016,7 +1196,6 @@ func (fc *FamilyController) AddDesiredDish(c *gin.Context) {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
         return
     }
-    // fmt.Println(userID)
 
     type AddDesiredDishRequest struct {
         DishID        uint  `json:"dish_id" binding:"required"`
@@ -1026,12 +1205,6 @@ func (fc *FamilyController) AddDesiredDish(c *gin.Context) {
     var request AddDesiredDishRequest
     if err := c.ShouldBindJSON(&request); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-        return
-    }
-
-    // 确保 LevelOfDesire 不为 nil
-    if request.LevelOfDesire == nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "LevelOfDesire is required"})
         return
     }
 
@@ -1058,8 +1231,6 @@ func (fc *FamilyController) AddDesiredDish(c *gin.Context) {
         c.JSON(http.StatusBadRequest, gin.H{"error": "You have already desired this dish"})
         return
     }
-    // fmt.Println("user.id")
-    // fmt.Println(user.ID)
 
     // 允许同一个菜被多个成员提出，因此不需要检查其他成员的记录
     // 创建 FamilyDish 记录
@@ -1078,7 +1249,7 @@ func (fc *FamilyController) AddDesiredDish(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{"message": "Desired dish added successfully"})
 }
 
-// GetDesiredDishes handles the request to retrieve all desired dishes of a family, sorted by LevelOfDesire
+// 获取所有想吃菜品，按想吃程度排序
 func (fc *FamilyController) GetDesiredDishes(c *gin.Context) {
     userID, exists := c.Get("user_id")
     if !exists {
@@ -1126,7 +1297,7 @@ func (fc *FamilyController) GetDesiredDishes(c *gin.Context) {
     c.JSON(http.StatusOK, response)
 }
 
-// DeleteDesiredDish handles the request to delete a desired dish proposed by the user
+// 删除想吃菜品
 func (fc *FamilyController) DeleteDesiredDish(c *gin.Context) {
     userID, exists := c.Get("user_id")
     if !exists {
