@@ -194,18 +194,18 @@ const submitFoodDetails = () => {
 
   const matchedFood = availableFoods.find((f) => displayName(f) === foodNameInput.value);
 
-if (matchedFood) {
-  // 如果找到匹配的食物项，使用 selectFood 方法
-  selectFood(matchedFood);
-} else {
-  // 如果没有找到，提醒用户
-  uni.showToast({
-    title: t('no_matching_food'),
-    icon: 'none',
-    duration: 2000,
-  });
-  return; // 终止提交
-}
+  if (matchedFood) {
+    // 如果找到匹配的食物项，使用 selectFood 方法
+    selectFood(matchedFood);
+  } else {
+    // 如果没有找到，提醒用户
+    uni.showToast({
+      title: t('no_matching_food'),
+      icon: 'none',
+      duration: 2000,
+    });
+    return; // 终止提交
+  }
 
   // 重置错误状态
   weightError.value = false;
@@ -223,14 +223,14 @@ if (matchedFood) {
   // 输入验证
   let valid = true;
 
-  // 验证重量：必须是正整数
-  if (!/^\d+$/.test(weight) || parseInt(weight) <= 0) {
+  // 验证重量：必须是正数（允许小数）
+  if (!/^\d+(\.\d+)?$/.test(weight) || parseFloat(weight) <= 0) {
     weightError.value = true;
     valid = false;
   }
 
-  // 验证价格：必须是正整数
-  if (!/^\d+$/.test(price) || parseInt(price) <= 0) {
+  // 验证价格：必须是正数（允许小数）
+  if (!/^\d+(\.\d+)?$/.test(price) || parseFloat(price) <= 0) {
     priceError.value = true;
     valid = false;
   }
@@ -251,8 +251,8 @@ if (matchedFood) {
   const newFood = {
     name, // 始终为英文名称
     id: food.id, // 添加 id
-    weight: parseInt(weight),
-    price: parseInt(price),
+    weight: parseFloat(weight), // 使用 parseFloat
+    price: parseFloat(price),   // 使用 parseFloat
     transportMethod,
     foodSource,
     image: imagePath,

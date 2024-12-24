@@ -249,14 +249,14 @@ const submitFoodDetails = () => {
   // 输入验证
   let valid = true;
 
-  // 验证重量：必须是正整数
-  if (!/^\d+$/.test(weight) || parseInt(weight) <= 0) {
+  // 验证重量：必须是正数（允许小数）
+  if (!/^\d+(\.\d+)?$/.test(weight) || parseFloat(weight) <= 0) {
     weightError.value = true;
     valid = false;
   }
 
-  // 验证价格：必须是正整数
-  if (!/^\d+$/.test(price) || parseInt(price) <= 0) {
+  // 验证价格：必须是正数（允许小数）
+  if (!/^\d+(\.\d+)?$/.test(price) || parseFloat(price) <= 0) {
     priceError.value = true;
     valid = false;
   }
@@ -276,8 +276,8 @@ const submitFoodDetails = () => {
   const updatedFood = {
     name, // 始终为英文名称
     id: food.id, // 添加 id
-    weight: parseInt(weight),
-    price: parseInt(price),
+    weight: parseFloat(weight), // 使用 parseFloat
+    price: parseFloat(price),   // 使用 parseFloat
     transportMethod,
     foodSource,
     image: imagePath,
@@ -298,6 +298,7 @@ const submitFoodDetails = () => {
     uni.navigateBack();
   }, 2000);
 };
+
 
 // 使用 onLoad 获取路由参数并初始化数据
 onLoad((loadedOptions) => {

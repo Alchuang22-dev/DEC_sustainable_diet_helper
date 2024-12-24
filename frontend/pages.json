@@ -241,25 +241,25 @@
 		"list": [{
 				"pagePath": "pages/index/index",
 				"text": "首页",
-				"iconPath": "static/home.png"
+				"iconPath": "static/home.png",
 				"selectedIconPath": "static/home.png"
 			},
 			{
 				"pagePath": "pages/tools_index/tools_index",
 				"text": "工具",
-				"iconPath": "static/tools.png"
+				"iconPath": "static/tools.png",
 				"selectedIconPath": "static/tools.png"
 			},
 			{
 				"pagePath": "pages/news_index/news_index",
 				"text": "资讯",
-				"iconPath": "static/community.png"
+				"iconPath": "static/community.png",
 				"selectedIconPath": "static/community.png"
 			},
 			{
 				"pagePath": "pages/my_index/my_index",
 				"text": "我的",
-				"iconPath": "static/my.png"
+				"iconPath": "static/my.png",
 				"selectedIconPath": "static/my.png"
 			}
 		]
