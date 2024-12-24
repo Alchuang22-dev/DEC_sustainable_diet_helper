@@ -124,9 +124,18 @@
           
           <!-- 评论交互 -->
           <view class="comment-interactions">
-            <button @click="toggleCommentLike(index)">
-              👍 {{ comment.liked ? '已点赞' : '点赞' }}
-            </button>
+			<button
+					class="action-button"
+					@click="toggleCommentLike(index)"
+			>
+					<image 
+					  :src="comment.liked
+					    ? '/pagesNews/static/liked.svg' 
+					    : '/pagesNews/static/like.svg'"
+					  class="icon"
+					></image>
+					<text class="count-text">{{ formatCount(comment.likecount) }}</text>
+			</button>
             <button @click="replyToComment(index)">
               💬 回复
             </button>
@@ -576,7 +585,42 @@ const toggleInteraction = (type) => {
 
 //评论相关方法
 const toggleCommentLike = (index) => {
-  comments[index].liked = !comments[index].liked;
+	if(!comments[index].liked){
+		uni.request({
+		  url: `http://122.51.231.155:8080/news/${comments[index].id}/comment_like`,
+		  method: "POST",
+		  header: {
+		    "Content-type": "application/json",
+		    "Authorization": `Bearer ${jwtToken.value}`,
+		  },
+		  data: {},
+		  success: () => {
+		    comments[index].liked = true;
+			comments[index].likecount++;
+		  },
+		  fail: (err) => {
+		    console.error("Error canceling dislike on comments:", err);
+		  },
+		});
+	}
+   else{
+	   uni.request({
+	     url: `http://122.51.231.155:8080/news/${comments[index].id}/comment_like`,
+	     method: "DELETE",
+	     header: {
+	       "Content-type": "application/json",
+	       "Authorization": `Bearer ${jwtToken.value}`,
+	     },
+	     data: {},
+	     success: () => {
+	       comments[index].liked = false;
+		   comments[index].likecount--;
+	     },
+	     fail: (err) => {
+	       console.error("Error canceling dislike on comments:", err);
+	     },
+	   });
+   }
 };
 
 const replyToComment = (index) => {
@@ -661,6 +705,7 @@ const addComment = () => {
             id: newCommentData.id,
             text: newCommentData.content,
             liked: newCommentData.like_count > 0, // 根据需要调整
+			likecount: 10,
 			authorName: uid.value,
 			authorAvatar: avatarSrc_sh.value,
 			publish_time: formatPublishTime(newCommentData.publish_time), // Format time
@@ -761,6 +806,7 @@ onLoad(async (options) => {
           id: comment.id,
           text: comment.content,
           liked: comment.like_count > 0,
+		  likecount: comment.like_count,
           publish_time: formattedTime,
 		  authorName: comment.author.nickname,
 		  authorAvatar: comment.author.avatar_url,

@@ -1,7 +1,7 @@
 <template>
   <image src="/static/images/index/background_index_new.png" class="background-image"></image>
   <view class="recipe-page">
-    <image src="../static/recipe_default.png" alt="Recipe Image" class="recipe-image"></image>
+    <image src="https://cloud.tsinghua.edu.cn/thumbnail/2cea5a0d546d4319a1ef/1024/id_1-1.png" alt="Recipe Image" class="recipe-image" mode="widthFix"></image>
     <text class="recipe-name">{{ name }}</text>
     <view class="ingredients-container">
       <view
