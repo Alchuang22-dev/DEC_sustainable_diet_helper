@@ -2,20 +2,6 @@
   <view>
     <!-- Header Section -->
     <image src="/static/images/index/background_img.jpg" class="background-image"></image>
-    <view class="header">
-	  <button @click="toggleDrawer" class="drawer-button">
-		  >
-	  </button>
-      <input
-        class="search-box"
-        v-model="searchText"
-        @input="onSearchInput"
-        :placeholder="placeholderText"
-      />
-      <button @click="onSearch" class="search-button">
-        {{$t('text_search')}}
-      </button>
-    </view>
 
     <!-- Loading Indicator -->
     <view v-if="isRefreshing" class="loading-overlay">
@@ -42,6 +28,12 @@
 		<view class="news-description">{{ item.info }}</view>
       </view>
     </view>
+	
+	<view class="functions">
+	  <button @click="toggleDrawer" class="add-btn">
+	  		<image src="@/pagesNews/static/plus.svg" alt=">" class="icon"></image>
+	  </button>
+	</view>
 
     <!-- Drawer Component -->
     <uni-drawer
@@ -186,7 +178,7 @@ onShow(() => {
   // 根据需求，这里设置为false，可能需要根据实际登录状态调整
   isLoggedIn.value = false; // 显式设置为未登录状态
   console.log("in onShow");
-  fetchNews();
+  handleSort('favorite')
 });
 </script>
 
@@ -212,85 +204,55 @@ body {
   opacity: 0.1;
 }
 
-/* Header Section */
-.header {
+/* 功能区固定左侧 */
+.functions {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  background-color: rgba(0, 0, 0, 0.5); /* 半透明背景 */
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3); /* 增加阴影效果 */
+  z-index: 10; /* 确保按钮高于其他内容 */
   display: flex;
+  flex-direction: column;
   align-items: center;
+}
+
+.function-btn,
+.push-btn {
+  margin-bottom: 10px;
   padding: 10px;
   background-color: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
-  justify-content: flex-start;
-  position: fixed; /* 固定头部 */
-  top: 0;
-  left: 0;
-  width: 100%;
-  z-index: 10; /* 确保在页面的最上层 */
-  overflow-x: scroll; /* 允许水平滚动 */
-  white-space: nowrap; /* 防止内容换行 */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 可选，增加阴影效果 */
-}
-
-/* 防止按钮换行，确保每个按钮都保持在一行 */
-.header button {
+  color: black;
+  border-radius: 50%;
   border: none;
-  margin-left: 5px;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
-  transition: color 0.3s;
-  white-space: nowrap; /* 防止按钮文本换行 */
-  padding: 5px 15px;
-  flex-shrink: 0; /* 防止按钮被压缩 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.search-box {
-  flex: 1;
-  padding: 13px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-.drawer-button {
+.add-btn {
+  margin-bottom: 10px;
+  padding: 10px;
   background-color: #ffffff;
   color: black;
+  border-radius: 50%;
   border: none;
-  font-size: 16px;
+  font-size: 8px;
   cursor: pointer;
-  transition: color 0.3s;
-  white-space: nowrap; /* 防止按钮文本换行 */
-  margin-left: 0;
-  padding: 5px 15px;
-  flex-shrink: 0; /* 防止按钮被压缩 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.search-button {
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  transition: color 0.3s;
-  white-space: nowrap; /* 防止按钮文本换行 */
-  padding: 5px 15px;
-  flex-shrink: 0; /* 防止按钮被压缩 */
-}
-
-.create-button {
-  background-color: #ffffff;
-  color: black;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  transition: color 0.3s;
-  white-space: nowrap; /* 防止按钮文本换行 */
-  padding: 5px 15px;
-  margin-right: 20px;
-  flex-shrink: 0; /* 防止按钮被压缩 */
-}
-
-/* 选中的按钮样式 */
-.header button.active {
-  color: #4caf50; /* 选中状态颜色 */
-  font-weight: bold; /* 选中状态加粗 */
+/* 按钮图标样式 */
+.icon {
+  width: 24px;
+  height: 24px;
 }
 
 /* Loading Overlay */
