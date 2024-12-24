@@ -76,21 +76,21 @@
 
       <!-- 营养建议说明 -->
       <view class="nutrition-guidelines">
-        <text class="guidelines-title">营养摄入参考值</text>
+        <text class="guidelines-title">{{ t('nutrition_guidelines_title') }}</text>
         <view class="guidelines-content">
-          <text class="guideline-item">成年男性（18-49岁）建议值：</text>
-          <text class="guideline-details">· 热量：2250-2400千卡/天</text>
-          <text class="guideline-details">· 蛋白质：65-75克/天</text>
-          <text class="guideline-details">· 碳水化合物：320-370克/天</text>
-          <text class="guideline-details">· 脂肪：60-70克/天</text>
-          <text class="guideline-details">· 钠：2000毫克/天</text>
+          <text class="guideline-item">{{ t('adult_male_guidelines') }}</text>
+          <text class="guideline-details">{{ t('calories_range_male') }}</text>
+          <text class="guideline-details">{{ t('protein_range_male') }}</text>
+          <text class="guideline-details">{{ t('carbs_range_male') }}</text>
+          <text class="guideline-details">{{ t('fat_range_male') }}</text>
+          <text class="guideline-details">{{ t('sodium_range') }}</text>
 
-          <text class="guideline-item">成年女性（18-49岁）建议值：</text>
-          <text class="guideline-details">· 热量：1800-2000千卡/天</text>
-          <text class="guideline-details">· 蛋白质：55-65克/天</text>
-          <text class="guideline-details">· 碳水化合物：250-300克/天</text>
-          <text class="guideline-details">· 脂肪：50-60克/天</text>
-          <text class="guideline-details">· 钠：2000毫克/天</text>
+          <text class="guideline-item">{{ t('adult_female_guidelines') }}</text>
+          <text class="guideline-details">{{ t('calories_range_female') }}</text>
+          <text class="guideline-details">{{ t('protein_range_female') }}</text>
+          <text class="guideline-details">{{ t('carbs_range_female') }}</text>
+          <text class="guideline-details">{{ t('fat_range_female') }}</text>
+          <text class="guideline-details">{{ t('sodium_range') }}</text>
         </view>
       </view>
 
