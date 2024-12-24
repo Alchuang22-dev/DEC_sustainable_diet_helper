@@ -352,3 +352,149 @@ func TestUploadImage(t *testing.T) {
         })
     }
 }
+
+func TestConvertDraftToNews(t *testing.T) {
+    db := setupNewsTestDB()
+    // 记得还要 AutoMigrate models.News, models.Paragraph, models.NewsImage，如果需要
+    _ = db.AutoMigrate(&models.News{}, &models.Paragraph{}, &models.NewsImage{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    {
+        newsGroup.Use(middleware.AuthMiddleware())
+        {
+            newsGroup.POST("/convert_draft", newsController.ConvertDraftToNews)
+        }
+    }
+
+    // 创建一个用户
+    user := models.User{
+        OpenID:   "OpenID_ConvertDraft_User",
+        Nickname: "UserConvertDraft",
+    }
+    db.Create(&user)
+
+    // 插入一个草稿 => draft
+    draft := models.Draft{
+        Title:    "DraftToConvert",
+        AuthorID: user.ID,
+    }
+    db.Create(&draft)
+
+    // 写段落、图片
+    db.Create(&models.DraftParagraph{DraftID: draft.ID, Text: "Draft Para 1"})
+    db.Create(&models.DraftParagraph{DraftID: draft.ID, Text: "Draft Para 2"})
+    db.Create(&models.DraftImage{DraftID: draft.ID, URL: "path/to/image1", Description: "desc1"})
+
+    tests := []struct {
+        name           string
+        userID         uint
+        requestBody    interface{}
+        setupFunc      func()
+        expectedStatus int
+        expectedBody   map[string]interface{}
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            requestBody:    gin.H{"draft_id": draft.ID},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedBody:   map[string]interface{}{"error": "Authorization header missing"},
+        },
+        {
+            name:           "Invalid Request Body",
+            userID:         user.ID,
+            requestBody:    "not_json",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "Invalid request body"},
+        },
+        {
+            name:           "Draft Not Found",
+            userID:         user.ID,
+            requestBody:    gin.H{"draft_id": 99999},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedBody:   map[string]interface{}{"error": "Draft not found"},
+        },
+        {
+            name:           "Failed To Find Draft (simulate error)",
+            userID:         user.ID,
+            requestBody:    gin.H{"draft_id": draft.ID},
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_find_draft_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "drafts" {
+                        tx.Error = fmt.Errorf("forced find draft error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedBody:   map[string]interface{}{"error": "Failed to find draft"},
+        },
+        {
+            name:           "Failed To Create News (simulate error)",
+            userID:         user.ID,
+            requestBody:    gin.H{"draft_id": draft.ID},
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_find_draft_err")
+                // 模拟创建 news 出错
+                db.Callback().Create().Before("gorm:create").Register("force_create_news_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "news" {
+                        tx.Error = fmt.Errorf("forced create news error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedBody:   map[string]interface{}{"error": "Failed to create news"},
+        },
+        {
+            name:           "Success Convert Draft",
+            userID:         user.ID,
+            requestBody:    gin.H{"draft_id": draft.ID},
+            setupFunc: func() {
+                db.Callback().Create().Remove("force_create_news_err")
+            },
+            expectedStatus: http.StatusOK,
+            expectedBody:   map[string]interface{}{"message": "Draft converted to news successfully."},
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            bodyBytes, _ := json.Marshal(tc.requestBody)
+            req, _ := http.NewRequest("POST", "/news/convert_draft", bytes.NewBuffer(bodyBytes))
+            req.Header.Set("Content-Type", "application/json")
+
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.expectedStatus == http.StatusOK {
+                // 只检查 message
+                assert.Equal(t, tc.expectedBody["message"], resp["message"])
+                // 还会有 news_id
+                _, ok := resp["news_id"]
+                assert.True(t, ok)
+            } else {
+                // 检查 error
+                for k, v := range tc.expectedBody {
+                    assert.Equal(t, v, resp[k])
+                }
+            }
+        })
+    }
+}
