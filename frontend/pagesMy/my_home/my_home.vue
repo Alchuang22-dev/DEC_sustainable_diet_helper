@@ -383,16 +383,54 @@ const editDraft = (index) => {
 };
 
 // Delete article function
-// Delete article function
 const deleteArticle = async (index) => {
-    const article = articles.value[index];
-    // 如果状态是已发布，提示用户联系管理员
-    console.log('请联系管理员删除');
+  const article = publishedArticles.value[index];
+  // 若后端已支持对已发布作品的删除，则直接调用下方逻辑
+  // 如果不支持删除已发布作品，可先与后端确认；若确实需要管理员权限，这里可弹出相应提示。
+  // 下面示例假设可以直接删除：
+  try {
+    const res = await uni.request({
+      url: `${BASE_URL.value}/news/${article.id}`, // 根据 API 文档: DELETE /news/:id
+      method: 'DELETE',
+      header: {
+        'Authorization': `Bearer ${jwtToken.value}`
+      }
+    });
+
+    // 如果接口返回的 message 与示例一致，则视为删除成功
+    if (res.data && res.data.message === 'News deleted successfully.') {
+      uni.showToast({
+        title: '删除成功',
+        icon: 'none',
+        duration: 2000
+      });
+      // 从前端状态里移除被删的作品
+      // 注意：publishedArticles.value 是一个计算属性，底层来自 articles.value
+      // 因此要在 articles.value 里进行 splice
+      const articleId = article.id;
+      const targetIndexInAll = articles.value.findIndex((a) => a.id === articleId);
+      if (targetIndexInAll !== -1) {
+        articles.value.splice(targetIndexInAll, 1);
+      }
+    } else {
+      console.error('删除失败:', res.data);
+      uni.showToast({
+        title: '删除失败',
+        icon: 'none',
+        duration: 2000
+      });
+    }
+  } catch (error) {
+    console.error('Error deleting published article', error);
     uni.showToast({
-      title: '请联系管理员删除',
+      title: '删除出现错误',
       icon: 'none',
       duration: 2000
     });
+  }
+
+  // 可根据需求，删除后再次拉取最新的已发布列表
+  await fetchArticles();
 };
 
 const deleteDraft = async (index) => {
