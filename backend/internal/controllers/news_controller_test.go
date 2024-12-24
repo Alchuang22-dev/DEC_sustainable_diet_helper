@@ -498,3 +498,237 @@ func TestConvertDraftToNews(t *testing.T) {
         })
     }
 }
+
+func TestUpdateDraft(t *testing.T) {
+    db := setupNewsTestDB()
+    // 需要同时迁移新的模型，比如 News，如果 UpdateDraft 中无用则可不做
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    {
+        newsGroup.Use(middleware.AuthMiddleware())
+        {
+            // 假设路由为 /news/draft/:id 进行 PUT
+            newsGroup.PUT("/draft/:id", newsController.UpdateDraft)
+        }
+    }
+
+    // 创建两个用户: draftOwner, otherUser
+    draftOwner := models.User{
+        OpenID:   "OpenID_UpdateDraft_Owner",
+        Nickname: "DraftOwner",
+    }
+    db.Create(&draftOwner)
+
+    otherUser := models.User{
+        OpenID:   "OpenID_UpdateDraft_Other",
+        Nickname: "OtherUser",
+    }
+    db.Create(&otherUser)
+
+    // 创建草稿 => ownedDraft
+    ownedDraft := models.Draft{
+        Title:    "DraftByOwner",
+        AuthorID: draftOwner.ID,
+    }
+    db.Create(&ownedDraft)
+
+    // 创建几张旧图片(后面测试删除)
+    oldImage := models.DraftImage{
+        DraftID: ownedDraft.ID,
+        URL:     "old_path1",
+    }
+    db.Create(&oldImage)
+    oldImage2 := models.DraftImage{
+        DraftID: ownedDraft.ID,
+        URL:     "old_path2",
+    }
+    db.Create(&oldImage2)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        draftID        string
+        requestBody    interface{}
+        setupFunc      func()
+        expectedStatus int
+        expectedBody   map[string]interface{}
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            draftID:        "1",
+            requestBody:    gin.H{"title": "AnyTitle"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedBody:   map[string]interface{}{"error": "Authorization header missing"},
+        },
+        {
+            name:           "Invalid Draft ID",
+            userID:         draftOwner.ID,
+            draftID:        "abc",
+            requestBody:    gin.H{"title": "NewTitle"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "Invalid draft ID"},
+        },
+        {
+            name:           "Draft Not Found",
+            userID:         draftOwner.ID,
+            draftID:        "99999",
+            requestBody:    gin.H{"title": "NewTitle"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedBody:   map[string]interface{}{"error": "Draft not found"},
+        },
+        {
+            name:           "No Permission (403)",
+            userID:         otherUser.ID,
+            draftID:        fmt.Sprintf("%d", ownedDraft.ID),
+            requestBody: gin.H{
+                "title":              "TryUpdateOthers",
+                "paragraphs":         []string{"Para1", "Para2"},
+                "image_descriptions": []string{},
+                "image_paths":        []string{},
+            },
+            setupFunc:      func() {},
+            expectedStatus: http.StatusForbidden,
+            expectedBody:   map[string]interface{}{"error": "You do not have permission to edit this draft"},
+        },
+        {
+            name:           "Invalid Request Data",
+            userID:         draftOwner.ID,
+            draftID:        fmt.Sprintf("%d", ownedDraft.ID),
+            requestBody:    "not_json",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "Invalid request data"},
+        },
+        {
+            name:           "Title Is Required",
+            userID:         draftOwner.ID,
+            draftID:        fmt.Sprintf("%d", ownedDraft.ID),
+            requestBody: gin.H{
+                "title":              "",
+                "paragraphs":         []string{"Paragraph1"},
+                "image_descriptions": []string{},
+                "image_paths":        []string{},
+            },
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "Title is required"},
+        },
+        {
+            name:           "Mismatch Image Descriptions & Paths",
+            userID:         draftOwner.ID,
+            draftID:        fmt.Sprintf("%d", ownedDraft.ID),
+            requestBody: gin.H{
+                "title":              "ValidTitle",
+                "paragraphs":         []string{"P1", "P2"},
+                "image_descriptions": []string{"desc1", "desc2"},
+                "image_paths":        []string{"path1"},
+            },
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "Number of image descriptions and image paths do not match"},
+        },
+        {
+            name:           "Failed To Delete Old Draft (simulate TX error)",
+            userID:         draftOwner.ID,
+            draftID:        fmt.Sprintf("%d", ownedDraft.ID),
+            requestBody: gin.H{
+                "title":              "NewTitleAfterDeleteFail",
+                "paragraphs":         []string{"P1"},
+                "image_descriptions": []string{},
+                "image_paths":        []string{},
+            },
+            setupFunc: func() {
+                // 在事务中 delete(draft) 时注入错误
+                db.Callback().Delete().Before("gorm:delete").Register("force_delete_old_draft_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "drafts" {
+                        tx.Error = fmt.Errorf("forced delete old draft error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedBody:   map[string]interface{}{"error": "Failed to delete old draft"},
+        },
+        
+        {
+            name:           "Failed To Create New Draft (simulate error)",
+            userID:         draftOwner.ID,
+            draftID:        fmt.Sprintf("%d", ownedDraft.ID),
+            requestBody: gin.H{
+                "title":              "NewTitleAfterCreateFail",
+                "paragraphs":         []string{"P1", "P2"},
+                "image_descriptions": []string{"desc1"},
+                "image_paths":        []string{"path1"},
+            },
+            setupFunc: func() {
+                // 在新建 draft 时注入错误，使用唯一回调名称
+                db.Callback().Create().Before("gorm:create").Register("force_create_new_draft_err_test1", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "drafts" {
+                        tx.Error = fmt.Errorf("forced create new draft error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedBody:   map[string]interface{}{"error": "Failed to delete old draft"},
+        },
+        {
+            name:           "Success Update Draft",
+            userID:         draftOwner.ID,
+            draftID:        fmt.Sprintf("%d", ownedDraft.ID),
+            requestBody: gin.H{
+                "title":              "UpdatedTitle",
+                "paragraphs":         []string{"NewPara1", "NewPara2"},
+                "image_descriptions": []string{"newDesc1", "newDesc2"},
+                "image_paths":        []string{"newPath1", "old_path2"}, 
+                // 这里故意保留 old_path2 以模拟只删除 old_path1
+            },
+            setupFunc: func() {
+                // 移除错误回调，使用唯一名称
+                db.Callback().Create().Remove("force_create_new_draft_err_test1")
+                db.Callback().Delete().Remove("force_delete_old_draft_err")
+                db.Callback().Update().Remove("force_save_pending_error")
+            },
+            expectedStatus: http.StatusCreated,
+            expectedBody:   map[string]interface{}{"message": "Draft updated successfully"},
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            bodyBytes, _ := json.Marshal(tc.requestBody)
+            req, _ := http.NewRequest("PUT", "/news/draft/"+tc.draftID, bytes.NewBuffer(bodyBytes))
+            req.Header.Set("Content-Type", "application/json")
+
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.expectedStatus == http.StatusCreated {
+                assert.Equal(t, tc.expectedBody["message"], resp["message"])
+                // draft_id 应该存在
+                _, ok := resp["draft_id"]
+                assert.True(t, ok)
+            } else {
+                for k, v := range tc.expectedBody {
+                    assert.Equal(t, v, resp[k])
+                }
+            }
+        })
+    }
+}
