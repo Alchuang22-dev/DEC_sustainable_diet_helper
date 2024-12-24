@@ -101,7 +101,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n'; // Import useI18n
-import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
+import { useFoodListStore } from '../stores/food_list'; // 引入 Pinia Store
 import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data';
 import UniDataPickerView
   from "../../uni_modules/uni-data-picker/components/uni-data-pickerview/uni-data-pickerview.vue"; // 引入营养碳排放store

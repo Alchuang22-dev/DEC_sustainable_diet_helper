@@ -4,7 +4,7 @@
     <image src="/static/images/index/background_img.jpg" class="background-image"></image>
     <view class="header">
 	  <button @click="toggleDrawer" class="drawer-button">
-		  >
+		  <image src="@/pagesNews/static/gengduo.png" alt=">" class="icon-news"></image>
 	  </button>
       <input
         class="search-box"
@@ -286,8 +286,8 @@ body {
   transition: color 0.3s;
   white-space: nowrap; /* 防止按钮文本换行 */
   margin-left: 0;
-  padding: 5px 15px;
   flex-shrink: 0; /* 防止按钮被压缩 */
+  align-items: center;
 }
 
 .search-button {
@@ -449,5 +449,10 @@ body {
 .uni-drawer {
   transition: all 0.3s ease;
   z-index: 1000;
+}
+
+.icon-news {
+  width: 20px;
+  height: 20px;
 }
 </style>

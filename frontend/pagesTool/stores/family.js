@@ -1,7 +1,7 @@
 // family.js
 import { defineStore } from 'pinia';
 import { reactive, watch, computed } from 'vue';
-import { useUserStore } from "./user.js";
+import { useUserStore } from "../../stores/user.js";
 
 const BASE_URL = 'http://122.51.231.155:8080';
 

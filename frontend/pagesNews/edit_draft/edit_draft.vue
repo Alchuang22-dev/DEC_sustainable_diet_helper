@@ -101,7 +101,7 @@
 <script setup>
 import { ref, onMounted, computed} from 'vue';
 import { useI18n } from 'vue-i18n'
-import { useDraftStore } from '@/stores/draft';
+import { useDraftStore } from '../stores/draft';
 import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
 import { onLoad } from "@dcloudio/uni-app";
 const draftStore = useDraftStore();
