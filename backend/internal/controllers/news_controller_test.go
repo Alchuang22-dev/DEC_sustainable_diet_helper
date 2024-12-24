@@ -234,3 +234,121 @@ func TestCreateDraft(t *testing.T) {
     }
 }
 
+func TestUploadImage(t *testing.T) {
+    db := setupNewsTestDB()
+    router := setupNewsRouter(db)
+
+    // 创建一个用户 => user
+    user := models.User{
+        OpenID:   "OpenID_UploadImg_User",
+        Nickname: "UploadImgUser",
+    }
+    db.Create(&user)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        fileField      string
+        fileName       string
+        setupFunc      func()
+        expectedStatus int
+        expectedBody   map[string]interface{}
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            fileField:      "image",
+            fileName:       "test_image.jpg",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedBody:   map[string]interface{}{"error": "Authorization header missing"},
+        },
+        {
+            name:           "No Image File Provided",
+            userID:         user.ID,
+            fileField:      "", // 不传图
+            fileName:       "",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "Image file is required"},
+        },
+        {
+            name:           "Failed To Upload Image (simulate error)",
+            userID:         user.ID,
+            fileField:      "image",
+            fileName:       "test_image.jpg",
+            setupFunc: func() {
+                // 模拟 uploadImage 出错
+                // 最简单方式：在 createFile 或 io.Copy 处返回错误
+                // 这里暂时仅示例，如果要细粒度 mock，需修改 `uploadImage`。
+                os.Setenv("BASE_UPLOAD_PATH", "/invalid/path/that/does/not/exist")
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedBody:   map[string]interface{}{"error": "Failed to upload image"},
+        },
+        {
+            name:           "Success Upload",
+            userID:         user.ID,
+            fileField:      "image",
+            fileName:       "success_test_image.jpg",
+            setupFunc: func() {
+                // 恢复到有效的上传目录
+                os.Setenv("BASE_UPLOAD_PATH", "./test_uploads")
+            },
+            expectedStatus: http.StatusOK,
+            expectedBody:   map[string]interface{}{"message": "Image uploaded successfully"},
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            body := &bytes.Buffer{}
+            writer := multipart.NewWriter(body)
+
+            if tc.fileField != "" {
+                // 构造一个虚拟文件
+                part, _ := writer.CreateFormFile(tc.fileField, tc.fileName)
+                // 写点内容假装是文件数据
+                _, _ = part.Write([]byte("fake_image_data"))
+            }
+            writer.Close()
+
+            req, _ := http.NewRequest("POST", "/news/upload_image", body)
+            req.Header.Set("Content-Type", writer.FormDataContentType())
+
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.expectedStatus == http.StatusOK {
+                // 检查 message 字段
+                assert.Equal(t, tc.expectedBody["message"], resp["message"])
+                // 应该返回 path
+                _, ok := resp["path"]
+                assert.True(t, ok)
+            } else {
+                // 错误情况检查
+                for k, v := range tc.expectedBody {
+                    assert.Equal(t, v, resp[k])
+                }
+            }
+
+            // 如果有生成文件，需要清理
+            if tc.expectedStatus == http.StatusOK {
+                // 移除测试生成的文件夹
+                os.RemoveAll("./test_uploads")
+            }
+        })
+    }
+}
