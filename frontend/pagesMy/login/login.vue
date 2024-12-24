@@ -24,24 +24,80 @@
 <script setup>
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useStore } from 'vuex' 
+import { useUserStore } from "@/stores/user";
 
 const { t, locale, messages } = useI18n()
-const store = useStore()
+const userStore = useUserStore();
 
 console.log('Current locale:', locale.value)
 console.log('Available messages:', messages)
 
-const testLogin = () => {
-  uni.navigateTo({
-    url: "/pagesMy/wechatLogin/wechatLogin",
-  })
+const testLogin = async () => {
+  try {
+    // 显示加载提示
+    uni.showLoading({
+      title: '登录中',
+    });
+
+    // 调用 user.js 中的 login 函数
+    await userStore.login();
+
+    // 显示成功提示
+    uni.showToast({
+      title: '登录成功',
+      icon: 'success',
+      duration: 2000,
+    });
+
+    // 跳转到首页
+    uni.switchTab({
+      url: '/pages/my_index/my_index',
+    });
+  } catch (error) {
+    // 显示错误提示
+    uni.showToast({
+      title: error.message || '登录失败，请重试',
+      icon: 'none',
+      duration: 2000,
+    });
+  } finally {
+    // 隐藏加载提示
+    uni.hideLoading();
+  }
 }
 
-const login = () => {
-  uni.navigateTo({
-    url: "/pagesMy/login_old/login_old",
-  })
+const login = async () => {
+  try {
+    // 显示加载提示
+    uni.showLoading({
+      title: '登录中',
+    });
+
+    // 调用 user.js 中的 login 函数
+    await userStore.login();
+
+    // 显示成功提示
+    uni.showToast({
+      title: '登录成功',
+      icon: 'success',
+      duration: 2000,
+    });
+
+    // 跳转到首页
+    uni.switchTab({
+      url: '/pages/my_index/my_index',
+    });
+  } catch (error) {
+    // 显示错误提示
+    uni.showToast({
+      title: error.message || '登录失败，请重试',
+      icon: 'none',
+      duration: 2000,
+    });
+  } finally {
+    // 隐藏加载提示
+    uni.hideLoading();
+  }
 }
 </script>
 
