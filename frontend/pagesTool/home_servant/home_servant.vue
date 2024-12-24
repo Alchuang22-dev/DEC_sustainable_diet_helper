@@ -88,12 +88,12 @@
                 <view class="collapse-title">
                   <text class="dish-name">{{ dish.name }}</text>
                   <view class="dish-info">
+                    <text class="proposer-text">{{ dish.proposer }}</text>
                     <uni-tag
                         :text="dishPreferenceLevels[dish.preference]"
                         :type="getPreferenceTagType(dish.preference)"
                         size="small"
                     />
-                    <text class="proposer-text">{{ dish.proposer }}</text>
                   </view>
                 </view>
               </template>
@@ -921,7 +921,6 @@ const startStatusCheck = () => {
 }
 
 .picker {
-  width: 100%;
   padding: 10rpx;
   border: 1rpx solid #ccc;
   border-radius: 5rpx;
