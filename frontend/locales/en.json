@@ -515,5 +515,6 @@
 	"setFail": "Set Failed",
 	"inputValidateFail": "Input validation failed",
 	"fetchGoalsFail": "Failed to fetch goals",
-	"nutrition_over_suffix": "Excessive"
+	"nutrition_over_suffix": "Excessive",
+	"actual_target": "Actual / Target"
 }

@@ -192,7 +192,7 @@ const ringOpts = ref({
 // 营养条形图配置
 const barOpts = ref({
   color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE", "#3CA272", "#FC8452", "#9A60B4", "#ea7ccc"],
-  padding: [15, 30, 0, 5],
+  padding: [15, 40, 0, 5],
   enableScroll: false,
   legend: {},
   xAxis: {
