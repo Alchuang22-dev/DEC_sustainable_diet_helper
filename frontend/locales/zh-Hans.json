@@ -544,5 +544,11 @@
 	"protein_range_female": "· 蛋白质：55-65克/天",
 	"carbs_range_female": "· 碳水化合物：250-300克/天",
 	"fat_range_female": "· 脂肪：50-60克/天",
-	"yuan": "元"
+	"yuan": "元",
+	"remove_member_success": "成功",
+	"remove_member_fail": "失败",
+	"success": "成功",
+	"fail": "失败",
+	"failed": "失败",
+	"input_specification": "最多可输入一位小数"
 }

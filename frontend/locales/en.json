@@ -530,6 +530,12 @@
 	"protein_range_female": "· Protein: 55-65 grams/day",
 	"carbs_range_female": "· Carbohydrates: 250-300 grams/day",
 	"fat_range_female": "· Fat: 50-60 grams/day",
-	"yuan": "¥"
+	"yuan": "¥",
+	"remove_member_success": "Success",
+	"remove_member_fail": "Failed",
+	"success": "Success",
+	"fail": "Failed",
+	"failed": "Failed",
+	"input_specification": "Up to one decimal place allowed"
 
 }
