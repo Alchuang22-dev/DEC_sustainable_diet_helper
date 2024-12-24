@@ -139,6 +139,7 @@
 <script setup>
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { onShow } from '@dcloudio/uni-app'
 import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data.js'
 
 // 国际化
@@ -359,7 +360,7 @@ const isTodaySelected = computed(() => {
 })
 
 // 在 onMounted 中初始化
-onMounted(async () => {
+onShow(async () => {
   generateDateTabs()
   await carbonNutritionStore.getNutritionGoals()
   await carbonNutritionStore.getNutritionIntakes()
