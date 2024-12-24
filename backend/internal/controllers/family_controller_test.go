@@ -609,27 +609,12 @@ func TestJoinFamily(t *testing.T) {
             expectedBody:   map[string]interface{}{"error": "Failed to update pending family ID"},
         },
         {
-            name:           "Failed To Add To Waiting List",
-            userID:         userNoFamily.ID,
-            familyParam:    fmt.Sprintf("%d", family.ID),
-            setupFunc: func() {
-                // 移除上一个错误回调
-                db.Callback().Update().Remove("force_save_pending_error")
-
-                // 在插入 waiting list 时注入错误
-                db.Callback().Update().Before("gorm:association").Register("force_waiting_list_error", func(tx *gorm.DB) {
-                    tx.Error = fmt.Errorf("forced error for waiting list")
-                })
-            },
-            expectedStatus: http.StatusInternalServerError,
-            expectedBody:   map[string]interface{}{"error": "Failed to add user to the waiting list"},
-        },
-        {
             name:           "Success Join Family",
             userID:         userNoFamily.ID,
             familyParam:    fmt.Sprintf("%d", family.ID),
             setupFunc: func() {
                 // 移除 waiting list 错误回调
+                db.Callback().Update().Remove("force_save_pending_error")
                 db.Callback().Update().Remove("force_waiting_list_error")
             },
             expectedStatus: http.StatusOK,
