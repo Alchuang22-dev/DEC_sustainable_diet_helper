@@ -550,5 +550,6 @@
 	"success": "成功",
 	"fail": "失败",
 	"failed": "失败",
-	"input_specification": "最多可输入一位小数"
+	"input_specification": "最多可输入一位小数",
+	"no_matching_food": "未找到匹配食品"
 }
