@@ -14,11 +14,40 @@ export const FamilyStatus = {
 
 const STORAGE_KEY = 'family_store_data';
 
-// 获取 userStore 实例
-const userStore = useUserStore();
+// 时区偏移量到地理时区名称的映射
+const TIMEZONE_MAPPING = {
+    480: 'Asia/Shanghai',    // UTC+8 (中国)
+    540: 'Asia/Tokyo',       // UTC+9 (日本)
+    420: 'Asia/Bangkok',     // UTC+7 (泰国)
+    330: 'Asia/Kolkata',     // UTC+5:30 (印度)
+    240: 'Asia/Dubai',       // UTC+4 (迪拜)
+    180: 'Europe/Moscow',    // UTC+3 (莫斯科)
+    120: 'Europe/Berlin',    // UTC+2 (柏林)
+    60: 'Europe/London',     // UTC+1 (伦敦)
+    0: 'Europe/London',      // UTC+0 (伦敦)
+    '-60': 'Atlantic/Azores', // UTC-1
+    '-120': 'America/Noronha', // UTC-2
+    '-180': 'America/Sao_Paulo', // UTC-3
+    '-240': 'America/New_York', // UTC-4
+    '-300': 'America/Chicago', // UTC-5
+    '-360': 'America/Denver',  // UTC-6
+    '-420': 'America/Los_Angeles', // UTC-7
+    '-480': 'America/Anchorage', // UTC-8
+    '-540': 'America/Adak',    // UTC-9
+    '-600': 'Pacific/Honolulu' // UTC-10
+};
+
+// 获取当前时区
+function getTimeZone() {
+    // 获取本地时区偏移量（分钟）
+    const offset = -new Date().getTimezoneOffset();
+    return TIMEZONE_MAPPING[offset] || 'Asia/Shanghai';
+}
 
 // 封装request为Promise，并处理401状态码
 const request = (config) => {
+    // 获取 userStore 实例
+    const userStore = useUserStore();
     return new Promise((resolve, reject) => {
         uni.request({
             ...config,
@@ -74,6 +103,9 @@ export const useFamilyStore = defineStore('family', () => {
                 waiting_members: [],
                 dishProposals: [],
                 status: FamilyStatus.NOT_JOINED,
+                // 新增存储字段（如果本地无则默认空）
+                memberDailyData: [],
+                familySums: {}
             };
         } catch (error) {
             console.error('Failed to get stored family data:', error);
@@ -86,6 +118,8 @@ export const useFamilyStore = defineStore('family', () => {
                 waiting_members: [],
                 dishProposals: [],
                 status: FamilyStatus.NOT_JOINED,
+                memberDailyData: [],
+                familySums: {}
             };
         }
     };
@@ -102,7 +136,11 @@ export const useFamilyStore = defineStore('family', () => {
     };
 
     const watchFamily = () => {
-        const watchKeys = ['id', 'name', 'familyId', 'memberCount', 'allMembers', 'waiting_members', 'status', 'dishProposals'];
+        const watchKeys = [
+            'id', 'name', 'familyId', 'memberCount',
+            'allMembers', 'waiting_members', 'status',
+            'dishProposals', 'memberDailyData', 'familySums'
+        ];
         watchKeys.forEach(key => {
             watch(() => family[key], () => {
                 saveToStorage();
@@ -111,6 +149,8 @@ export const useFamilyStore = defineStore('family', () => {
     };
 
     const createRequestConfig = (config) => {
+        // 获取 userStore 实例
+        const userStore = useUserStore();
         return {
             ...config,
             header: {
@@ -150,7 +190,7 @@ export const useFamilyStore = defineStore('family', () => {
     const getFamilyDetails = async () => {
         try {
             const response = await request(createRequestConfig({
-                url: `${BASE_URL}/families/details`,
+                url: `${BASE_URL}/families/details?timezone=${encodeURIComponent(getTimeZone())}`,
                 method: 'GET'
             }));
 
@@ -191,6 +231,10 @@ export const useFamilyStore = defineStore('family', () => {
                     family.waiting_members = [];
                 }
 
+                // ============= 新增：存储每日数据与总汇数据 =============
+                family.memberDailyData = data.member_daily_data || [];
+                family.familySums = data.family_sums || {};
+
             } else if (data.status === FamilyStatus.PENDING_APPROVAL) {
                 family.id = data.id;
                 family.name = data.name;
@@ -206,6 +250,9 @@ export const useFamilyStore = defineStore('family', () => {
                 family.allMembers = [];
                 family.waiting_members = [];
                 family.dishProposals = [];
+                // 重置每日数据和汇总数据
+                family.memberDailyData = [];
+                family.familySums = {};
             }
 
             return response;
@@ -355,6 +402,8 @@ export const useFamilyStore = defineStore('family', () => {
     // 离开家庭
     const leaveFamily = async () => {
         try {
+            // 获取 userStore 实例
+            const userStore = useUserStore();
             const response = await request(createRequestConfig({
                 url: `${BASE_URL}/families/leave_family`,
                 method: 'DELETE',
@@ -441,6 +490,8 @@ export const useFamilyStore = defineStore('family', () => {
         family.waiting_members = [];
         family.dishProposals = [];
         family.status = FamilyStatus.NOT_JOINED;
+        family.memberDailyData = [];
+        family.familySums = {};
         clearStorage();
     };
 

@@ -1,29 +1,73 @@
-<template>
-  <image src="/static/images/index/background_img.jpg" class="background-image"></image>
-  <view class="header">
-    <text class="title">{{$t('menu_creations')}}</text>
-    <view class="header-actions">
-      <button class="menu-icon"></button>
-      <button class="camera-icon"></button>
+<template> 
+   
+  <!-- 可编辑背景图 -->
+  <view class="profile-header">
+	<!--
+	<image
+      :src="backgroundImageUrl"
+      class="profile-bg"
+      @click="editBackgroundImage"
+    ></image>
+	-->
+    <!-- 用户信息区 -->
+    <view class="profile-info">
+      <image :src="avatarSrc" class="avatar" alt="用户头像"></image>
+      <text class="nickname">{{ uid }}</text>
+      <text class="userid">id：{{ userStore.user.id || 'test_user' }}</text>
+
+      <!-- 创作统计 -->
+      <view class="stats">
+        <view class="stats-item">
+          <text>创作</text>
+          <text>{{ publishedCount }}</text>
+        </view>
+        <view class="stats-item">
+          <text>草稿</text>
+          <text>{{ draftCount }}</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 修改资料的按钮 -->
+  </view>
+
+  <!-- 标签（已发布/草稿）切换 -->
+  <view class="tabs">
+    <view
+      :class="['tab', currentTab === 'published' ? 'active' : '']"
+      @click="currentTab = 'published'"
+    >
+      作品栏
+    </view>
+    <view
+      :class="['tab', currentTab === 'draft' ? 'active' : '']"
+      @click="currentTab = 'draft'"
+    >
+      草稿箱
     </view>
   </view>
+
   <view class="container">
-    <!-- 图文卡片列表 -->
-    <view class="card-list">
+    <!-- 已发布列表：仅在 currentTab === 'published' 时显示 -->
+    <view
+      v-if="currentTab === 'published'"
+      class="card-list"
+    >
       <view
-        v-for="(item, index) in articles"
+        v-for="(item, index) in publishedArticles"
         :key="index"
         class="card"
         :style="{ backgroundColor: item.bgColor }"
       >
+        <!-- 与原本的卡片展示基本一致 -->
         <view class="card-header">
           <view class="title">{{ item.title }}</view>
-          <view class="status">{{ item.status }}</view>
+          <view class="status">作品</view>
         </view>
         <view class="card-body">
           <view class="description">{{ item.description }}</view>
           <view class="info">
-            <text class="publish-time">{{ item.publishTime }}</text>
+            <text class="publish-time">{{ formatPublishTime(item.publishTime) }}</text>
             <view class="stats">
               <text class="like-count">👍 {{ item.likes }}</text>
               <text class="favorite-count">⭐ {{ item.favorites }}</text>
@@ -32,13 +76,54 @@
           </view>
         </view>
         <view class="card-footer">
-          <button @click="viewArticle(index)" class="action-btn">
+          <!-- 这里使用原先的按钮: 查看、编辑、删除等 -->
+          <button @click="viewArticleByIndex(index, 'published')" class="action-btn">
             <image src="@/pagesMy/static/view.svg" class="icon" alt="View" ></image>
           </button>
-          <button @click="editArticle(index)" class="action-btn">
+          <button @click="editArticleByIndex(index, 'published')" class="action-btn">
             <image src="@/pagesMy/static/edit.svg" class="icon" alt="Edit" ></image>
           </button>
-          <button @click="deleteArticle(index)" class="action-btn">
+          <button @click="deleteArticleByIndex(index, 'published')" class="action-btn">
+            <image src="@/pagesMy/static/delete.svg" class="icon" alt="Delete" ></image>
+          </button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 草稿列表：仅在 currentTab === 'draft' 时显示 -->
+    <view
+      v-else
+      class="card-list"
+    >
+      <view
+        v-for="(item, index) in draftArticles"
+        :key="index"
+        class="card"
+        :style="{ backgroundColor: item.bgColor }"
+      >
+        <view class="card-header">
+          <view class="title">{{ item.title }}</view>
+          <view class="status">草稿</view>
+        </view>
+        <view class="card-body">
+          <view class="description">{{ item.description }}</view>
+          <view class="info">
+            <text class="publish-time">{{ formatPublishTime(item.publishTime) }}</text>
+            <view class="stats">
+              <text class="like-count">👍 {{ item.likes }}</text>
+              <text class="favorite-count">⭐ {{ item.favorites }}</text>
+              <text class="share-count">🔗 {{ item.shares }}</text>
+            </view>
+          </view>
+        </view>
+        <view class="card-footer">
+          <button @click="viewArticleByIndex(index, 'draft')" class="action-btn">
+            <image src="@/pagesMy/static/view.svg" class="icon" alt="View" ></image>
+          </button>
+          <button @click="editArticleByIndex(index, 'draft')" class="action-btn">
+            <image src="@/pagesMy/static/edit.svg" class="icon" alt="Edit" ></image>
+          </button>
+          <button @click="deleteArticleByIndex(index, 'draft')" class="action-btn">
             <image src="@/pagesMy/static/delete.svg" class="icon" alt="Delete" ></image>
           </button>
         </view>
@@ -61,14 +146,16 @@ const userStore = useUserStore(); // 使用用户存储
 // 用来获取本地时间和日期
 const systemDate = new Date();
 const systemDateStr = systemDate.toISOString().slice(0, 10); // 获取当前系统日期，格式：YYYY-MM-DD
+const BASE_URL = ref('http://122.51.231.155:8080');
 
 const activeIndex = ref(null);
 // 计算属性从 Pinia store 获取用户状态
 const isLoggedIn = computed(() => userStore.user.isLoggedIn);
 const uid = computed(() => userStore.user.nickName);
+
 const avatarSrc = computed(() =>
     userStore.user.avatarUrl
-        ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
+        ? `${BASE_URL.value}/static/${userStore.user.avatarUrl}`
         : '/static/images/index/background_img.jpg'
 );
 
@@ -77,7 +164,7 @@ const { filteredNewsItems, selectedSection, isRefreshing } = storeToRefs(newsSto
 const { setSection, refreshNews, fetchNews } = newsStore;
 
 
-const BASE_URL = ref('http://122.51.231.155:8080');
+
 
 // 模拟数据
 const articles = ref([]);
@@ -99,6 +186,71 @@ const formattedSaveTime = computed((time) => {
     // 否则显示完整日期
     return postDate;
   }
+});
+
+/**
+ * @param {string} publishTime - ISO 格式或其他可被 Date 解析的字符串
+ * @returns {string} - 格式化后的时间字符串
+ */
+const formatPublishTime = (publishTime) => {
+  const date = new Date(publishTime);
+  const now = new Date();
+
+  // 判断是否是同一天
+  const isSameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (isSameDay) {
+    // 如果是同一天，显示“今天 HH:mm”
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `今天 ${hours}:${minutes}`;
+  } else {
+    // 否则显示 YYYY-MM-DD 或者你想要的其他格式
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+};
+
+//用户信息部分的逻辑
+const backgroundImageUrl = ref('/static/images/index/background_img.jpg');
+
+const editBackgroundImage = () => {
+  uni.chooseImage({
+    count: 1,
+    success: (res) => {
+      // 假设取第一张图片并上传
+      const tempFilePath = res.tempFilePaths[0];
+      // ...上传逻辑省略
+      // 上传成功后更新
+      backgroundImageUrl.value = tempFilePath;
+    }
+  });
+};
+
+// 创作统计数量
+const publishedCount = computed(() =>
+  articles.value.filter(a => a.status === '已发布').length
+);
+const draftCount = computed(() =>
+  articles.value.filter(a => a.status === '草稿').length
+);
+const favoriteCount = ref(0);  // 你可以根据后端返回的数据赋值
+const followerCount = ref(0);  // 同上
+
+// 当前标签
+const currentTab = ref('published');
+
+// 根据 status 筛选
+const publishedArticles = computed(() => {
+  return articles.value.filter(a => a.status === '已发布');
+});
+const draftArticles = computed(() => {
+  return articles.value.filter(a => a.status === '草稿');
 });
 
 // Function to get published news IDs
@@ -317,9 +469,137 @@ body {
   border: none;
 }
 
+.profile-header {
+  margin-top: 20px;
+  position: relative;
+  width: 100%;
+  height: 220px; /* 适当加大 */
+  background-color: #f5f5f5; /* 如果没有背景图时的底色 */
+  overflow: hidden;
+}
+
+/* 背景图可编辑：点击后替换 */
+.profile-bg {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  z-index: -1;
+}
+
+/* 编辑背景按钮，如果你想单独做一个icon，也可绝对定位到右下角 */
+.edit-bg-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background-color: rgba(255,255,255,0.5);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+
+.profile-info {
+  position: absolute;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  object-fit: cover;
+  margin-bottom: 5px;
+}
+
+.nickname {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 2px;
+  color: #333;
+}
+
+.bio {
+  font-size: 14px;
+  color: #666;
+}
+
+.userid {
+  font-size: 12px;
+  margin-top: 4px;
+  color: #666;
+  z-index: 10;
+}
+
+/* 创作、收藏、知音 */
+.stats {
+  margin-top: 8px;
+  height: 140px;
+  gap: 20px;
+}
+
+.stats-item text:nth-child(1) {
+  font-size: 12px;
+  color: black;
+}
+.stats-item text:nth-child(2) {
+  font-size: 14px;
+  font-weight: bold;
+  margin-left: 4px;
+}
+
+/* 修改资料按钮 */
+.edit-profile-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #f5f5f5;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 4px 8px;
+}
+
+/* 标签切换 */
+.tabs { 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+  border-bottom: 1px solid #ebebeb;
+}
+
+.tab {
+  padding: 10px 0;
+  font-size: 16px;
+  color: #666;
+  position: relative;
+  cursor: pointer;
+}
+.tab.active {
+  font-weight: bold;
+  color: #333;
+}
+.tab.active::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 2px;
+  background-color: #333;
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+}
+
+/* 下方卡片列表容器 */
 .container {
   padding: 20px;
+  margin-top: 0; /* 如果有需要可微调 */
 }
+
+/* 其余样式可沿用你原先的 .card, .card-header, .card-body 等... */
+
 
 .card-list {
   display: flex;
@@ -327,11 +607,11 @@ body {
 }
 
 .card {
-  margin-bottom: 20px;
+  margin-bottom: 20px;  /* 卡片之间的间距，改小比如 10px */
   border-radius: 8px;
-  padding: 15px;
+  padding: 15px;        /* 卡片内容与边框的内边距，可改小比如 10px */
   background-color: #fff;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .card-header {
@@ -353,6 +633,7 @@ body {
 
 .card-body {
   margin-bottom: 15px;
+  height: 20px;
 }
 
 .description {

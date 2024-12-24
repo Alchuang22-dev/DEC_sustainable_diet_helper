@@ -11,23 +11,24 @@
       <view class="content-wrapper">
         <scroll-view scroll-y="true" class="food-list">
           <uni-collapse>
-            <uni-collapse-item v-for="(food, index) in displayFoodList"
-                               :key="food.id"
-                               :title="food.displayName || $t('default_food_name')"
-                               :thumb="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
+            <uni-collapse-item
+              v-for="(food, index) in displayFoodList"
+              :key="food.id"
+              :title="food.displayName || $t('default_food_name')"
+              :thumb="food.displayImage || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
             >
               <view class="food-details">
                 <image
-                    :src="food.image || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
-                    class="food-image"
-                    mode="aspectFill"
+                  :src="food.displayImage || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
+                  class="food-image"
+                  mode="aspectFill"
                 />
                 <view class="food-info">
                   <view class="info-grid">
-                    <uni-tag :text="$t('weight') + ': ' + (food.weight || '1.2kg')" type="primary" size="small" />
-                    <uni-tag :text="$t('price') + ': ' + (food.price || '5元')" type="success" size="small" />
-                    <uni-tag :text="$t(`transport_${food.transportMethod}`)" type="warning" size="small" />
-                    <uni-tag :text="$t(`source_${food.foodSource}`)" type="info" size="small" />
+                    <uni-tag :text="$t('weight') + ': ' + (food.weight + 'kg' || '1.2kg')" type="primary" size="small" />
+                    <uni-tag :text="$t('price') + ': ' + (food.price + t('yuan') || '5元')" type="success" size="small" />
+                    <uni-tag v-if="food.transportMethod" :text="$t(`transport_${food.transportMethod}`)" type="warning" size="small" />
+                    <uni-tag v-if="food.foodSource" :text="$t(`source_${food.foodSource}`)" type="info" size="small" />
                   </view>
                   <view class="action-row">
                     <uni-icons type="compose" size="20" color="#2979ff" @click.stop="handleEdit(index)" />
@@ -36,6 +37,10 @@
                 </view>
               </view>
             </uni-collapse-item>
+            <!-- 空列表提示 -->
+            <view v-if="displayFoodList.length === 0" class="empty-state">
+              <text>{{ $t('no_foods_added') }}</text>
+            </view>
           </uni-collapse>
         </scroll-view>
 
@@ -43,19 +48,16 @@
           <uni-row :gutter="10">
             <uni-col :span="8">
               <view class="action-button primary" @click="navigateToAddFood">
-                <!--                <uni-icons type="plus" size="18" color="#fff"/>-->
                 <text>{{ $t('add_food') }}</text>
               </view>
             </uni-col>
             <uni-col :span="8">
               <view class="action-button success" @click="saveData">
-                <!--                <uni-icons type="save" size="18" color="#fff"/>-->
                 <text>{{ $t('save_additions') }}</text>
               </view>
             </uni-col>
             <uni-col :span="8">
               <view class="action-button warning" @click="calculateData">
-                <!--                <uni-icons type="calculator" size="18" color="#fff"/>-->
                 <text>{{ $t('start_calculation') }}</text>
               </view>
             </uni-col>
@@ -97,7 +99,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n'; // Import useI18n
 import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
 import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data';
@@ -120,6 +122,7 @@ const {
   fetchAvailableFoods,
   availableFoods,
   getFoodName,
+  getFoodImageUrl,
   calculateNutritionAndEmission
 } = foodStore;
 
@@ -188,7 +191,7 @@ const ringOpts = ref({
 // 营养条形图配置
 const barOpts = ref({
   color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE", "#3CA272", "#FC8452", "#9A60B4", "#ea7ccc"],
-  padding: [15, 30, 0, 5],
+  padding: [15, 40, 0, 5],
   enableScroll: false,
   legend: {},
   xAxis: {
@@ -216,16 +219,23 @@ const barOpts = ref({
   }
 });
 
-// 计算 displayFoodList，根据当前语言显示食物名称
+// 计算 displayFoodList，根据当前语言显示食物名称和图片
 const displayFoodList = computed(() => {
   return foodList.map(food => {
     const availableFood = availableFoods.find(f => f.id === food.id);
+
+    // 确定显示名称（中/英文）
     const displayName = availableFood
-        ? (locale.value === 'zh-Hans' ? availableFood.name_zh : availableFood.name_en)
-        : food.name || t('default_food_name');
+      ? (locale.value === 'zh-Hans' ? availableFood.name_zh : availableFood.name_en)
+      : (food.name || t('default_food_name'));
+
+    // 从后端接口取到的图片链接
+    const displayImage = availableFood?.image_url || '';
+
     return {
       ...food,
-      displayName
+      displayName,
+      displayImage
     };
   });
 });
@@ -562,6 +572,17 @@ onMounted(() => {
   from {
     opacity: 0;
     transform: translateY(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20rpx);
   }
   to {
     opacity: 1;
