@@ -329,6 +329,11 @@ const saveDraft = async () => {
         if (res.data.message === 'Draft created successfully.') {
           PageId.value = res.data.draft_id;
           resolve(PageId.value); // 成功时返回 draft_id
+		  uni.showToast({
+		    title: '草稿已保存',
+		    icon: "fail",
+		    duration: 2000,
+		  });
         } else {
           reject('保存草稿失败'); // 失败时拒绝 Promise
         }
