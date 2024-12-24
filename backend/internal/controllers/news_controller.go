@@ -2164,8 +2164,6 @@ func (nc *NewsController) SearchNews(c *gin.Context) {
     for i, news := range newsList {
         results[i] = gin.H{
             "id":          news.ID,
-            "title":       news.Title,
-            "upload_time": news.UploadTime,
         }
     }
 
