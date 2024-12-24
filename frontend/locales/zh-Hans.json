@@ -528,6 +528,7 @@
 	"setFail": "设置失败",
 	"inputValidateFail": "输入验证失败",
 	"fetchGoalsFail": "获取目标失败",
-	"nutrition_over_suffix": "超标"
+	"nutrition_over_suffix": "超标",
+	"actual_target": "实际 / 目标"
 
 }

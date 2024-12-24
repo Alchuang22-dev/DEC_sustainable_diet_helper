@@ -524,19 +524,31 @@ const canDeleteDish = (dish) => {
 
 // ========== 家庭碳排放环形图相关 ==========
 // 环形图配置
-const carbonRingOpts = {
+const carbonRingOpts = ref({
   title: {
-    name: '0 / 0',
-    fontSize: 14,
+    name: '', // 多语言标题
+    fontSize: 16, // 增大标题字体
     color: '#333'
   },
   subtitle: {
-    name: '',
-    fontSize: 12,
-    color: '#999'
+    name: '', // 实际值和目标值
+    fontSize: 14, // 增大副标题字体
+    color: '#999' // 默认颜色
   },
+  extra: {
+    ring: {
+      ringWidth: 10,
+      activeOpacity: 0.5,
+      activeRadius: 10,
+      offsetAngle: 0,
+      labelWidth: 15,
+      border: false,
+      borderWidth: 3,
+      borderColor: "#FFFFFF"
+    }
+  }
   // 其他配置项可根据你使用的图表组件自行调整
-};
+});
 
 // 环形图数据
 const carbonChartData = ref({
@@ -549,7 +561,9 @@ watch(
     (newVal) => {
       if (!newVal || newVal.length === 0) {
         carbonChartData.value.series = [];
-        carbonRingOpts.title.name = '0 / 0';
+        carbonRingOpts.value.title.name = t('actual_target'); // 多语言标题
+        carbonRingOpts.value.subtitle.name = `0 / 0Kg`;
+        carbonRingOpts.value.subtitle.color = '#999';
         return;
       }
       // 构造 series 数据：每个成员的今日碳排放
@@ -558,19 +572,30 @@ watch(
         data: member.carbon_intake_sum
       }));
 
-      // 更新环形图中心文字：“家庭总排放量 / 家庭目标量”
+      // 更新环形图中心文字：“实际/目标” 和 实际值与目标值
       const { familySums } = family.value;
-      if (familySums && familySums.carbon_intake_sum !== undefined) {
-        carbonRingOpts.title.name = `${familySums.carbon_intake_sum || 0} / ${familySums.carbon_goal_sum || 0}`;
+      if (familySums && familySums.carbon_intake_sum !== undefined && familySums.carbon_goal_sum !== undefined) {
+        const actual = familySums.carbon_intake_sum || 0;
+        const target = familySums.carbon_goal_sum || 0;
+        carbonRingOpts.value.title.name = t('actual_target'); // 多语言标题
+
+        carbonRingOpts.value.subtitle.name = `${actual} / ${target}Kg`;
+
+        if (actual > target) {
+          carbonRingOpts.value.subtitle.color = '#FF4D4F'; // 红色
+        } else {
+          carbonRingOpts.value.subtitle.color = '#999'; // 默认颜色
+        }
       } else {
-        carbonRingOpts.title.name = '0 / 0';
+        carbonRingOpts.value.title.name = t('actual_target'); // 确保标题设置
+        carbonRingOpts.value.subtitle.name = `0 / 0Kg`;
+        carbonRingOpts.value.subtitle.color = '#999';
       }
     },
     { immediate: true, deep: true }
 );
 
 // ========== 营养超标计算 ==========
-// 定义五大营养素对应的多语言key
 const nutritionKeys = [
   { key: 'calories', i18nKey: 'calories' },
   { key: 'protein', i18nKey: 'protein' },
@@ -956,7 +981,7 @@ const startStatusCheck = () => {
 
 .charts {
   width: 100%;
-  height: 300rpx;
+  height: 400rpx; /* 增大图表高度 */
   margin-bottom: 20rpx;
 }
 
@@ -1142,5 +1167,4 @@ const startStatusCheck = () => {
     opacity: 1;
   }
 }
-
 </style>
