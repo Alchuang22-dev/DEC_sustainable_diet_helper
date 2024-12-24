@@ -38,7 +38,6 @@ const {
 
 // Pinia用户存储
 const userStore = useUserStore();
-const user = computed(() => userStore.user);
 
 // 响应式数据
 const avatarUrl = ref('/static/images/index/background_img.jpg');

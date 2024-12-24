@@ -140,10 +140,8 @@ export const useUserStore = defineStore('user', () => {
 
   /**
    * 用户登录/注册（微信登录）
-   * @param {string} nickName 用户昵称
-   * @param {string} avatarUrl 头像 URL
    */
-  const login = async (nickName, avatarUrl) => {
+  const login = async () => {
     try {
       // 调用 uni.login 获取微信登录凭证
       const loginRes = await new Promise((resolve, reject) => {
@@ -159,19 +157,15 @@ export const useUserStore = defineStore('user', () => {
         throw new Error('微信登录失败，请重试');
       }
 
-      // 发送登录凭证和昵称到后端进行微信认证
-      console.log("formData", loginRes.code, nickName);
-
       const authRes = await new Promise((resolve, reject) => {
         console.log('url:', `${BASE_URL}/users/auth`);
-        uni.uploadFile({
+        uni.request({
           url: `${BASE_URL}/users/auth`, // 确保端点正确
           method: 'POST',
-          formData: {
+          data: {
             code: loginRes.code,
-            nickname: nickName,
           },
-          filePath: avatarUrl,
+          // filePath: avatarUrl,
           name: 'avatar', // 对应后端表单文件字段名
           success: resolve,
           fail: reject,
@@ -182,7 +176,7 @@ export const useUserStore = defineStore('user', () => {
       console.log("返回的完整响应：", authRes);
       console.log("后端返回的数据：", authRes.data);
 
-      const returnData = JSON.parse(authRes.data);
+      const returnData = authRes.data;
       console.log("returnData", returnData);
 
       // 检查 code 是否是 200
