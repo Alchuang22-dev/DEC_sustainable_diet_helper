@@ -6,6 +6,25 @@ import { useUserStore } from "./user.js";
 const BASE_URL = 'http://122.51.231.155:8095';
 const STORAGE_KEY = 'carbon_and_nutrition_store_data';
 
+// 辅助函数：递归遍历对象或数组，四舍五入所有数值字段到一位小数
+const roundNumbers = (data) => {
+    if (Array.isArray(data)) {
+        return data.map(item => roundNumbers(item));
+    } else if (data !== null && typeof data === 'object') {
+        const roundedObj = {};
+        for (const key in data) {
+            if (Object.prototype.hasOwnProperty.call(data, key)) {
+                roundedObj[key] = roundNumbers(data[key]);
+            }
+        }
+        return roundedObj;
+    } else if (typeof data === 'number') {
+        return Math.round(data * 10) / 10;
+    } else {
+        return data;
+    }
+};
+
 // 封装request为Promise，并处理401状态码
 const request = (config) => {
     // 获取 userStore 实例
@@ -135,7 +154,8 @@ export const useCarbonAndNutritionStore = defineStore('carbon_and_nutrition', ()
             }));
             console.log('getNutritionGoals:', response.data);
             if (response.statusCode === 200 && response.data && response.data.data) {
-                state.nutritionGoals = response.data.data;
+                // 应用四舍五入处理
+                state.nutritionGoals = roundNumbers(response.data.data);
             }
             return response.data;
         } catch (error) {
@@ -172,7 +192,8 @@ export const useCarbonAndNutritionStore = defineStore('carbon_and_nutrition', ()
             }));
             console.log('getCarbonGoals:', response.data);
             if (response.statusCode === 200 && response.data && response.data.data) {
-                state.carbonGoals = response.data.data;
+                // 应用四舍五入处理
+                state.carbonGoals = roundNumbers(response.data.data);
             }
             return response.data;
         } catch (error) {
@@ -190,7 +211,8 @@ export const useCarbonAndNutritionStore = defineStore('carbon_and_nutrition', ()
             }));
             console.log('getNutritionIntakes:', response.data);
             if (response.statusCode === 200 && Array.isArray(response.data)) {
-                state.nutritionIntakes = response.data;
+                // 应用四舍五入处理
+                state.nutritionIntakes = roundNumbers(response.data);
             }
             return response.data;
         } catch (error) {
@@ -208,7 +230,8 @@ export const useCarbonAndNutritionStore = defineStore('carbon_and_nutrition', ()
             }));
             console.log('getCarbonIntakes:', response.data);
             if (response.statusCode === 200 && Array.isArray(response.data)) {
-                state.carbonIntakes = response.data;
+                // 应用四舍五入处理
+                state.carbonIntakes = roundNumbers(response.data);
             }
             return response.data;
         } catch (error) {
@@ -237,10 +260,12 @@ export const useCarbonAndNutritionStore = defineStore('carbon_and_nutrition', ()
          * }
          */
         try {
+            // 应用四舍五入处理
+            const roundedSharedData = roundNumbers(sharedData);
             const response = await request(createRequestConfig({
                 url: `${BASE_URL}/nutrition-carbon/shared/nutrition-carbon`,
                 method: 'POST',
-                data: sharedData
+                data: roundedSharedData
             }));
             console.log('setSharedNutritionCarbonIntake:', response.data);
             // 设置成功后，可选择立即获取最新的共享记录，以更新 state
@@ -266,7 +291,8 @@ export const useCarbonAndNutritionStore = defineStore('carbon_and_nutrition', ()
             }));
             console.log('getSharedNutritionCarbonIntakes:', response.data);
             if (response.statusCode === 200 && Array.isArray(response.data)) {
-                state.sharedNutritionCarbonIntakes = response.data;
+                // 应用四舍五入处理
+                state.sharedNutritionCarbonIntakes = roundNumbers(response.data);
             }
             return response.data;
         } catch (error) {
@@ -295,7 +321,6 @@ export const useCarbonAndNutritionStore = defineStore('carbon_and_nutrition', ()
     };
 
     watchState();
-
 
     // 添加辅助方法 getDataByDate
     const getDataByDate = (dateString) => {
@@ -338,6 +363,32 @@ export const useCarbonAndNutritionStore = defineStore('carbon_and_nutrition', ()
             totalCarbonEmission += cIntake.emission || 0
         }
 
+        // 应用四舍五入处理
+        for (const key in totalNutrients) {
+            if (Object.prototype.hasOwnProperty.call(totalNutrients, key)) {
+                totalNutrients[key] = Math.round(totalNutrients[key] * 10) / 10;
+            }
+        }
+        totalCarbonEmission = Math.round(totalCarbonEmission * 10) / 10;
+
+        for (const meal in meals) {
+            if (meals[meal].nutrients) {
+                for (const key in meals[meal].nutrients) {
+                    if (Object.prototype.hasOwnProperty.call(meals[meal].nutrients, key)) {
+                        meals[meal].nutrients[key] = Math.round(meals[meal].nutrients[key] * 10) / 10;
+                    }
+                }
+            } else {
+                meals[meal].nutrients = { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 };
+            }
+
+            if (meals[meal].carbonEmission) {
+                meals[meal].carbonEmission = Math.round(meals[meal].carbonEmission * 10) / 10;
+            } else {
+                meals[meal].carbonEmission = 0;
+            }
+        }
+
         // 如果不存在数据（包括明天的日期或任何后端未提供的数据），返回全为0的默认值
         // 这样无论后端是否提供明天的数据，前端都能获得明天为0的数据
         if (!nutritionGoal && dailyNutritionIntakes.length === 0 && dailyCarbonIntakes.length === 0) {
@@ -363,16 +414,16 @@ export const useCarbonAndNutritionStore = defineStore('carbon_and_nutrition', ()
             nutrients: {
                 actual: totalNutrients,
                 target: nutritionGoal ? {
-                    calories: nutritionGoal.calories,
-                    protein: nutritionGoal.protein,
-                    fat: nutritionGoal.fat,
-                    carbohydrates: nutritionGoal.carbohydrates,
-                    sodium: nutritionGoal.sodium
+                    calories: Math.round(nutritionGoal.calories * 10) / 10,
+                    protein: Math.round(nutritionGoal.protein * 10) / 10,
+                    fat: Math.round(nutritionGoal.fat * 10) / 10,
+                    carbohydrates: Math.round(nutritionGoal.carbohydrates * 10) / 10,
+                    sodium: Math.round(nutritionGoal.sodium * 10) / 10
                 } : { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
             },
             carbonEmission: {
                 actual: totalCarbonEmission,
-                target: carbonGoal ? carbonGoal.emission : 0
+                target: carbonGoal ? Math.round(carbonGoal.emission * 10) / 10 : 0
             },
             meals
         }
