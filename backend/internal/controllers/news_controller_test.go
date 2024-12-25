@@ -1225,3 +1225,132 @@ func TestGetMyDrafts(t *testing.T) {
         })
     }
 }
+
+func TestPreviewNews(t *testing.T) {
+    db := setupNewsTestDB()
+    // 需要迁移相关模型
+    db.AutoMigrate(&models.News{}, &models.NewsImage{}, &models.Paragraph{}, &models.User{})
+
+    // 设置路由
+    router := gin.Default()
+    newsController := NewNewsController(db)
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware()) // 需要鉴权
+    {
+        newsGroup.POST("/preview_news", newsController.PreviewNews)
+    }
+
+    // 创建测试用户
+    user := models.User{
+        OpenID:    "OpenID_PreviewNews_User",
+        Nickname:  "PreviewNewsUser",
+    }
+    db.Create(&user)
+
+    // 创建新闻数据: news1, news2
+    author1 := models.User{OpenID: "OpenID_Author1", Nickname: "AuthorOne"}
+    db.Create(&author1)
+    author2 := models.User{OpenID: "OpenID_Author2", Nickname: "AuthorTwo"}
+    db.Create(&author2)
+
+    news1 := models.News{Title: "PreviewTitle1", AuthorID: author1.ID, LikeCount: 10}
+    db.Create(&news1)
+    db.Create(&models.Paragraph{NewsID: news1.ID, Text: "Paragraph1 for News1"})
+    db.Create(&models.NewsImage{NewsID: news1.ID, URL: "img1.jpg", Description: "desc1"})
+
+    news2 := models.News{Title: "PreviewTitle2", AuthorID: author2.ID, LikeCount: 5}
+    db.Create(&news2)
+    db.Create(&models.Paragraph{NewsID: news2.ID, Text: "Paragraph1 for News2"})
+    db.Create(&models.NewsImage{NewsID: news2.ID, URL: "img2.jpg", Description: "desc2"})
+
+    tests := []struct {
+        name           string
+        userID         uint
+        requestBody    interface{}
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string // 对错误场景做断言
+        isSuccess      bool   // 是否期望成功
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            requestBody:    gin.H{"ids": []uint{news1.ID, news2.ID}},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid Request Body",
+            userID:         user.ID,
+            requestBody:    "not_valid_json",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid request body",
+        },
+        {
+            name:           "Database Error (simulate)",
+            userID:         user.ID,
+            requestBody:    gin.H{"ids": []uint{news1.ID, news2.ID}},
+            setupFunc: func() {
+                // 模拟 DB 错误
+                db.Callback().Query().Before("gorm:query").Register("force_preview_news_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "news" {
+                        tx.Error = fmt.Errorf("forced preview news error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to fetch news",
+        },
+        {
+            name:           "Success Preview",
+            userID:         user.ID,
+            requestBody:    gin.H{"ids": []uint{news1.ID, news2.ID}},
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_preview_news_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            bodyBytes, _ := json.Marshal(tc.requestBody)
+            req, _ := http.NewRequest("POST", "/news/preview_news", bytes.NewBuffer(bodyBytes))
+            req.Header.Set("Content-Type", "application/json")
+
+            // Token
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            // 处理响应
+            if tc.isSuccess {
+                // 成功时返回 200 + 预览列表
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                // 可以根据需要更精细地断言
+                // 如: assert.Len(t, resp.Previews, 2)
+            } else {
+                // 错误时检查 error 字段
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
+
