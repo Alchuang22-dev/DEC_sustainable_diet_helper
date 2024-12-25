@@ -18,7 +18,6 @@ import (
 	"strings"
 	"github.com/golang-jwt/jwt/v4"
 
-	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/config"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/middleware"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
