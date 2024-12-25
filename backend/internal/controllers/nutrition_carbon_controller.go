@@ -679,13 +679,21 @@ func (nc *NutritionCarbonController) SetSharedNutritionCarbonIntake(c *gin.Conte
     }
     log.Printf("开启事务成功")
     // 为每个用户创建营养和碳摄入记录
+    cst, _ := time.LoadLocation("Asia/Shanghai")
     for _, share := range req.UserShares {
         if share.Ratio == 0 {
             continue
         }
+        normalizedDate := time.Date(
+            req.Date.Year(),
+            req.Date.Month(),
+            req.Date.Day(),
+            0, 0, 0, 0,
+            cst,
+        )
         nutritionIntake := models.NutritionIntake{
             UserID:        share.UserID,
-            Date:         req.Date,
+            Date:         normalizedDate,
             MealType:     req.MealType,
             Calories:     req.Calories * share.Ratio,
             Protein:      req.Protein * share.Ratio,
@@ -696,7 +704,7 @@ func (nc *NutritionCarbonController) SetSharedNutritionCarbonIntake(c *gin.Conte
         log.Printf("创建营养摄入记录成功")
         carbonIntake := models.CarbonIntake{
             UserID: share.UserID,
-            Date: req.Date,
+            Date: normalizedDate,
             MealType: req.MealType,
             Emission: req.Emission * share.Ratio,
         }
