@@ -1961,3 +1961,117 @@ func TestGetNewsByLikeCount(t *testing.T) {
         })
     }
 }
+
+func TestGetNewsByUploadTime(t *testing.T) {
+    db := setupNewsTestDB()
+    db.AutoMigrate(&models.News{}, &models.User{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.GET("/paginated/upload_time", newsController.GetNewsByUploadTime)
+    }
+
+    // 创建用户
+    user := models.User{
+        OpenID:   "OpenID_GetNewsByUploadTime_User",
+        Nickname: "UploadTimeUser",
+    }
+    db.Create(&user)
+
+    // 插入新闻: UploadTime 不同
+    n1 := models.News{Title: "OldNews", UploadTime: time.Now().Add(-2 * time.Hour)}
+    db.Create(&n1)
+    n2 := models.News{Title: "NewerNews", UploadTime: time.Now().Add(-1 * time.Hour)}
+    db.Create(&n2)
+    n3 := models.News{Title: "NewestNews", UploadTime: time.Now()}
+    db.Create(&n3)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        page           string
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+        expectedIDs    []uint
+    }{
+        {
+            name:           "Unauthorized",
+            userID:         0,
+            page:           "1",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid Page Number",
+            userID:         user.ID,
+            page:           "-1",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid page number",
+        },
+        {
+            name:           "DB Error",
+            userID:         user.ID,
+            page:           "1",
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_uploadtime_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "news" {
+                        tx.Error = fmt.Errorf("forced upload_time error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to fetch news",
+        },
+        {
+            name:           "Success (upload_time desc)",
+            userID:         user.ID,
+            page:           "1",
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_uploadtime_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            // upload_time DESC => n3, n2, n1
+            expectedIDs: []uint{n3.ID, n2.ID, n1.ID},
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            url := "/news/paginated/upload_time?page=" + tc.page
+            req, _ := http.NewRequest("GET", url, nil)
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            if tc.isSuccess {
+                var resp map[string][]uint
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                assert.Equal(t, tc.expectedIDs, resp["news_ids"])
+            } else {
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
