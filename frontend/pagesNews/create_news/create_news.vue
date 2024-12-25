@@ -98,11 +98,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n'
-import { onHide, onBackPress, onUnload } from '@dcloudio/uni-app'; // 导入 onUnload
+import { onUnload } from '@dcloudio/uni-app'; // 导入 onUnload
 import { useDraftStore } from '../stores/draft';
-import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
+import { useUserStore } from '@/stores/user'; // 引入 Pinia 用户存储
 const draftStore = useDraftStore();
 const userStore = useUserStore();
 
