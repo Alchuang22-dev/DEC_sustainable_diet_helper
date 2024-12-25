@@ -2617,3 +2617,147 @@ func TestCancelLikeComment(t *testing.T) {
         })
     }
 }
+
+func TestDeleteComment(t *testing.T) {
+    db := setupNewsTestDB()
+    db.AutoMigrate(&models.Comment{}, &models.User{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.DELETE("/comments/:id", newsController.DeleteComment)
+    }
+
+    // 创建用户
+    user := models.User{
+        OpenID:   "OpenID_DeleteComment_User",
+        Nickname: "DeleteCommentUser",
+    }
+    db.Create(&user)
+
+    // 创建评论
+    comment := models.Comment{
+        NewsID:    99999,
+        Content:   "Comment to delete",
+        UserID:    user.ID,
+    }
+    db.Create(&comment)
+
+    // 创建其他人的评论
+    otherComment := models.Comment{
+        NewsID:    99999,
+        Content:   "Other user's comment",
+        UserID:    999, // 不同用户
+    }
+    db.Create(&otherComment)
+
+    // 为演示子评论，创建子评论指向 comment
+    childComment := models.Comment{
+        NewsID:    99999,
+        Content:   "Child comment",
+        UserID:    user.ID,
+        ParentID:  &comment.ID,
+    }
+    db.Create(&childComment)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        commentID      string
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            commentID:      fmt.Sprintf("%d", comment.ID),
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid Comment ID",
+            userID:         user.ID,
+            commentID:      "abc",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid comment ID",
+        },
+        {
+            name:           "Comment Not Found",
+            userID:         user.ID,
+            commentID:      "88888",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "Comment not found",
+        },
+        {
+            name:           "No Permission (forbidden)",
+            userID:         user.ID,
+            commentID:      fmt.Sprintf("%d", otherComment.ID),
+            setupFunc:      func() {},
+            expectedStatus: http.StatusForbidden,
+            expectedError:  "You do not have permission to delete this comment",
+        },
+        {
+            name:           "Failed To Delete Comment (transaction error)",
+            userID:         user.ID,
+            commentID:      fmt.Sprintf("%d", comment.ID),
+            setupFunc: func() {
+                // 注入事务错误 / delete错误
+                db.Callback().Delete().Before("gorm:delete").Register("force_delete_comment_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "comments" {
+                        tx.Error = fmt.Errorf("forced delete comment error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to delete comment",
+        },
+        {
+            name:           "Success Delete Comment",
+            userID:         user.ID,
+            commentID:      fmt.Sprintf("%d", comment.ID),
+            setupFunc: func() {
+                // 移除回调
+                db.Callback().Delete().Remove("force_delete_comment_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            url := "/news/comments/" + tc.commentID
+            req, _ := http.NewRequest("DELETE", url, nil)
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.isSuccess {
+                assert.Equal(t, "Comment deleted successfully", resp["message"])
+                // 可以在此处再查数据库，确认 comment 以及其子评论已被删除
+            } else {
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
