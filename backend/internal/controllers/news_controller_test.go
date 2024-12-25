@@ -4114,3 +4114,147 @@ func TestGetUserNewsStatus(t *testing.T) {
         })
     }
 }
+
+func TestSearchNews(t *testing.T) {
+    db := setupNewsTestDB()
+    // 需要迁移 News
+    db.AutoMigrate(&models.News{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    {
+        // 如果搜索需要登录可加鉴权，否则可公开搜索
+        newsGroup.POST("/search", newsController.SearchNews)
+    }
+
+    // 创建一些新闻（Title 中包含不同关键词）
+    n1 := models.News{Title: "Go concurrency patterns"}
+    db.Create(&n1)
+
+    n2 := models.News{Title: "Gin HTTP framework"}
+    db.Create(&n2)
+
+    n3 := models.News{Title: "GORM usage examples"}
+    db.Create(&n3)
+
+    n4 := models.News{Title: "Gopher Tools: concurrency and database"}
+    db.Create(&n4)
+
+    tests := []struct {
+        name           string
+        requestBody    interface{}
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+        // 预期匹配到的 ID 集合(只返回 ID)
+        expectedIDs []uint
+    }{
+        {
+            name:           "Invalid Request Body",
+            requestBody:    "not_json",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid request body",
+        },
+        {
+            name:           "Empty Query",
+            requestBody:    gin.H{"query": ""},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Query string cannot be empty",
+        },
+        {
+            name:           "No Valid Keyword",
+            requestBody:    gin.H{"query": "   "},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Query string is invalid",
+        },
+        {
+            name:           "DB Error (simulate)",
+            requestBody:    gin.H{"query": "Go concurrency"},
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_search_news_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "news" {
+                        tx.Error = fmt.Errorf("forced search news error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to search news",
+        },
+        {
+            name:           "Search 'Go concurrency'",
+            requestBody:    gin.H{"query": "Go concurrency"},
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_search_news_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            // 期待匹配: n1 "Go concurrency patterns", n4 "Gopher Tools: concurrency and database"
+            expectedIDs: []uint{n4.ID, n1.ID}, 
+            // 因为 Order("id DESC") => n4 > n3 > n2 > n1
+            // 但只有 n4、n1 符合关键字 => 先返回 n4, 再返回 n1
+        },
+        {
+            name:           "Search 'Gin framework'",
+            requestBody:    gin.H{"query": "Gin framework"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            // 只匹配 n2: "Gin HTTP framework"
+            expectedIDs: []uint{n2.ID},
+        },
+        {
+            name:           "Search no matching",
+            requestBody:    gin.H{"query": "nonexistent keyword"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            expectedIDs:    []uint(nil),
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            bodyBytes, _ := json.Marshal(tc.requestBody)
+            req, _ := http.NewRequest("POST", "/news/search", bytes.NewBuffer(bodyBytes))
+            req.Header.Set("Content-Type", "application/json")
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.isSuccess {
+                // 检查 "results"
+                results, ok := resp["results"].([]interface{})
+                assert.True(t, ok, "should have 'results' array")
+
+                // 提取 results[i]["id"]
+                var gotIDs []uint
+                for _, item := range results {
+                    m, _ := item.(map[string]interface{})
+                    if idVal, exists := m["id"]; exists {
+                        gotIDs = append(gotIDs, uint(idVal.(float64)))
+                    }
+                }
+                // 断言结果顺序
+                assert.Equal(t, tc.expectedIDs, gotIDs)
+            } else {
+                // 检查 error
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
