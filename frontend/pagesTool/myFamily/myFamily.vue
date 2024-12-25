@@ -1,34 +1,42 @@
-<!-- myFamily.vue -->
 <template>
   <view class="family-management">
     <view class="family-list">
-      <!-- 已加入的家庭成员列表 -->
-      <uni-card v-for="member in sortedFamilyMembers"
-                :key="member.id"
-                :padding="0"
-                spacing="0"
-                class="member-card">
+      <!-- 已加入的成员列表 -->
+      <uni-card
+        v-for="member in sortedFamilyMembers"
+        :key="member.id"
+        :padding="0"
+        spacing="0"
+        class="member-card"
+      >
         <view class="member-wrapper">
           <view class="member-info">
-            <image :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
-                   mode="aspectFill"
-                   class="avatar" />
+            <image
+              :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+              mode="aspectFill"
+              class="avatar"
+            />
             <text class="nickname">{{ member.nickname }}</text>
-            <uni-tag v-if="member.role === 'admin'"
-                     text="管理员"
-                     type="primary"
-                     size="small"
-                     class="role-tag" />
+            <uni-tag
+              v-if="member.role === 'admin'"
+              text="管理员"
+              type="primary"
+              size="small"
+              class="role-tag"
+            />
           </view>
-
           <view class="actions" v-if="member.id !== currentUserId">
-            <text v-if="member.role !== 'admin'"
-                  class="action-btn promote-btn"
-                  @click="setAsAdmin(member.id)">
+            <text
+              v-if="member.role !== 'admin'"
+              class="action-btn promote-btn"
+              @click="setAsAdmin(member.id)"
+            >
               {{ $t('set_as_admin') }}
             </text>
-            <text class="action-btn remove-btn"
-                  @click="removeMember(member.id)">
+            <text
+              class="action-btn remove-btn"
+              @click="removeMember(member.id)"
+            >
               {{ $t('remove_member') }}
             </text>
           </view>
@@ -36,34 +44,46 @@
       </uni-card>
     </view>
 
-    <uni-section title="待审核成员"
-                 type="line"
-                 v-if="family.waiting_members?.length > 0">
+    <!-- 待审核成员 -->
+    <uni-section
+      title="待审核成员"
+      type="line"
+      v-if="family.waiting_members?.length > 0"
+    >
       <view class="family-list">
-        <uni-card v-for="member in family.waiting_members"
-                  :key="member.id"
-                  :padding="0"
-                  spacing="0"
-                  class="member-card">
+        <uni-card
+          v-for="member in family.waiting_members"
+          :key="member.id"
+          :padding="0"
+          spacing="0"
+          class="member-card"
+        >
           <view class="member-wrapper">
             <view class="member-info">
-              <image :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
-                     mode="aspectFill"
-                     class="avatar" />
+              <image
+                :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+                mode="aspectFill"
+                class="avatar"
+              />
               <text class="nickname">{{ member.nickname }}</text>
-              <uni-tag text="待审核"
-                       type="warning"
-                       size="small"
-                       class="role-tag" />
+              <uni-tag
+                text="待审核"
+                type="warning"
+                size="small"
+                class="role-tag"
+              />
             </view>
-
             <view class="actions">
-              <text class="action-btn approve-btn"
-                    @click="admitMember(member.id)">
+              <text
+                class="action-btn approve-btn"
+                @click="admitMember(member.id)"
+              >
                 {{ $t('admit') }}
               </text>
-              <text class="action-btn reject-btn"
-                    @click="rejectMember(member.id)">
+              <text
+                class="action-btn reject-btn"
+                @click="rejectMember(member.id)"
+              >
                 {{ $t('reject') }}
               </text>
             </view>
@@ -75,80 +95,78 @@
 </template>
 
 <script setup>
-import { onMounted, computed } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { useFamilyStore } from '../stores/family.js';
-import { useUserStore } from "@/stores/user";
-import { onShow } from '@dcloudio/uni-app';
+/* ----------------- Imports ----------------- */
+import {computed} from 'vue'
+import {onShow} from '@dcloudio/uni-app'
+import {useI18n} from 'vue-i18n'
+import {useFamilyStore} from '../stores/family.js'
+import {useUserStore} from '@/stores/user'
 
-const { t } = useI18n();
+/* ----------------- Setup ----------------- */
+const {t} = useI18n()
+const familyStore = useFamilyStore()
+const family = computed(() => familyStore.family)
+const userStore = useUserStore()
+const currentUserId = computed(() => userStore.user.uid)
 
-const familyStore = useFamilyStore();
-const family = computed(() => familyStore.family);
-const userStore = useUserStore();
-const currentUserId = computed(() => userStore.user.uid);
-
-const isCurrentUserAdmin = computed(() => {
-  return familyStore.isAdmin(currentUserId.value);
-});
-
-const allFamilyMembers = computed(() => {
-  return family.value.allMembers || [];
-});
-
+/* ----------------- Computed ----------------- */
+const isCurrentUserAdmin = computed(() => familyStore.isAdmin(currentUserId.value))
+const allFamilyMembers = computed(() => family.value.allMembers || [])
 const sortedFamilyMembers = computed(() => {
-  const members = [...allFamilyMembers.value];
-  const currentUserIndex = members.findIndex(member => member.id === currentUserId.value);
+  const members = [...allFamilyMembers.value]
+  const currentUserIndex = members.findIndex(m => m.id === currentUserId.value)
   if (currentUserIndex > -1) {
-    const [currentUser] = members.splice(currentUserIndex, 1);
-    members.unshift(currentUser);
+    const [currentUser] = members.splice(currentUserIndex, 1)
+    members.unshift(currentUser)
   }
-  return members;
-});
+  return members
+})
 
+/* ----------------- Lifecycle ----------------- */
 onShow(async () => {
   try {
-    await familyStore.getFamilyDetails();
-  } catch (error) {
-    uni.showToast({ title: t('failed'), icon: 'none' });
+    await familyStore.getFamilyDetails()
+  } catch {
+    uni.showToast({title: t('failed'), icon: 'none'})
   }
-});
+})
 
-const setAsAdmin = async (userId) => {
+/* ----------------- Methods ----------------- */
+async function setAsAdmin(userId) {
   try {
-    await familyStore.setAdmin(userId);
-    uni.showToast({ title: t('success'), icon: 'success' });
-  } catch (error) {
-    uni.showToast({ title: t('failed'), icon: 'error' });
+    await familyStore.setAdmin(userId)
+    uni.showToast({title: t('success'), icon: 'success'})
+  } catch {
+    uni.showToast({title: t('failed'), icon: 'error'})
   }
-};
+}
 
-const removeMember = async (userId) => {
+async function removeMember(userId) {
   try {
-    await familyStore.removeFamilyMember(userId);
-    uni.showToast({ title: t('success'), icon: 'success' });
-  } catch (error) {
-    uni.showToast({ title: t('failed'), icon: 'error' });
+    await familyStore.removeFamilyMember(userId)
+    uni.showToast({title: t('success'), icon: 'success'})
+  } catch {
+    uni.showToast({title: t('failed'), icon: 'error'})
   }
-};
+}
 
-const admitMember = async (userId) => {
+async function admitMember(userId) {
   try {
-    await familyStore.admitJoinRequest(userId);
-    uni.showToast({ title: t('success'), icon: 'success' });
-  } catch (error) {
-    uni.showToast({ title: t('failed'), icon: 'error' });
+    await familyStore.admitJoinRequest(userId)
+    uni.showToast({title: t('success'), icon: 'success'})
+  } catch {
+    uni.showToast({title: t('failed'), icon: 'error'})
   }
-};
+}
 
-const rejectMember = async (userId) => {
+async function rejectMember(userId) {
   try {
-    await familyStore.rejectJoinRequest(userId);
-    uni.showToast({ title: t('success'), icon: 'success' });
-  } catch (error) {
-    uni.showToast({ title: t('failed'), icon: 'error' });
+    await familyStore.rejectJoinRequest(userId)
+    uni.showToast({title: t('success'), icon: 'success'})
+  } catch {
+    uni.showToast({title: t('failed'), icon: 'error'})
   }
-};
+}
 </script>
 
 <style scoped>
