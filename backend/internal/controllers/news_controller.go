@@ -2162,18 +2162,18 @@ func (nc *NewsController) SearchNews(c *gin.Context) {
         db = db.Where("title LIKE ?", "%"+keyword+"%")
     }
 
-    // 查询新闻
+    // 执行查询
     var newsList []models.News
     if err := db.Order("id DESC").Find(&newsList).Error; err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search news"})
         return
     }
 
-    // 构建返回结构
+    // 构建返回结构，仅返回 ID 和标题（根据需要调整）
     results := make([]gin.H, len(newsList))
     for i, news := range newsList {
         results[i] = gin.H{
-            "id": news.ID,
+            "id":    news.ID,
         }
     }
 

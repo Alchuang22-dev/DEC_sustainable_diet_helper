@@ -64,7 +64,7 @@ func RegisterNewsRoutes(router *gin.Engine, db *gorm.DB) {
             authGroup.POST("/:id/comment_like", newsController.LikeComment) // 点赞评论
             authGroup.DELETE("/:id/comment_like", newsController.CancelLikeComment) // 取消点赞评论
 
-            authGroup.GET("/search", newsController.SearchNews)
+            authGroup.POST("/search", newsController.SearchNews)
         }
     }
 }
