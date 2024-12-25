@@ -142,7 +142,360 @@ func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
     return m.RoundTripFunc(req)
 }
 
+func TestWeChatAuth(t *testing.T) {
+    // 1. 初始化测试DB和路由
+    db := setupUserTestDB()
+    mockUtils := &MockUtils{
+        GenerateAccessTokenFunc: func(userID uint) (string, error) {
+            return fmt.Sprintf("AccessToken_ForUser_%d", userID), nil
+        },
+        GenerateRefreshTokenFunc: func(userID uint) (string, error) {
+            return fmt.Sprintf("RefreshToken_ForUser_%d", userID), nil
+        },
+        CopyFileFunc: func(src, dst string) error {
+            return nil
+        },
+    }
 
+    router := setupUserRouter(db, mockUtils)
+
+    // 2. 设置一些环境变量 (可根据需要修改)
+    os.Setenv("WECHAT_API_URL", "http://mock-wechat-api.com/sns/jscode2session")
+    os.Setenv("APP_ID", "test_app_id")
+    os.Setenv("APP_SECRET", "test_app_secret")
+
+    // 3. 定义一个 mock HTTP server or transport 来模拟微信API
+
+    // ------- 准备一个可修改的 transport，用于模拟微信API返回 --------
+    var mockWeChatTransport http.RoundTripper = &MockRoundTripper{
+        RoundTripFunc: func(req *http.Request) (*http.Response, error) {
+            if strings.Contains(req.URL.String(), "call_wechat_api_fail") {
+                // 返回网络错误
+                return nil, fmt.Errorf("forced wechat api call error")
+            }
+
+            if strings.Contains(req.URL.String(), "bad_json_response") {
+                // 返回一个非JSON
+                return &http.Response{
+                    StatusCode: 200,
+                    Body:       io.NopCloser(bytes.NewBufferString("not_json")),
+                }, nil
+            }
+
+            if strings.Contains(req.URL.String(), "errcode_nonzero") {
+                // 返回一个微信错误，如 errcode=40029
+                respStr := `{"errcode": 40029, "errmsg": "invalid code"}` 
+                return &http.Response{
+                    StatusCode: 200,
+                    Body:       io.NopCloser(bytes.NewBufferString(respStr)),
+                }, nil
+            }
+
+            // 正常返回 => openid & session_key
+            respStr := `{"openid": "OpenID_WeChatAuthTest", "session_key": "SessionKey_12345"}`
+            return &http.Response{
+                StatusCode: 200,
+                Body:       io.NopCloser(bytes.NewBufferString(respStr)),
+            }, nil
+        },
+    }
+
+    oldTransport := http.DefaultTransport
+    http.DefaultTransport = mockWeChatTransport
+    defer func() {
+        http.DefaultTransport = oldTransport
+    }()
+
+    // 4. 准备表驱动测试用例
+    tests := []struct {
+        name           string
+        requestBody    interface{}
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+    }{
+		{
+            name: "Success existing user",
+            requestBody: gin.H{"code": "normal_code"},
+            setupFunc: func() {
+                // 移除回调
+                // mock token生成都正常
+                mockUtils.GenerateRefreshTokenFunc = func(userID uint) (string, error) {
+                    return fmt.Sprintf("RefreshToken_ForUser_%d", userID), nil
+                }
+                // 预先创建一个User(已有User) => openID=OpenID_WeChatAuthTest
+                userExist := models.User{
+                    OpenID:     "OpenID_WeChatAuthTest",
+                    SessionKey: "OldSessionKey",
+                }
+                db.Create(&userExist)
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+        },
+        {
+            name: "Success new user",
+            requestBody: gin.H{"code": "normal_code"},
+            setupFunc: func() {
+                // 让 openID=OpenID_WeChatAuthTest => user 不存在 => 走创建逻辑
+                db.Where("open_id = ?", "OpenID_WeChatAuthTest").Delete(&models.User{}) 
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+        },
+        {
+            name:           "Invalid JSON body",
+            requestBody:    "not_json",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid request body",
+        },
+        {
+            name:           "Empty code field",
+            requestBody:    gin.H{},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid request body",
+        },
+        {
+            name:           "WeChat API call fail",
+            requestBody:    gin.H{"code": "call_wechat_api_fail"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to call WeChat API",
+        },
+        {
+            name:           "WeChat response parse fail (bad JSON)",
+            requestBody:    gin.H{"code": "bad_json_response"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to parse WeChat API response",
+        },
+        {
+            name:           "WeChat response errcode nonzero",
+            requestBody:    gin.H{"code": "errcode_nonzero"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "invalid code",
+        },
+        {
+            name:           "DB error when checking user (simulate)",
+            requestBody:    gin.H{"code": "normal_code"},
+            setupFunc: func() {
+                // 模拟 uc.DB.Preload("RefreshTokens").Where("open_id = ?").First(&user).Error 出错
+                db.Callback().Query().Before("gorm:query").Register("force_query_user_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "users" {
+                        tx.Error = fmt.Errorf("forced query user error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Database error",
+        },
+        {
+            name: "Copy default avatar fail",
+            requestBody: gin.H{"code": "normal_code"},
+            setupFunc: func() {
+				db.Callback().Query().Remove("force_query_user_err")  // 移除上一条mock
+                db.Callback().Create().Remove("force_create_user_err")
+                // 在 CopyFile 里出错
+                mockUtils.CopyFileFunc = func(src, dst string) error {
+                    return fmt.Errorf("forced copy file error")
+                }
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to store refresh token",
+        },
+        {
+            name: "Fail to generate access token",
+            requestBody: gin.H{"code": "normal_code"},
+            setupFunc: func() {
+                db.Callback().Update().Remove("force_update_avatar_err")
+                // mock token生成
+                mockUtils.GenerateAccessTokenFunc = func(userID uint) (string, error) {
+                    return "", fmt.Errorf("forced access token gen error")
+                }
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to generate access token",
+        },
+        {
+            name: "Fail to generate refresh token",
+            requestBody: gin.H{"code": "normal_code"},
+            setupFunc: func() {
+                mockUtils.GenerateAccessTokenFunc = func(userID uint) (string, error) {
+                    return fmt.Sprintf("AccessToken_ForUser_%d", userID), nil
+                }
+                mockUtils.GenerateRefreshTokenFunc = func(userID uint) (string, error) {
+                    return "", fmt.Errorf("forced refresh token gen error")
+                }
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to generate refresh token",
+        },
+        {
+            name: "Fail to store refresh token",
+            requestBody: gin.H{"code": "normal_code"},
+            setupFunc: func() {
+                mockUtils.GenerateRefreshTokenFunc = func(userID uint) (string, error) {
+                    return "RefreshToken_Abc123", nil
+                }
+                // mock db.Create(&newRefreshToken).Error 出错
+                db.Callback().Create().Before("gorm:create").Register("force_create_refreshtoken_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "refresh_tokens" {
+                        tx.Error = fmt.Errorf("forced create refresh token error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to store refresh token",
+        },
+    }
+
+    // 5. 依次运行测试
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            bodyBytes, _ := json.Marshal(tc.requestBody)
+            req, _ := http.NewRequest("POST", "/users/auth", bytes.NewBuffer(bodyBytes))
+            req.Header.Set("Content-Type", "application/json")
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.isSuccess {
+                // 成功分支，可进一步校验 access_token, refresh_token, user 等字段
+                _, hasAccess := resp["access_token"]
+                _, hasRefresh := resp["refresh_token"]
+                _, hasUser := resp["user"]
+                assert.True(t, hasAccess)
+                assert.True(t, hasRefresh)
+                assert.True(t, hasUser)
+            } else if tc.expectedError != "" {
+                // 检查 error
+                assert.Equal(t, tc.expectedError, resp["error"])
+            }
+        })
+    }
+}
+
+func TestSetNickname(t *testing.T) {
+    db := setupUserTestDB()
+    router := setupUserRouter(db, utils.UtilsImpl{})
+
+    // 创建一个需要鉴权的路由 => PUT /users/set_nickname
+    // 在 setupUserRouter 里，authGroup.PUT("/set_nickname", userController.SetNickname)
+
+    // 创建用户
+    user := models.User{
+        OpenID:   "OpenID_SetNickname_Test",
+        Nickname: "OldNickname",
+    }
+    db.Create(&user)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        requestBody    interface{}
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+        expectedNew    string
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            requestBody:    gin.H{"nickname": "NewNick"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid Request Body (missing nickname)",
+            userID:         user.ID,
+            requestBody:    gin.H{},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid request body",
+        },
+        {
+            name:           "User Not Found",
+            userID:         99999, // 不存在
+            requestBody:    gin.H{"nickname": "NewNick"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "User not found",
+        },
+        {
+            name:           "DB Error While Updating Nickname",
+            userID:         user.ID,
+            requestBody:    gin.H{"nickname": "NewNick"},
+            setupFunc: func() {
+                // 模拟更新 user 时的错误 => Save(&user).Error
+                db.Callback().Update().Before("gorm:update").Register("force_update_nickname_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "users" {
+                        tx.Error = fmt.Errorf("forced update nickname error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to update nickname",
+        },
+        {
+            name:           "Success Set Nickname",
+            userID:         user.ID,
+            requestBody:    gin.H{"nickname": "NewNick"},
+            setupFunc: func() {
+                // 移除回调
+                db.Callback().Update().Remove("force_update_nickname_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            expectedNew:    "NewNick",
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            bodyBytes, _ := json.Marshal(tc.requestBody)
+            req, _ := http.NewRequest("PUT", "/users/set_nickname", bytes.NewBuffer(bodyBytes))
+            req.Header.Set("Content-Type", "application/json")
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTUser(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.isSuccess {
+                // 成功更新
+                assert.Equal(t, "Nickname updated successfully", resp["message"])
+                assert.Equal(t, tc.expectedNew, resp["nickname"])
+            } else {
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
 
 // func TestRefreshTokenHandler(t *testing.T) {
 //     db := setupUserTestDB()
