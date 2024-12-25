@@ -866,3 +866,139 @@ func TestDeleteDraft(t *testing.T) {
         })
     }
 }
+
+func TestDeleteNews(t *testing.T) {
+    db := setupNewsTestDB()
+    // DeleteNews 会用到 News, NewsImage, Paragraph, etc.
+    db.AutoMigrate(&models.News{}, &models.NewsImage{}, &models.Paragraph{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.DELETE("/news/:id", newsController.DeleteNews)
+    }
+
+    // 创建两个用户 => newsOwner, otherUser
+    newsOwner := models.User{
+        OpenID:   "OpenID_DeleteNews_Owner",
+        Nickname: "NewsOwner",
+    }
+    db.Create(&newsOwner)
+
+    otherUser := models.User{
+        OpenID:   "OpenID_DeleteNews_Other",
+        Nickname: "NewsOtherUser",
+    }
+    db.Create(&otherUser)
+
+    // 创建一条新闻 => news
+    myNews := models.News{
+        Title:    "NewsToDelete",
+        AuthorID: newsOwner.ID,
+    }
+    db.Create(&myNews)
+
+    // 创建关联图片
+    newsImg := models.NewsImage{
+        NewsID: myNews.ID,
+        URL:    "some_news_path.jpg",
+    }
+    db.Create(&newsImg)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        newsID         string
+        setupFunc      func()
+        expectedStatus int
+        expectedBody   map[string]interface{}
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            newsID:         "1",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedBody:   map[string]interface{}{"error": "Authorization header missing"},
+        },
+        {
+            name:           "Invalid News ID",
+            userID:         newsOwner.ID,
+            newsID:         "abc",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "Invalid news ID"},
+        },
+        {
+            name:           "News Not Found",
+            userID:         newsOwner.ID,
+            newsID:         "99999",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedBody:   map[string]interface{}{"error": "News not found"},
+        },
+        {
+            name:           "No Permission (403)",
+            userID:         otherUser.ID,
+            newsID:         fmt.Sprintf("%d", myNews.ID),
+            setupFunc:      func() {},
+            expectedStatus: http.StatusForbidden,
+            expectedBody:   map[string]interface{}{"error": "You do not have permission to delete this news"},
+        },
+        {
+            name:           "Failed To Delete News (simulate DB error)",
+            userID:         newsOwner.ID,
+            newsID:         fmt.Sprintf("%d", myNews.ID),
+            setupFunc: func() {
+                db.Callback().Delete().Before("gorm:delete").Register("force_delete_news_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "news" {
+                        tx.Error = fmt.Errorf("forced delete news error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedBody:   map[string]interface{}{"error": "Failed to delete news"},
+        },
+        {
+            name:           "Success Delete News",
+            userID:         newsOwner.ID,
+            newsID:         fmt.Sprintf("%d", myNews.ID),
+            setupFunc: func() {
+                db.Callback().Delete().Remove("force_delete_news_err")
+            },
+            expectedStatus: http.StatusOK,
+            expectedBody:   map[string]interface{}{"message": "News deleted successfully."},
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            req, _ := http.NewRequest("DELETE", "/news/news/"+tc.newsID, nil)
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.expectedStatus == http.StatusOK {
+                assert.Equal(t, tc.expectedBody["message"], resp["message"])
+            } else {
+                for k, v := range tc.expectedBody {
+                    assert.Equal(t, v, resp[k])
+                }
+            }
+        })
+    }
+}
