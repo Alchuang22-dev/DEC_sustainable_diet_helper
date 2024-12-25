@@ -5,12 +5,13 @@ import (
     "gorm.io/gorm"
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/controllers"
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/middleware"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
 
     "github.com/gin-gonic/gin"
 )
 
-func RegisterUserRoutes(router *gin.Engine, db *gorm.DB) {
-    userController := controllers.NewUserController(db)
+func RegisterUserRoutes(router *gin.Engine, db *gorm.DB, utils utils.UtilsInterface) {
+    userController := controllers.NewUserController(db, utils)
 
     userGroup := router.Group("/users")
     {

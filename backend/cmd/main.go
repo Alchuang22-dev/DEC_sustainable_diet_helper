@@ -15,6 +15,7 @@ import (
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/config"
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/routes"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
 )
 
 func main() {
@@ -83,7 +84,8 @@ func main() {
     }))
 
     // 注册用户路由
-    routes.RegisterUserRoutes(router, db)
+    utilsImpl := utils.UtilsImpl{} // 实现的真实 utils 方法
+    routes.RegisterUserRoutes(router, db, utilsImpl)
 
     // 注册新闻路由
     routes.RegisterNewsRoutes(router, db)
