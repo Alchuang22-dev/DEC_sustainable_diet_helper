@@ -395,26 +395,6 @@ onMounted(() => {
   console.log('进入新闻创作页');
 });
 
-// 在页面卸载时自动保存草稿
-onHide(async () => {
-  console.log('页面即将卸载，自动保存草稿');
-  try {
-    const pageId = await saveDraft();
-    console.log('自动保存草稿成功，草稿编号:', pageId);
-  } catch (error) {
-    console.error('自动保存草稿失败:', error);
-  }
-});
-
-onUnLoad(async () => {
-  console.log('页面即将卸载，自动保存草稿');
-  try {
-    const pageId = await saveDraft();
-    console.log('自动保存草稿成功，草稿编号:', pageId);
-  } catch (error) {
-    console.error('自动保存草稿失败:', error);
-  }
-});
 </script>
 
 <style scoped>
