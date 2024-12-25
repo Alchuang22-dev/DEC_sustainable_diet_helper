@@ -497,6 +497,130 @@ func TestSetNickname(t *testing.T) {
     }
 }
 
+func TestSetAvatar(t *testing.T) {
+    db := setupUserTestDB()
+    router := setupUserRouter(db, utils.UtilsImpl{})
+
+    // 创建用户
+    user := models.User{
+        OpenID:    "OpenID_SetAvatar_Test",
+        Nickname:  "UserSetAvatar",
+        AvatarURL:  "avatars/old_avatar.jpg",
+    }
+    db.Create(&user)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        fileField      string   // form-data 中的字段名
+        fileName       string   // 上传的文件名
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            fileField:      "avatar",
+            fileName:       "test_avatar.jpg",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "User Not Found",
+            userID:         99999,
+            fileField:      "avatar",
+            fileName:       "test_avatar.jpg",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "User not found",
+        },
+        {
+            name:           "No File Provided",
+            userID:         user.ID,
+            fileField:      "", // 不提供 file
+            fileName:       "",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Failed to retrieve file",
+        },
+        {
+            name:           "Failed to Update DB Avatar",
+            userID:         user.ID,
+            fileField:      "avatar",
+            fileName:       "test_avatar.jpg",
+            setupFunc: func() {
+                // 可以使用 GORM update callback
+                db.Callback().Update().Before("gorm:update").Register("force_update_avatar_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "users" {
+                        tx.Error = fmt.Errorf("forced update avatar error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to update avatar",
+        },
+        {
+            name:           "Success Set Avatar",
+            userID:         user.ID,
+            fileField:      "avatar",
+            fileName:       "test_avatar.jpg",
+            setupFunc: func() {
+                // 移除上一个callback
+                db.Callback().Update().Remove("force_update_avatar_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            // 构造 multipart/form-data
+            body := &bytes.Buffer{}
+            writer := multipart.NewWriter(body)
+            if tc.fileField != "" {
+                part, _ := writer.CreateFormFile(tc.fileField, tc.fileName)
+                // 写入少许字节模拟图片
+                part.Write([]byte("fake_image_data"))
+            }
+            writer.Close()
+
+            req, _ := http.NewRequest("POST", "/users/set_avatar", body)
+            req.Method = "POST" // 在 router 里是 authGroup.POST, 这里示例函数是 SetAvatar(POST)
+            req.Header.Set("Content-Type", writer.FormDataContentType())
+
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTUser(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.isSuccess {
+                // 成功
+                assert.Equal(t, "Avatar updated successfully", resp["message"])
+                // resp["avatar_url"] 应该存在
+                _, ok := resp["avatar_url"]
+                assert.True(t, ok)
+            } else {
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
+
 // func TestRefreshTokenHandler(t *testing.T) {
 //     db := setupUserTestDB()
 //     router := setupUserRouter(db, utils.UtilsImpl{})
