@@ -3455,3 +3455,180 @@ func TestCancelFavoriteNews(t *testing.T) {
         })
     }
 }
+
+func TestDislikeNews(t *testing.T) {
+    db := setupNewsTestDB()
+    db.AutoMigrate(&models.News{}, &models.User{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.POST("/:id/dislike", newsController.DislikeNews)
+    }
+
+    // 创建用户
+    user := models.User{
+        OpenID:   "OpenID_DislikeNews_User",
+        Nickname: "DislikeNewsUser",
+    }
+    db.Create(&user)
+
+    // 创建新闻
+    newsItem := models.News{
+        Title:        "Dislikable News",
+        DislikeCount: 3,
+    }
+    db.Create(&newsItem)
+
+    tests := []struct {
+        name            string
+        userID          uint
+        newsID          string
+        setupFunc       func()
+        expectedStatus  int
+        expectedError   string
+        isSuccess       bool
+        finalDislikeCT  int
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            newsID:         fmt.Sprintf("%d", newsItem.ID),
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid News ID",
+            userID:         user.ID,
+            newsID:         "abc",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid news ID",
+        },
+        {
+            name:           "News Not Found",
+            userID:         user.ID,
+            newsID:         "99999",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "News not found",
+        },
+        {
+            name:           "Failed To Find News",
+            userID:         user.ID,
+            newsID:         fmt.Sprintf("%d", newsItem.ID),
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_find_news_err_dislike", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "news" {
+                        tx.Error = fmt.Errorf("forced find news error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to find news",
+        },
+        {
+            name:           "Failed To Find User",
+            userID:         user.ID,
+            newsID:         fmt.Sprintf("%d", newsItem.ID),
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_find_news_err_dislike")
+                // mock user 查询失败
+                db.Callback().Query().Before("gorm:query").Register("force_find_user_err_dislike", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "users" {
+                        tx.Error = fmt.Errorf("forced find user error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to find user",
+        },
+        {
+            name:           "Already Disliked",
+            userID:         user.ID,
+            newsID:         fmt.Sprintf("%d", newsItem.ID),
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_find_user_err_dislike")
+                // 让 user 已经点踩
+                db.Model(&user).Association("DislikedNews").Append(&newsItem)
+            },
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "You have already disliked this news",
+        },
+        {
+            name:           "Failed To Dislike (assoc append error)",
+            userID:         user.ID,
+            newsID:         fmt.Sprintf("%d", newsItem.ID),
+            setupFunc: func() {
+                // 移除点踩关系
+                db.Model(&user).Association("DislikedNews").Clear()
+                // 模拟 association 出错
+                db.Callback().Update().Before("gorm:association").Register("force_dislike_append_err", func(tx *gorm.DB) {
+                    tx.Error = fmt.Errorf("forced dislike association error")
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to dislike news",
+        },
+        {
+            name:           "Failed To Update Dislike Count",
+            userID:         user.ID,
+            newsID:         fmt.Sprintf("%d", newsItem.ID),
+            setupFunc: func() {
+                db.Callback().Update().Remove("force_dislike_append_err")
+                // 注入 updateColumn 出错
+                db.Callback().Update().Before("gorm:update").Register("force_update_dislike_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "news" {
+                        tx.Error = fmt.Errorf("forced update dislike_count error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to update dislike count",
+        },
+        {
+            name:            "Success Dislike",
+            userID:          user.ID,
+            newsID:          fmt.Sprintf("%d", newsItem.ID),
+            setupFunc: func() {
+                db.Callback().Update().Remove("force_update_dislike_err")
+            },
+            expectedStatus:  http.StatusOK,
+            isSuccess:       true,
+            finalDislikeCT:  newsItem.DislikeCount + 1,
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            url := fmt.Sprintf("/news/%s/dislike", tc.newsID)
+            req, _ := http.NewRequest("POST", url, nil)
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.isSuccess {
+                assert.Equal(t, "News disliked successfully", resp["message"])
+                assert.Equal(t, float64(tc.finalDislikeCT), resp["dislike_count"])
+            } else {
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
