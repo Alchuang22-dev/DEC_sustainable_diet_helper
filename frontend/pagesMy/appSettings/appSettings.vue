@@ -23,10 +23,6 @@
         <text>{{ $t('settings_clear_data') }}</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item" @click="Seal()">
-        <text>{{ $t('settings_storage_space') }}</text>
-        <text class="arrow">></text>
-      </view>
       <view class="divider">
         <text class="divider-text">{{ $t('settings_accessibility') }}</text>
       </view>
