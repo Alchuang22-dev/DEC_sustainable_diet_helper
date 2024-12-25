@@ -190,7 +190,7 @@ const confirmPublish = async () => {
       success: (res) => {
         if (res.data.message === 'Draft converted to news successfully.') {
           uni.showToast({
-            title: '草稿已发布为新闻',
+            title: '已发布',
             icon: 'success',
             duration: 2000,
           });
