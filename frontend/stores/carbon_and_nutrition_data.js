@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { reactive, watch } from 'vue'
 import { useUserStore } from './user.js'
 
-const BASE_URL = 'http://122.51.231.155:8095'
+const BASE_URL = 'http://122.51.231.155:8080'
 const STORAGE_KEY = 'carbon_and_nutrition_store_data'
 
 // 递归遍历，对数值字段四舍五入到 1 位小数
@@ -182,6 +182,7 @@ export const useCarbonAndNutritionStore = defineStore('carbon_and_nutrition', ()
           method: 'GET'
         })
       )
+
       if (response.statusCode === 200 && Array.isArray(response.data?.data)) {
         state.carbonGoals = roundNumbers(response.data.data)
       }
