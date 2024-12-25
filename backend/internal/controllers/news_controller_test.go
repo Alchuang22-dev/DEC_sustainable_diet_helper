@@ -1729,3 +1729,121 @@ func TestGetDraftDetails(t *testing.T) {
         })
     }
 }
+
+func TestGetNewsByViewCount(t *testing.T) {
+    db := setupNewsTestDB()
+    // 需要迁移 News，避免操作报错
+    db.AutoMigrate(&models.News{}, &models.User{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.GET("/paginated/view_count", newsController.GetNewsByViewCount)
+    }
+
+    // 创建用户
+    user := models.User{
+        OpenID:   "OpenID_GetNewsByViewCount_User",
+        Nickname: "ViewCountUser",
+    }
+    db.Create(&user)
+
+    // 创建一些新闻，设置不同的 view_count
+    news1 := models.News{Title: "News1", ViewCount: 500}
+    db.Create(&news1)
+    news2 := models.News{Title: "News2", ViewCount: 1000}
+    db.Create(&news2)
+    news3 := models.News{Title: "News3", ViewCount: 300}
+    db.Create(&news3)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        page           string
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+        expectedIDs    []uint
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            page:           "1",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid Page Number",
+            userID:         user.ID,
+            page:           "abc",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid page number",
+        },
+        {
+            name:           "DB Error (simulate)",
+            userID:         user.ID,
+            page:           "1",
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_viewcount_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "news" {
+                        tx.Error = fmt.Errorf("forced viewcount error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to fetch news",
+        },
+        {
+            name:           "Success First Page",
+            userID:         user.ID,
+            page:           "1",
+            setupFunc: func() {
+                // 移除上一个回调
+                db.Callback().Query().Remove("force_viewcount_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            // 按 view_count 降序 => news2(1000), news1(500), news3(300)
+            expectedIDs: []uint{news2.ID, news1.ID, news3.ID},
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            url := "/news/paginated/view_count?page=" + tc.page
+            req, _ := http.NewRequest("GET", url, nil)
+
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            if tc.isSuccess {
+                var resp map[string][]uint
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                // 校验顺序
+                assert.Equal(t, tc.expectedIDs, resp["news_ids"])
+            } else {
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
