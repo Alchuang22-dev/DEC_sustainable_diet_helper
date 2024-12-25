@@ -3,7 +3,7 @@
     <!-- 标题 -->
     <view class="header">
       <text class="title">
-        {{$t('diet_restriction_label')}}{{$t('and')}}{{$t('preferences_title')}}
+        {{t('diet_restriction_label')}} {{t('and')}} {{t('preferences_title')}}
       </text>
     </view>
     <!-- 替换 greeting 卡片为文本 -->
@@ -19,7 +19,7 @@
 
     <!-- 使用 uni-card 容器展示 食物偏好 -->
     <uni-card
-      title="偏好"
+      :title="t('preferences_title')"
       :is-shadow="true"
       class="preference-card-wrapper"
     >
@@ -30,14 +30,19 @@
       >
         <image :src="preference.icon" class="preference-icon" />
         <text class="preference-name">{{ preference.name }}</text>
-        <button class="delete-button" @click="removePreference(index)">
-          <image src="@/pagesMy/static/delete.svg" class="delete-icon" />
+        <button
+          class="delete-button error-button"
+          @click="removePreference(index)"
+        >
+          <image src="../static/delete.svg" class="delete-icon" />
         </button>
       </view>
 
       <!-- 添加偏好按钮 -->
       <view class="add-preference">
-        <button @click="showPreferenceOptions">{{$t('add_preference_button')}}</button>
+        <button class="btn primary-btn" @click="showPreferenceOptions">
+          {{t('add_preference_button')}}
+        </button>
       </view>
     </uni-card>
 
@@ -48,19 +53,22 @@
         v-model="foodNameInput"
         :candidates="filteredFoods.map(item => displayName(item))"
         @input="onComboxInput"
+        class="combox"
       ></uni-combox>
-      <button @click="addDietRestriction">{{$t('add_restriction_button')}}</button>
+      <button class="btn warning-btn" @click="addDietRestriction">
+        {{t('add_restriction_button')}}
+      </button>
     </view>
 
     <!-- 黑名单列表（与偏好分开） -->
     <uni-card
-      title="黑名单"
+      :title="t('diet_restriction_label')"
       :is-shadow="true"
       class="blacklist-card"
     >
       <!-- 若无黑名单，简单提示 -->
-      <view v-if="dietRestrictions.length === 0" style="padding: 10px;">
-        <text>暂无黑名单食物</text>
+      <view v-if="dietRestrictions.length === 0" class="empty-message">
+        <text>{{t('diet_restriction_placeholder')}}</text>
       </view>
       <view
         v-for="(restriction, index) in dietRestrictions"
@@ -73,8 +81,11 @@
         />
         <text class="restriction-name">{{ restriction.name }}</text>
         <!-- 删除按钮与偏好卡片一致 -->
-        <button class="delete-button" @click="removeDietRestriction(index)">
-          <image src="@/pagesMy/static/delete.svg" class="delete-icon" />
+        <button
+          class="delete-button error-button"
+          @click="removeDietRestriction(index)"
+        >
+          <image src="../static/delete.svg" class="delete-icon" />
         </button>
       </view>
     </uni-card>
@@ -82,7 +93,7 @@
     <!-- 选择偏好弹窗 -->
     <view v-if="showModal" class="modal">
       <view class="modal-content">
-        <text class="modal-title">{{$t('modal_title')}}</text>
+        <text class="modal-title">{{t('modal_title')}}</text>
         <view
           v-for="(option, index) in preferenceOptions"
           :key="index"
@@ -94,7 +105,9 @@
         </view>
       </view>
       <view class="button-content">
-        <button class="close-button" @click="closeModal">{{$t('close_button')}}</button>
+        <button class="btn error-btn close-button" @click="closeModal">
+          {{t('close_button')}}
+        </button>
       </view>
     </view>
   </view>
@@ -390,15 +403,32 @@ const getDietRestriction = () => {
 </script>
 
 <style scoped>
-/* 这里仅作示例演示，实际项目中可根据情况适配 uni-ui 的暗色模式、行间距等 */
-body {
-  font-family: 'Arial', sans-serif;
-  background: url('/static/images/index/background_img.jpg') no-repeat center center fixed;
-  background-size: cover;
-  margin: 0;
-  padding: 0;
+/* 使用 rpx 进行响应式布局 */
+.container {
+  padding: 20rpx;
 }
 
+.header {
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.title {
+  font-size: 30rpx;
+  font-weight: bold;
+}
+
+.greeting-wrap {
+  margin-bottom: 20rpx;
+  text-align: center;
+}
+
+.greeting-text {
+  font-size: 24rpx;
+  color: #333;
+}
+
+/* 背景图 */
 .background-image {
   position: fixed;
   top: 0;
@@ -410,105 +440,141 @@ body {
   opacity: 0.1;
 }
 
-.container {
-  padding: 5px;
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 10px;
-}
-.title {
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.greeting-wrap {
-  margin-bottom: 10px;
-  text-align: center;
-}
-.greeting-text {
-  font-size: 16px;
-  color: #333;
-}
-
 /* uni-card 包裹的偏好/黑名单列表 */
 .preference-card-wrapper,
 .blacklist-card {
-  margin-top: 10px;
+  margin-top: 20rpx;
 }
 
 /* 偏好/黑名单的卡片通用样式 */
 .preference-card {
   display: flex;
   align-items: center;
-  padding: 8px;
-  border-radius: 8px;
-  /* 在使用 uni-card 时，可以去掉显式的 background-color，
-     或保留给卡片内容分区用 */
-  margin-bottom: 10px;
+  padding: 20rpx;
+  border-radius: 8rpx;
+  margin-bottom: 20rpx;
 }
+
 .color-0 {
-  background-color: #4ca;         /* 可自行调整颜色 */
+  background-color: #4ca;
 }
+
 .color-1 {
   background-color: #e0f7fa;
 }
+
 .color-2 {
   background-color: #ffe0b2;
 }
+
 .color-3 {
   background-color: #e1bee7;
 }
 
 .preference-icon {
-  width: 40px;
-  height: 40px;
-  margin-right: 10px;
+  width: 60rpx;
+  height: 60rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
 }
 
 .preference-name,
 .restriction-name {
   flex: 1;
-  font-size: 16px;
+  font-size: 26rpx;
 }
 
 /* 删除按钮统一样式 */
 .delete-button {
-  background: none;
-  color: #fff;
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
-  border-radius: 4px;
+  background: transparent;
   cursor: pointer;
-  padding: 5px;
+  padding: 0;
 }
+
 .delete-icon {
-  width: 20px;
-  height: 20px;
+  width: 30rpx;
+  height: 30rpx;
+}
+
+/* 按钮样式 */
+.btn {
+  padding: 10rpx 20rpx;
+  border: none;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+  cursor: pointer;
+  color: #fff;
+  transition: background-color 0.3s;
+}
+
+.error-button {
+  background-color: rgba(255, 59, 48, 0.88);
+}
+
+.error-button:hover {
+  background-color: #c1271d;
+}
+
+.primary-btn {
+  background-color: #007aff;
+}
+
+.primary-btn:hover {
+  background-color: #005bb5;
+}
+
+.warning-btn {
+  background-color: #ffcc00;
+  color: #333;
+}
+
+.warning-btn:hover {
+  background-color: #e6b800;
+}
+
+.close-button {
+  width: 200rpx;
+  padding: 10rpx 20rpx;
+  border: none;
+  border-radius: 8rpx;
+  font-size: 26rpx;
+  cursor: pointer;
+  background-color: #ff3b30;
+  color: #fff;
+  transition: background-color 0.3s;
+}
+
+.close-button:hover {
+  background-color: #c1271d;
 }
 
 /* 添加偏好按钮 */
 .add-preference {
-  margin-top: 10px;
+  margin-top: 20rpx;
   text-align: center;
 }
-.add-preference button {
-  background-color: #4caf50;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
+
+.add-preference .btn {
+  width: 200rpx;
 }
 
 /* 黑名单输入区域 */
 .add-restriction {
-  margin-top: 20px;
-  margin-left: 20px;
+  margin-top: 30rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 20rpx;
+}
+
+.combox {
+  flex: 1;
 }
 
 /* 弹窗相关样式 */
@@ -528,48 +594,62 @@ body {
 
 .modal-content {
   background-color: #fff;
-  padding: 20px;
-  border-radius: 8px;
+  padding: 30rpx;
+  border-radius: 12rpx;
   width: 80%;
-  max-width: 400px;
-  max-height: 400px;
+  max-width: 600rpx;
+  max-height: 80%;
   overflow-y: auto;
-  margin-bottom: 20px;
+  margin-bottom: 30rpx;
 }
+
 .modal-title {
-  font-size: 20px;
+  font-size: 32rpx;
   font-weight: bold;
-  margin-bottom: 20px;
+  margin-bottom: 30rpx;
+  text-align: center;
 }
+
 .modal-option {
   display: flex;
   align-items: center;
-  padding: 10px;
+  padding: 20rpx;
   border: 1px solid #ddd;
-  border-radius: 4px;
-  margin-bottom: 10px;
+  border-radius: 8rpx;
+  margin-bottom: 20rpx;
   cursor: pointer;
+  transition: background-color 0.3s;
 }
+
+.modal-option:hover {
+  background-color: #f0f0f0;
+}
+
 .option-icon {
-  width: 40px;
-  height: 40px;
-  margin-right: 10px;
+  width: 60rpx;
+  height: 60rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
 }
+
 .option-name {
-  font-size: 16px;
+  font-size: 26rpx;
 }
+
 .button-content {
   display: flex;
   justify-content: center;
   width: 100%;
 }
+
 .close-button {
-  background-color: #ff4d4f;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 20px;
+  width: 200rpx;
+}
+
+.empty-message {
+  padding: 20rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: #888;
 }
 </style>
