@@ -16,7 +16,7 @@
         {{$t('text_search')}}
       </button>
       <button v-if="isLoggedIn" @click="createNews()" class="create-button">
-        写文章
+        去信
       </button>
     </view>
 

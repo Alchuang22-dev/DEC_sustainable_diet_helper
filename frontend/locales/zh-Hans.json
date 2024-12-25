@@ -45,7 +45,7 @@
 	"menu_history_data": "历史数据",
 	"menu_app_settings": "软件设置",
 	"menu_user_settings": "用户设置",
-	"menu_search_tools": "搜索工具",
+	"menu_search_tools": "页面导航",
 	"form_name_label": "名称",
 	"form_name_placeholder": "请输入食品名称",
 	"form_weight_label": "总重量 (g)",
@@ -161,7 +161,7 @@
 	"set_for_week": "设置一周",
 
 	//搜索页
-	"text_search": "搜索",
+	"text_search": "查询",
 	"text_search_label": "你所感兴趣的都在这里...",
 
 	//饮食偏好
@@ -316,7 +316,7 @@
 
 	"index": "首页",
 	"my_index": "我的",
-	"news_index": "社区",
+	"news_index": "星球",
 	"tools_index": "工具",
 
 	"viewNutritionGoals": "查看您的一日营养目标",
@@ -527,11 +527,11 @@
 	
 	//新闻部分
 	"draft":"草稿",
-	"post":"已发布",
-	"creation": "创作",
+	"post":"书札",
+	"creation": "存档",
 	"pieces": "作品",
 	"today": "今天",
-	"emptyArticles": "这个人很神秘，什么也没写..."
+	"emptyArticles": "这个人很神秘，什么也没写...",
 
 
 	"setSuccess": "设置成功",
