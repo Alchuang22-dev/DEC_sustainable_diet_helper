@@ -944,3 +944,305 @@ func TestUserBasicDetails(t *testing.T) {
         })
     }
 }
+
+func TestGetMyFavoritedNews(t *testing.T) {
+    db := setupUserTestDB()
+    router := setupUserRouter(db, utils.UtilsImpl{})
+
+    user := models.User{
+        OpenID:   "OpenID_FavoritedNews_Test",
+        Nickname: "FavorTester",
+    }
+    db.Create(&user)
+
+    // 创建一些新闻
+    news1 := models.News{Title: "News A"}
+    db.Create(&news1)
+    news2 := models.News{Title: "News B"}
+    db.Create(&news2)
+
+    // 让 user 收藏 news1
+    db.Model(&user).Association("FavoritedNews").Append(&news1)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+        expectedIDs    []uint
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "User Not Found",
+            userID:         99999,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "User not found",
+        },
+        {
+            name:           "DB Error (simulate)",
+            userID:         user.ID,
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_db_err_favorited", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "users" {
+                        tx.Error = fmt.Errorf("forced db error in favorited news")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to query database",
+        },
+        {
+            name:           "Success GetMyFavoritedNews",
+            userID:         user.ID,
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_db_err_favorited")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            expectedIDs:    []uint{news1.ID}, // user只收藏了news1
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            req, _ := http.NewRequest("GET", "/users/favorited", nil)
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTUser(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.isSuccess {
+                // 返回 { "news_ids": [] }
+                ids, ok := resp["news_ids"].([]interface{})
+                assert.True(t, ok)
+                var got []uint
+                for _, idVal := range ids {
+                    got = append(got, uint(idVal.(float64)))
+                }
+                assert.Equal(t, tc.expectedIDs, got)
+            } else {
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
+
+func TestGetMyLikedNews(t *testing.T) {
+    db := setupUserTestDB()
+    router := setupUserRouter(db, utils.UtilsImpl{})
+
+    user := models.User{
+        OpenID:   "OpenID_LikedNews_Test",
+        Nickname: "LikeTester",
+    }
+    db.Create(&user)
+
+    // 创建一些新闻
+    news1 := models.News{Title: "Liked News1"}
+    db.Create(&news1)
+    news2 := models.News{Title: "Liked News2"}
+    db.Create(&news2)
+
+    // 让 user 点赞 news2
+    db.Model(&user).Association("LikedNews").Append(&news2)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+        expectedIDs    []uint
+    }{
+        {
+            name:           "Unauthorized",
+            userID:         0,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "User Not Found",
+            userID:         99999,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "User not found",
+        },
+        {
+            name:           "DB Error",
+            userID:         user.ID,
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_liked_db_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "users" {
+                        tx.Error = fmt.Errorf("forced liked db error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to query database",
+        },
+        {
+            name:           "Success LikedNews",
+            userID:         user.ID,
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_liked_db_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            expectedIDs:    []uint{news2.ID},
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            req, _ := http.NewRequest("GET", "/users/liked", nil)
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTUser(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.isSuccess {
+                // news_ids => [news2.ID]
+                ids, ok := resp["news_ids"].([]interface{})
+                assert.True(t, ok)
+                var got []uint
+                for _, idVal := range ids {
+                    got = append(got, uint(idVal.(float64)))
+                }
+                assert.Equal(t, tc.expectedIDs, got)
+            } else if tc.expectedError != "" {
+                assert.Equal(t, tc.expectedError, resp["error"])
+            }
+        })
+    }
+}
+
+func TestGetMyViewedNews(t *testing.T) {
+    db := setupUserTestDB()
+    router := setupUserRouter(db, utils.UtilsImpl{})
+
+    user := models.User{
+        OpenID:   "OpenID_ViewedNews_Test",
+        Nickname: "ViewTester",
+    }
+    db.Create(&user)
+
+    news1 := models.News{Title: "Viewed News1"}
+    db.Create(&news1)
+    news2 := models.News{Title: "Viewed News2"}
+    db.Create(&news2)
+
+    // user.ViewedNews => [news1, news2]
+    db.Model(&user).Association("ViewedNews").Append(&news1, &news2)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+        expectedIDs    []uint
+    }{
+        {
+            name:           "Unauthorized",
+            userID:         0,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "User Not Found",
+            userID:         99999,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "User not found",
+        },
+        {
+            name:           "DB Error",
+            userID:         user.ID,
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_viewed_db_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "users" {
+                        tx.Error = fmt.Errorf("forced viewed db error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to query database",
+        },
+        {
+            name:           "Success ViewedNews",
+            userID:         user.ID,
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_viewed_db_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            // user.ViewedNews => news1, news2
+            expectedIDs: []uint{news1.ID, news2.ID},
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            req, _ := http.NewRequest("GET", "/users/viewed", nil)
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTUser(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.isSuccess {
+                ids, ok := resp["news_ids"].([]interface{})
+                assert.True(t, ok)
+                var got []uint
+                for _, idVal := range ids {
+                    got = append(got, uint(idVal.(float64)))
+                }
+                assert.Equal(t, tc.expectedIDs, got)
+            } else if tc.expectedError != "" {
+                assert.Equal(t, tc.expectedError, resp["error"])
+            }
+        })
+    }
+}
