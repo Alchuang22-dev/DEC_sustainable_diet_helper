@@ -3,7 +3,7 @@
     <!-- 标题 -->
     <view class="header">
       <text class="title">
-        {{t('diet_restriction_label')}} {{t('and')}} {{t('preferences_title')}}
+        {{ t('diet_restriction_label') }} {{ t('and') }} {{ t('preferences_title') }}
       </text>
     </view>
     <!-- 替换 greeting 卡片为文本 -->
@@ -41,7 +41,7 @@
       <!-- 添加偏好按钮 -->
       <view class="add-preference">
         <button class="btn primary-btn" @click="showPreferenceOptions">
-          {{t('add_preference_button')}}
+          {{ t('add_preference_button') }}
         </button>
       </view>
     </uni-card>
@@ -56,7 +56,7 @@
         class="combox"
       ></uni-combox>
       <button class="btn warning-btn" @click="addDietRestriction">
-        {{t('add_restriction_button')}}
+        {{ t('add_restriction_button') }}
       </button>
     </view>
 
@@ -68,7 +68,7 @@
     >
       <!-- 若无黑名单，简单提示 -->
       <view v-if="dietRestrictions.length === 0" class="empty-message">
-        <text>{{t('diet_restriction_placeholder')}}</text>
+        <text>{{ t('diet_restriction_placeholder') }}</text>
       </view>
       <view
         v-for="(restriction, index) in dietRestrictions"
@@ -93,7 +93,7 @@
     <!-- 选择偏好弹窗 -->
     <view v-if="showModal" class="modal">
       <view class="modal-content">
-        <text class="modal-title">{{t('modal_title')}}</text>
+        <text class="modal-title">{{ t('modal_title') }}</text>
         <view
           v-for="(option, index) in preferenceOptions"
           :key="index"
@@ -106,7 +106,7 @@
       </view>
       <view class="button-content">
         <button class="btn error-btn close-button" @click="closeModal">
-          {{t('close_button')}}
+          {{ t('close_button') }}
         </button>
       </view>
     </view>
@@ -237,10 +237,16 @@ onMounted(() => {
         const data = res.data; // 假设返回数组
         // 将后端数据添加到 preferences
         data.forEach((item) => {
+          // 在 preferenceOptions 中找到对应 key 的配置
+          const matchedOption = preferenceOptions.value.find(option => option.key === item.name);
+
+          // 如果找到了，就用本地的 icon；找不到则给个占位图
           preferences.value.push({
-            name: t(item.name),
+            name: matchedOption ? matchedOption.name : t(item.name),
             key: item.name,
-            icon: 'https://via.placeholder.com/50',
+            icon: matchedOption
+              ? matchedOption.icon
+              : 'https://via.placeholder.com/50', // 或者后端返回的 icon
           });
         });
       } else {
@@ -270,6 +276,8 @@ const removePreference = (index) => {
       if (res.statusCode === 200) {
         console.log(res.data.message);
         preferences.value.splice(index, 1);
+      } else {
+        console.error('Failed to remove preference:', res.data);
       }
     },
     fail: (err) => {
@@ -301,6 +309,8 @@ const selectPreference = (option) => {
         console.log(res.data.message);
         preferences.value.push({ name: option.name, key: option.key, icon: option.icon });
         closeModal();
+      } else {
+        console.error('Failed to add preference:', res.data);
       }
     },
     fail: (err) => {
@@ -341,6 +351,8 @@ const addDietRestriction = () => {
             id: food.id,
           });
           foodNameInput.value = '';
+        } else {
+          console.error('Failed to add diet restriction:', res.data);
         }
       },
       fail: (err) => {
@@ -368,6 +380,8 @@ const removeDietRestriction = (index) => {
       if (res.statusCode === 200) {
         console.log(res.data.message);
         dietRestrictions.value.splice(index, 1);
+      } else {
+        console.error('Failed to remove diet restriction:', res.data);
       }
     },
     fail: (err) => {
