@@ -11,15 +11,13 @@ services:
     env_file:
       - .env
     ports:
-      # 改为 "8080:8080"，让外部访问 8080 => 容器内部 8080
-      - "8080:8080"
+      - "8080:8080"  # 外部 8080 -> 容器 8080 (可选, 仅调试用)
     environment:
       - DB_HOST=db
       - DB_PORT=3306
       - DB_USER=root
       - DB_PASSWORD=DECpassword
       - DB_NAME=backend_db
-      # - GODEBUG=http2client=0
     depends_on:
       db:
         condition: service_healthy
@@ -46,22 +44,41 @@ services:
       timeout: 5s
       retries: 5
 
+  # 新增的 Nginx 服务
   nginx:
     container_name: nginx_container
     image: nginx:latest
-    ports:
-      - "8081:80"
-      - "8443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
     depends_on:
       - app
     networks:
       - frontend
+    # 不再暴露 80/443 到宿主机，因为 Caddy 对外提供
+    # 如果你想本地调试 Nginx，可加端口映射:
+    # ports:
+    #   - "8081:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+
+  caddy:
+    container_name: caddy_container
+    image: caddy:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - nginx
+    networks:
+      - frontend
+    restart: unless-stopped
 
 volumes:
   db_data:
+  caddy_data:
+  caddy_config:
 
 networks:
   backend:
