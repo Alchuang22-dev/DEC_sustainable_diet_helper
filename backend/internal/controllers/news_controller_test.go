@@ -2259,3 +2259,187 @@ func TestAddComment(t *testing.T) {
         })
     }
 }
+
+func TestLikeComment(t *testing.T) {
+    db := setupNewsTestDB()
+    db.AutoMigrate(&models.Comment{}, &models.User{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.POST("/:id/comment_like", newsController.LikeComment)
+    }
+
+    // 创建用户
+    user := models.User{
+        OpenID:   "OpenID_LikeComment_User",
+        Nickname: "LikeCommentUser",
+    }
+    db.Create(&user)
+
+    // 创建评论
+    comment := models.Comment{
+        NewsID:  999, // 对应的 News 不一定要存在
+        Content: "Some comment",
+        UserID:  12345,
+    }
+    db.Create(&comment)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        commentID      string
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+        finalLikeCount int // 用于成功情况下的断言
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            commentID:      fmt.Sprintf("%d", comment.ID),
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid Comment ID",
+            userID:         user.ID,
+            commentID:      "abc",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid comment ID",
+        },
+        {
+            name:           "Comment Not Found",
+            userID:         user.ID,
+            commentID:      "99999",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "Comment not found",
+        },
+        {
+            name:           "Failed To Find Comment (simulate)",
+            userID:         user.ID,
+            commentID:      fmt.Sprintf("%d", comment.ID),
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_find_comment_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "comments" {
+                        tx.Error = fmt.Errorf("forced find comment error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to find comment",
+        },
+        {
+            name:           "Failed To Find User",
+            userID:         user.ID,
+            commentID:      fmt.Sprintf("%d", comment.ID),
+            setupFunc: func() {
+                // 移除查 comment 时的错误
+                db.Callback().Query().Remove("force_find_comment_err")
+                // 模拟查 user 错误
+                db.Callback().Query().Before("gorm:query").Register("force_find_user_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "users" {
+                        tx.Error = fmt.Errorf("forced find user error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to find user",
+        },
+        {
+            name:           "Already Liked This Comment",
+            userID:         user.ID,
+            commentID:      fmt.Sprintf("%d", comment.ID),
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_find_user_err")
+
+                // 让 user.LikedComments 包含这个 comment
+                db.Model(&user).Association("LikedComments").Append(&comment)
+            },
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "You have already liked this comment",
+        },
+        {
+            name:           "Failed To Like Comment (append error)",
+            userID:         user.ID,
+            commentID:      fmt.Sprintf("%d", comment.ID),
+            setupFunc: func() {
+                // 移除已经点赞关系
+                db.Model(&user).Association("LikedComments").Clear()
+
+                // 模拟 append 出错
+                db.Callback().Update().Before("gorm:association").Register("force_append_err", func(tx *gorm.DB) {
+                    tx.Error = fmt.Errorf("forced append error")
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to like comment",
+        },
+        {
+            name:           "Failed To Update Comment like_count",
+            userID:         user.ID,
+            commentID:      fmt.Sprintf("%d", comment.ID),
+            setupFunc: func() {
+                db.Callback().Update().Remove("force_append_err")
+
+                // mock updateColumn 出错
+                db.Callback().Update().Before("gorm:update").Register("force_update_like_count_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "comments" {
+                        tx.Error = fmt.Errorf("forced update like_count error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to update comment like_count",
+        },
+        {
+            name:           "Success Like Comment",
+            userID:         user.ID,
+            commentID:      fmt.Sprintf("%d", comment.ID),
+            setupFunc: func() {
+                db.Callback().Update().Remove("force_update_like_count_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            finalLikeCount: comment.LikeCount + 1,
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            url := fmt.Sprintf("/news/%s/comment_like", tc.commentID)
+            req, _ := http.NewRequest("POST", url, nil)
+
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.isSuccess {
+                assert.Equal(t, "Comment liked successfully", resp["message"])
+                assert.Equal(t, float64(tc.finalLikeCount), resp["like_count"])
+            } else {
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
