@@ -13,13 +13,25 @@ const BASE_URL = 'http://122.51.231.155:8080'; //url基本路径
 // Helper function to format publish time
 const formatPublishTime = (publishTime) => {
   const date = new Date(publishTime);
-  const dateStr = date.toISOString().slice(0, 10);
-  if (dateStr === systemDateStr) {
+  const now = new Date();
+
+  // 判断是否是同一天
+  const isSameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (isSameDay) {
+    // 如果是同一天，显示“今天 HH:mm”
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
     return `今天 ${hours}:${minutes}`;
   } else {
-    return dateStr;
+    // 否则显示 YYYY-MM-DD 或者你想要的其他格式
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 };
 
@@ -53,7 +65,7 @@ export const useNewsStore = defineStore('news', {
     },
 
     // Fetch the news based on type (by views, likes, or latest)
-    async fetchNews(page = 1, type = 'top-views') {
+    async fetchNews(page = 1, type = 'top-views', text = '') {
       console.log(`正在获取新闻, type: ${type}, page: ${page}`);
       this.allNewsItems = [];
       this.isLoading = true; // Start loading
@@ -65,6 +77,8 @@ export const useNewsStore = defineStore('news', {
 
       try {
         let url = '';
+		let data = {};
+		let ifSearch = false;
         switch (type) {
           case 'top-views':
             url = `${BASE_URL}/news/paginated/view_count?page=${page}`;
@@ -81,29 +95,75 @@ export const useNewsStore = defineStore('news', {
 		  case 'viewed':
 			url = `${BASE_URL}/users/viewed`;
 			break;
+		  case 'search':
+		    url = `${BASE_URL}/news/search`;
+			data = {"query": text};
+			ifSearch = true;
+			break;
           default:
+		    console.log('非法的type:', type);
             throw new Error('Invalid news type');
         }
-
-        const res = await uni.request({
-          url: url,
-          method: 'GET',
-          header: {
-            "Content-type": "application/json",
-            "Authorization": `Bearer ${jwtToken.value}`,
-          },
-        });
-        console.log('后端返回：', res);
-        const newsIds = res.data.news_ids;
-        console.log('获取的新闻id:', newsIds);
-        if (newsIds.length) {
-          // Get details for each news ID
-          const newsDetails = await Promise.all(newsIds.map(id => this.getNewsDetails(id)));
-          this.rawNewsData = newsDetails;
-          this.rawNewsData.forEach(this.convertNewsToItems);
-        }
-        this.isLoading = false; // Finish loading
-        clearTimeout(loadingTimeout); // Clear the timeout if data is loaded
+		console.log(ifSearch);
+		
+		if (ifSearch) {
+		    try {
+		        const res = await uni.request({
+		            url: url,
+		            method: 'POST',
+		            header: {
+		                "Content-type": "application/json",
+		                "Authorization": `Bearer ${jwtToken.value}`,
+		            },
+		            data: data,
+		        });
+		        console.log('后端返回：', res);
+		
+		        const newsResults = res.data.results; // [{id:2}, {id:3}, ...]
+		
+		        console.log('获取的新闻id:', newsResults);
+		
+		        if (Array.isArray(newsResults) && newsResults.length > 0) {
+		            // 提取每个对象的 id 值
+		            const newsIds = newsResults.map(item => item.id);
+		            console.log('提取的新闻id:', newsIds);
+		
+		            // 获取每个新闻ID的详细信息
+		            const newsDetails = await Promise.all(newsIds.map(id => this.getNewsDetails(id)));
+		            this.rawNewsData = newsDetails.filter(detail => detail !== null); // 过滤掉 null 值
+		            this.rawNewsData.forEach(this.convertNewsToItems);
+		        } else {
+		            console.log('没有找到相关的新闻结果。');
+		        }
+		
+		    } catch (error) {
+		        console.error('搜索时出错：', error);
+		    }
+		
+		    this.isLoading = false; // 完成加载
+		    clearTimeout(loadingTimeout); // 清除超时计时器
+		}
+		else{
+			const res = await uni.request({
+			  url: url,
+			  method: 'GET',
+			  header: {
+			    "Content-type": "application/json",
+			    "Authorization": `Bearer ${jwtToken.value}`,
+			  },
+			});
+			console.log('后端返回：', res);
+			const newsIds = res.data.news_ids;
+			console.log('获取的新闻id:', newsIds);
+			if (newsIds.length) {
+			  // Get details for each news ID
+			  const newsDetails = await Promise.all(newsIds.map(id => this.getNewsDetails(id)));
+			  this.rawNewsData = newsDetails;
+			  this.rawNewsData.forEach(this.convertNewsToItems);
+			}
+			this.isLoading = false; // Finish loading
+			clearTimeout(loadingTimeout); // Clear the timeout if data is loaded
+		}
       } catch (error) {
         console.error('Error fetching data:', error);
         this.isLoading = false; // Finish loading even on error
