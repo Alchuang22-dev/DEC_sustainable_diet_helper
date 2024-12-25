@@ -1,18 +1,18 @@
 <template>
   <view class="container">
     <view v-for="(section, sectionIndex) in sections" :key="sectionIndex">
-      <!-- 分隔线 -->
-	  <view class="divider">
-	    <text class="divider-text">{{ section.title }}</text>
-	  </view>
-
-      <!-- 分隔线下的项目 -->
-      <view v-for="(item, index) in section.items" :key="index" class="item-container">
+      <view class="divider">
+        <text class="divider-text">{{ section.title }}</text>
+      </view>
+      <view
+        v-for="(item, index) in section.items"
+        :key="index"
+        class="item-container"
+      >
         <view class="item" @click="toggleItem(sectionIndex, index)">
           <text class="item-title">{{ item.name }}</text>
           <text class="arrow">{{ expanded[sectionIndex][index] ? '▲' : '▼' }}</text>
         </view>
-        <!-- 展开内容 -->
         <view v-if="expanded[sectionIndex][index]" class="item-details">
           <view class="detail">
             <text class="detail-label">内容:</text>
@@ -29,19 +29,11 @@
 </template>
 
 <script setup>
+/* ----------------- Imports ----------------- */
 import { reactive } from 'vue'
-import { useI18n } from 'vue-i18n';
-import { onShow } from '@dcloudio/uni-app'
 
-const { t } = useI18n()
+/* ----------------- Setup ----------------- */
 
-onShow(() => {
-  uni.setNavigationBarTitle({
-    title: t('Personal Information Collection List')
-  })
-})
-
-// 定义信息分类及其项目
 const sections = [
   {
     title: '用户基本信息',
@@ -55,27 +47,18 @@ const sections = [
   },
   {
     title: '用户使用过程信息',
-    items: [
-      { name: '位置' },
-      { name: '图片和视频' }
-    ]
+    items: [{ name: '位置' }, { name: '图片和视频' }]
   },
   {
     title: '用户输入信息',
-    items: [
-      { name: '偏好' },
-      { name: '上传图文' }
-    ]
+    items: [{ name: '偏好' }, { name: '上传图文' }]
   }
 ]
 
-// 初始化展开状态
-const expanded = reactive(
-  sections.map(section => section.items.map(() => false))
-)
+const expanded = reactive(sections.map((section) => section.items.map(() => false)))
 
-// 切换展开状态
-const toggleItem = (sectionIndex, itemIndex) => {
+/* ----------------- Methods ----------------- */
+function toggleItem(sectionIndex, itemIndex) {
   expanded[sectionIndex][itemIndex] = !expanded[sectionIndex][itemIndex]
 }
 </script>
@@ -86,22 +69,33 @@ const toggleItem = (sectionIndex, itemIndex) => {
   background-color: #f5f5f5;
 }
 
-.separator {
-  margin-vertical: 15px;
-  border-bottom: 1px solid #ccc;
+.divider {
   position: relative;
-  text-align: center;
+  height: 20px;
+  margin: 20px 0;
 }
-
-.separator text {
-  background-color: #f5f5f5;
+.divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: #ebebeb;
+  transform: translateY(-50%);
+}
+.divider-text {
+  position: relative;
+  z-index: 1;
+  background-color: #f8f8f8;
   padding: 0 10px;
-  color: #666;
-  font-size: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #888;
 }
 
 .item-container {
-  margin-vertical: 10px;
+  margin: 10px 0;
 }
 
 .item {
@@ -110,7 +104,6 @@ const toggleItem = (sectionIndex, itemIndex) => {
   padding: 12px;
   background-color: #fff;
   border-radius: 8px;
-  cursor: pointer;
   align-items: center;
 }
 
@@ -131,7 +124,7 @@ const toggleItem = (sectionIndex, itemIndex) => {
 .item-details {
   padding: 10px 12px;
   background-color: #fafafa;
-  border-left: 2px solid #007AFF;
+  border-left: 2px solid #007aff;
   border-radius: 0 8px 8px 0;
   margin-top: 5px;
 }
@@ -153,30 +146,5 @@ const toggleItem = (sectionIndex, itemIndex) => {
 
 .detail-value {
   color: #777;
-}
-
-.divider {
-  position: relative;
-  height: 20px;
-  margin: 20px 0;
-}
-.divider::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background-color: #ebebeb;
-  transform: translateY(-50%);
-}
-.divider-text {
-  position: relative;
-  z-index: 1;
-  background-color: #f8f8f8;
-  padding: 0 10px;
-  text-align: center;
-  font-size: 14px;
-  color: #888;
 }
 </style>
