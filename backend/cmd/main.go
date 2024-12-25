@@ -121,6 +121,6 @@ func main() {
 // }
     err = router.Run(":8080") // 默认HTTPS端口是443
     if err != nil {
-        log.Fatal("无法启动HTTPS服务器:", err)
+        log.Fatal("无法启动HTTP服务器:", err)
     }
 }
