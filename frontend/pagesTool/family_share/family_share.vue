@@ -2,30 +2,46 @@
   <view class="container">
     <text class="title">{{ t('shared_calculation_for_family') }}</text>
     <scroll-view scroll-y class="member-list">
-      <view v-for="member in allFamilyMembers" :key="member.id" class="member-row">
+      <view
+        v-for="member in allFamilyMembers"
+        :key="member.id"
+        class="member-row"
+      >
         <view class="member-info">
-          <image :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`" class="avatar"></image>
+          <image
+            :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+            class="avatar"
+          />
           <text class="name">{{ member.nickname }}</text>
         </view>
         <view class="input-container">
           <input
-              class="ratio-input"
-              type="digit"
-              v-model.number="memberRatio[member.id]"
-              placeholder="0.00"
-              step="0.01"
-              min="0"
-              max="1"
-              @input="validateRatio"
+            class="ratio-input"
+            type="digit"
+            v-model.number="memberRatio[member.id]"
+            placeholder="0.00"
+            step="0.01"
+            min="0"
+            max="1"
+            @input="validateRatio"
           />
         </view>
       </view>
     </scroll-view>
     <view class="footer">
-      <view class="total-ratio" :class="{ 'warning': totalRatio.value > 1 }">
-        <text>{{ t('total_ratio') }}: {{ totalRatio.toFixed(2) }} / 1.00</text>
+      <view
+        class="total-ratio"
+        :class="{ warning: totalRatio.value > 1 }"
+      >
+        <text>
+          {{ t('total_ratio') }}: {{ totalRatio.toFixed(2) }} / 1.00
+        </text>
       </view>
-      <button class="confirm-button" :disabled="!isValid" @click="submitData">
+      <button
+        class="confirm-button"
+        :disabled="!isValid"
+        @click="submitData"
+      >
         {{ t('confirm_submission') }}
       </button>
     </view>
@@ -33,197 +49,175 @@
 </template>
 
 <script setup>
-import {
-	ref,
-	reactive,
-	computed,
-	watch
-} from 'vue';
-import {
-	useFamilyStore
-} from "../stores/family.js";
-import {
-	useUserStore
-} from "@/stores/user.js";
-import {
-	useI18n
-} from 'vue-i18n';
-import {
-	onLoad, onShow
-} from '@dcloudio/uni-app'
+/* ----------------- Imports ----------------- */
+import { ref, reactive, computed, watch } from 'vue'
+import { onLoad, onShow } from '@dcloudio/uni-app'
+import { useI18n } from 'vue-i18n'
+import { useFamilyStore } from '../stores/family.js'
+import { useUserStore } from '@/stores/user.js'
 
-// 使用国际化
-const {
-	t
-} = useI18n();
+/* ----------------- i18n ----------------- */
+const { t } = useI18n()
 
-const userStore = useUserStore();
-const familyStore = useFamilyStore();
-const allFamilyMembers = computed(() => familyStore.family.allMembers);
+/* ----------------- Stores ----------------- */
+const userStore = useUserStore()
+const familyStore = useFamilyStore()
 
+/* ----------------- Data & Reactive State ----------------- */
+// 全部家庭成员
+const allFamilyMembers = computed(() => familyStore.family.allMembers)
 
 // 成员比例
-const memberRatio = reactive({});
+const memberRatio = reactive({})
 
-// 初始化比例
-onShow(() => {
-  familyStore.getFamilyDetails();
-  for (let member of allFamilyMembers.value) {
-    memberRatio[member.id] = 0;
-  }
-});
+// 接收页面传递的数据
+const carbonEmissionData = ref(0)
+const nutritionData = reactive({})
+const mealType = ref('')
 
-// 获取当前用户的 UID 和 Token
-const token = computed(() => userStore.user.token);
-
-// 传递给页面的数据
-const carbonEmissionData = ref(0);
-const nutritionData = reactive({});
-const mealType = ref('');
-
-// 接收传递的数据
-onLoad((options) => {
-	if (options && options.data) {
-		try {
-			const parsedData = JSON.parse(decodeURIComponent(options.data));
-			console.log('接收到的计算结果:', parsedData);
-
-			// 使用 reactive 保存数据
-			carbonEmissionData.value = parsedData.carbonEmission;
-      console.log('carbonEmissionData:', carbonEmissionData.value);
-			Object.assign(nutritionData, parsedData.nutrition);
-      mealType.value = parsedData.mealType;
-		} catch (error) {
-			console.error('解析传递的数据失败:', error);
-		}
-	}
-});
-
+/* ----------------- Computed & Watchers ----------------- */
 // 计算总比例
 const totalRatio = computed(() => {
-	return Object.values(memberRatio).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
-});
+  return Object.values(memberRatio).reduce(
+    (sum, val) => sum + (parseFloat(val) || 0),
+    0
+  )
+})
 
-// 验证比例
+// 验证总比例 & 每个成员比例
 const isValid = computed(() => {
-	// 总比例必须小于或等于1，并且每个比例在0到1之间
-	return totalRatio.value <= 1 && Object.values(memberRatio).every(val => val >= 0 && val <= 1);
-});
+  return (
+    totalRatio.value <= 1 &&
+    Object.values(memberRatio).every(val => val >= 0 && val <= 1)
+  )
+})
 
-// 监听比例变化，实时验证
-watch(memberRatio, () => {
-	validateRatio();
-}, { deep: true });
+// 深度监听 memberRatio 变化
+watch(
+  memberRatio,
+  () => {
+    validateRatio()
+  },
+  { deep: true }
+)
 
-// 验证比例的方法
+/* ----------------- Lifecycle Hooks ----------------- */
+// 页面显示时初始化
+onShow(() => {
+  familyStore.getFamilyDetails()
+  for (let member of allFamilyMembers.value) {
+    memberRatio[member.id] = 0
+  }
+})
+
+// onLoad 时解析传入数据
+onLoad(options => {
+  if (options && options.data) {
+    try {
+      const parsedData = JSON.parse(decodeURIComponent(options.data))
+      carbonEmissionData.value = parsedData.carbonEmission
+      Object.assign(nutritionData, parsedData.nutrition)
+      mealType.value = parsedData.mealType
+    } catch (error) {
+      console.error('解析传递的数据失败:', error)
+    }
+  }
+})
+
+/* ----------------- Methods ----------------- */
+// 校验成员比例
 const validateRatio = () => {
-	// 确保所有比例在0到1之间
-	let sum = 0;
-	for (let id in memberRatio) {
-		let val = parseFloat(memberRatio[id]) || 0;
-		if (val < 0) {
-			memberRatio[id] = 0;
-		} else if (val > 1) {
-			memberRatio[id] = 1;
-		}
-		sum += memberRatio[id];
-	}
-	if (sum > 1) {
-		uni.showToast({
-			title: t('total_ratio_cannot_exceed_one'),
-			icon: 'none',
-			duration: 2000
-		});
-	}
-};
-
-function formatToISO(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-
-  // 组合成指定格式，仍然使用 Z 后缀
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+  let sum = 0
+  for (let id in memberRatio) {
+    let val = parseFloat(memberRatio[id]) || 0
+    if (val < 0) {
+      memberRatio[id] = 0
+    } else if (val > 1) {
+      memberRatio[id] = 1
+    }
+    sum += memberRatio[id]
+  }
+  if (sum > 1) {
+    uni.showToast({
+      title: t('total_ratio_cannot_exceed_one'),
+      icon: 'none',
+      duration: 2000
+    })
+  }
 }
 
-// 提交数据的方法
+// 格式化日期到 ISO
+function formatToISO(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`
+}
+
+// 提交数据
 const submitData = () => {
-	if (totalRatio.value > 1) {
-		uni.showToast({
-			title: t('total_ratio_cannot_exceed_one'),
-			icon: 'none',
-			duration: 2000
-		});
-		return;
-	}
+  if (totalRatio.value > 1) {
+    uni.showToast({
+      title: t('total_ratio_cannot_exceed_one'),
+      icon: 'none',
+      duration: 2000
+    })
+    return
+  }
 
-	// 可选：提醒用户如果总和 <1，可能会有未分配的比例
-	if (totalRatio.value < 1) {
-		uni.showToast({
-			title: t('total_ratio_less_than_one'),
-			icon: 'none',
-			duration: 2000
-		});
-	}
+  if (totalRatio.value < 1) {
+    uni.showToast({
+      title: t('total_ratio_less_than_one'),
+      icon: 'none',
+      duration: 2000
+    })
+  }
 
-	const userShares = Object.keys(memberRatio).map(id => ({
-		user_id: parseInt(id),
-		ratio: parseFloat(memberRatio[id]) || 0
-	}));
+  const userShares = Object.keys(memberRatio).map(id => ({
+    user_id: parseInt(id),
+    ratio: parseFloat(memberRatio[id]) || 0
+  }))
 
-  const today = new Date();
-	const requestData = {
+  const today = new Date()
+  const requestData = {
     date: formatToISO(today),
-		meal_type: mealType.value,
-		calories: nutritionData[0] || 0,
-		protein: nutritionData[1] || 0,
-		fat: nutritionData[2] || 0,
+    meal_type: mealType.value,
+    calories: nutritionData[0] || 0,
+    protein: nutritionData[1] || 0,
+    fat: nutritionData[2] || 0,
     carbohydrates: nutritionData[3] || 0,
     sodium: nutritionData[4] || 0,
     emission: carbonEmissionData.value || 0,
     user_shares: userShares
-  };
+  }
 
-  console.log('发送的数据:', requestData);
-
-  // 发送 POST 请求到共享营养碳排放接口
   uni.request({
     url: 'http://122.51.231.155:8095/nutrition-carbon/shared/nutrition-carbon',
     method: 'POST',
     data: requestData,
     header: {
       'Content-Type': 'application/json',
-      // 使用 Bearer Token 进行认证
-      'Authorization': `Bearer ${token.value}`
+      Authorization: `Bearer ${userStore.user.token}`
     },
-    success: (res) => {
+    success: res => {
       if (res.statusCode === 200) {
         uni.showToast({
           title: t('submission_success'),
           icon: 'success',
           duration: 2000
-        });
+        })
         setTimeout(() => {
-          uni.navigateBack({
-            delta: 2
-          });
-        }, 2000);
+          uni.navigateBack({ delta: 2 })
+        }, 2000)
       } else {
-        // 如果后端返回了错误信息，显示具体错误
-        const errorMsg = res.data && res.data.error ? res.data.error : t('submission_failed');
-        uni.showToast({
-          title: errorMsg,
-          icon: 'none',
-          duration: 2000
-        });
+        const errorMsg = res.data?.error || t('submission_failed')
+        uni.showToast({ title: errorMsg, icon: 'none', duration: 2000 })
         setTimeout(() => {
-          uni.navigateBack({
-            delta: 2
-          });
-        }, 2000);
+          uni.navigateBack({ delta: 2 })
+        }, 2000)
       }
     },
     fail: () => {
@@ -231,15 +225,13 @@ const submitData = () => {
         title: t('submission_failed'),
         icon: 'none',
         duration: 2000
-      });
+      })
       setTimeout(() => {
-        uni.navigateBack({
-          delta: 2
-        });
-      }, 2000);
+        uni.navigateBack({ delta: 2 })
+      }, 2000)
     }
-  });
-};
+  })
+}
 </script>
 
 <style scoped>
@@ -256,7 +248,7 @@ const submitData = () => {
   font-weight: 600;
   text-align: center;
   margin-bottom: 32rpx;
-  color: #4CAF50FF;
+  color: #4caf50ff;
   padding: 16rpx;
 }
 
@@ -281,7 +273,7 @@ const submitData = () => {
   display: flex;
   align-items: center;
   flex: 1;
-  min-width: 0; /* Prevents flex items from overflowing */
+  min-width: 0;
 }
 
 .avatar {
@@ -303,7 +295,7 @@ const submitData = () => {
 }
 
 .input-container {
-  min-width: 160rpx; /* Ensures input area doesn't shrink too much */
+  min-width: 160rpx;
 }
 
 .ratio-input {
@@ -320,7 +312,7 @@ const submitData = () => {
 }
 
 .ratio-input:focus {
-  border-color: #4CAF50;
+  border-color: #4caf50;
   background: white;
 }
 
@@ -349,7 +341,7 @@ const submitData = () => {
   width: 100%;
   height: 88rpx;
   line-height: 88rpx;
-  background: #4CAF50;
+  background: #4caf50;
   color: white;
   font-size: 32rpx;
   font-weight: 600;
