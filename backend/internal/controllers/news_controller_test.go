@@ -1464,3 +1464,129 @@ func TestPreviewDrafts(t *testing.T) {
     }
 }
 
+func TestGetNewsDetails(t *testing.T) {
+    db := setupNewsTestDB()
+    // 需要迁移 News, Paragraph, NewsImage, Comment, User 等
+    db.AutoMigrate(&models.News{}, &models.NewsImage{}, &models.Paragraph{}, &models.Comment{}, &models.User{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.GET("/details/news/:id", newsController.GetNewsDetails)
+    }
+
+    // 创建用户
+    user := models.User{
+        OpenID:   "OpenID_GetNewsDetails_User",
+        Nickname: "GetNewsUser",
+    }
+    db.Create(&user)
+
+    // 创建新闻
+    newsItem := models.News{
+        Title:       "NewsDetailsTest",
+        AuthorID:    user.ID,
+        UploadTime:  time.Now(),
+        ViewCount:   100,
+        LikeCount:   10,
+        FavoriteCount: 5,
+        DislikeCount: 2,
+        ShareCount:  1,
+    }
+    db.Create(&newsItem)
+    // 插入段落、图片
+    db.Create(&models.Paragraph{NewsID: newsItem.ID, Text: "Paragraph1"})
+    db.Create(&models.NewsImage{NewsID: newsItem.ID, URL: "news_img1.jpg", Description: "img_desc1"})
+
+    tests := []struct {
+        name           string
+        userID         uint
+        newsID         string
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            newsID:         fmt.Sprintf("%d", newsItem.ID),
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid News ID",
+            userID:         user.ID,
+            newsID:         "abc",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid news ID",
+        },
+        {
+            name:           "News Not Found",
+            userID:         user.ID,
+            newsID:         "99999",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "News not found",
+        },
+        {
+            name:           "Failed To Fetch News Detail (simulate DB error)",
+            userID:         user.ID,
+            newsID:         fmt.Sprintf("%d", newsItem.ID),
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_get_news_detail_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "news" {
+                        tx.Error = fmt.Errorf("forced get news detail error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to fetch news details",
+        },
+        {
+            name:           "Success Get News Detail",
+            userID:         user.ID,
+            newsID:         fmt.Sprintf("%d", newsItem.ID),
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_get_news_detail_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            url := "/news/details/news/" + tc.newsID
+            req, _ := http.NewRequest("GET", url, nil)
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            if tc.isSuccess {
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+            } else {
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
