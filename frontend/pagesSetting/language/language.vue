@@ -1,8 +1,8 @@
 <template>
   <view class="settings">
     <view class="header">
-      <view @click="goBack" class="back-icon">{{$t('back')}}</view>
-      <text class="title">{{$t('lanSettings')}}</text>
+      <view @click="goBack" class="back-icon">{{ t('back') }}</view>
+      <text class="title">{{ t('lanSettings') }}</text>
       <view class="header-actions">
         <button class="menu-icon"></button>
         <button class="camera-icon"></button>
@@ -11,11 +11,11 @@
 
     <view class="list">
       <view class="list-item" @click="switchToEn">
-        <text>{{$t('lang.en')}}</text>
+        <text>{{ t('lang.en') }}</text>
         <text class="arrow">></text>
       </view>
       <view class="list-item" @click="switchToZhHans">
-        <text>{{$t('lang.zh-hans')}}</text>
+        <text>{{ t('lang.zh-hans') }}</text>
         <text class="arrow">></text>
       </view>
     </view>
@@ -23,35 +23,30 @@
 </template>
 
 <script setup>
-import { useI18n } from 'vue-i18n';
-import { onShow } from '@dcloudio/uni-app';
+/* ----------------- Imports ----------------- */
+import { useI18n } from 'vue-i18n'
 
-onShow(() => {
-  uni.setNavigationBarTitle({
-    title: t('lanSettings'),
-  });
-});
+/* ----------------- Setup ----------------- */
+const { t, locale } = useI18n()
 
-const { t, locale } = useI18n();
-
+/* ----------------- Methods ----------------- */
 function goBack() {
-  uni.navigateBack();
+  uni.navigateBack()
 }
 
 function switchToEn() {
-  locale.value = 'en';
+  locale.value = 'en'
   uni.reLaunch({
-    url: '/pagesSetting/language/language',
-  });
+    url: '/pagesSetting/language/language'
+  })
 }
 
 function switchToZhHans() {
-  locale.value = 'zh-Hans';
-    uni.reLaunch({
-    url: '/pagesSetting/language/language',
-  });
+  locale.value = 'zh-Hans'
+  uni.reLaunch({
+    url: '/pagesSetting/language/language'
+  })
 }
-
 </script>
 
 <style scoped>
@@ -59,6 +54,7 @@ function switchToZhHans() {
   height: 100%;
   background: #f8f8f8;
 }
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -68,17 +64,21 @@ function switchToZhHans() {
   background-color: #fff;
   border-bottom: 1px solid #ebebeb;
 }
+
 .title {
   font-size: 18px;
   font-weight: bold;
 }
+
 .header-actions button {
   background: none;
   border: none;
 }
+
 .list {
   margin-top: 10px;
 }
+
 .list-item {
   display: flex;
   justify-content: space-between;
@@ -87,19 +87,8 @@ function switchToZhHans() {
   background-color: #fff;
   border-bottom: 1px solid #ebebeb;
 }
-.list-item.centered {
-  justify-content: center;
-}
+
 .arrow {
   color: #ccc;
 }
-.divider {
-  height: 1px;
-  background-color: #ebebeb;
-  margin: 10px 0;
-}
-.red-text {
-  color: red;
-}
 </style>
-

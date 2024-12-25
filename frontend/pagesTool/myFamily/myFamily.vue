@@ -31,13 +31,13 @@
               class="action-btn promote-btn"
               @click="setAsAdmin(member.id)"
             >
-              {{ $t('set_as_admin') }}
+              {{ t('set_as_admin') }}
             </text>
             <text
               class="action-btn remove-btn"
               @click="removeMember(member.id)"
             >
-              {{ $t('remove_member') }}
+              {{ t('remove_member') }}
             </text>
           </view>
         </view>
@@ -78,13 +78,13 @@
                 class="action-btn approve-btn"
                 @click="admitMember(member.id)"
               >
-                {{ $t('admit') }}
+                {{ t('admit') }}
               </text>
               <text
                 class="action-btn reject-btn"
                 @click="rejectMember(member.id)"
               >
-                {{ $t('reject') }}
+                {{ t('reject') }}
               </text>
             </view>
           </view>

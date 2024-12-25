@@ -1,8 +1,8 @@
 <template>
   <view class="settings">
     <view class="header">
-      <view @click="goBack" class="back-icon">{{$t('back')}}</view>
-      <text class="title">{{userData.username}}</text>
+      <view @click="goBack" class="back-icon">{{ t('back') }}</view>
+      <text class="title">{{ userData.username }}</text>
       <view class="header-actions">
         <button class="menu-icon"></button>
         <button class="camera-icon"></button>
@@ -11,91 +11,74 @@
 
     <view class="list">
       <view class="list-item">
-        <text>{{$t('settings_profile')}}</text>
+        <text>{{ t('settings_profile') }}</text>
         <text class="numbers right-align">{{ userData.username }}</text>
         <text class="arrow">></text>
       </view>
       <view class="list-item">
-        <text>{{$t('settings_id')}}</text>
+        <text>{{ t('settings_id') }}</text>
         <text class="numbers right-align">{{ userData.accountId }}</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item" @click="Seal()">
-        <text>{{$t('settings_phonenumber')}}</text>
+      <view class="list-item" @click="Seal">
+        <text>{{ t('settings_phonenumber') }}</text>
         <text class="numbers right-align">{{ userData.phoneNumber }}</text>
         <text class="arrow">></text>
       </view>
-
-      <view class="list-item" @click="Seal()">
-        <text>{{$t('settings_email')}}</text>
+      <view class="list-item" @click="Seal">
+        <text>{{ t('settings_email') }}</text>
         <text class="numbers right-align">{{ userData.email }}</text>
         <text class="arrow">></text>
       </view>
       <view class="divider"></view>
-      <view class="list-item centered" @click="Seal()">
-        <text>{{$t('settings_security')}}</text>
+      <view class="list-item centered" @click="Seal">
+        <text>{{ t('settings_security') }}</text>
       </view>
-      <view class="list-item centered red-text" @click="Seal()">
-        <text>{{$t('settings_frozen')}}</text>
+      <view class="list-item centered red-text" @click="Seal">
+        <text>{{ t('settings_frozen') }}</text>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
-import { onShow } from '@dcloudio/uni-app';
-const BASE_URL = 'http://122.51.231.155:8080';
+/* ----------------- Imports ----------------- */
+import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useUserStore } from '@/stores/user'
 
-// 国际化
-const { t } = useI18n();
+/* ----------------- Setup ----------------- */
+const userStore = useUserStore()
+const { t } = useI18n()
 
-// Pinia 用户存储
-const userStore = useUserStore();
-
-// 计算属性从 Pinia store 获取用户状态
-const isLoggedIn = computed(() => userStore.user.isLoggedIn);
-const nickname = computed(() => userStore.user.nickName);
-const uid = computed(() => userStore.user.accountId);
-const email = computed(() => userStore.user.email);
-const avatarSrc = computed(() =>
-    userStore.user.avatarUrl
-        ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
-        : '/static/images/index/background_img.jpg'
-);
-const user_id = computed(() => userStore.user.uid);
+const nickname = computed(() => userStore.user.nickName)
+const user_id = computed(() => userStore.user.uid)
+const email = computed(() => userStore.user.email)
 
 const userData = ref({
   username: nickname.value,
   accountId: user_id.value,
   phoneNumber: '',
   email: email.value
-});
+})
+
+/* ----------------- Methods ----------------- */
+function goBack() {
+  uni.navigateBack()
+}
 
 function Seal() {
-	uni.showToast({
-	  title: '正在开发',
-	  icon: "error",
-	  duration: 2000,
-	});
+  uni.showToast({
+    title: '正在开发',
+    icon: 'error',
+    duration: 2000
+  })
 }
 
-function goBack() {
-  uni.navigateBack();
-}
-
-function navigateTo(link) {
-  uni.navigateTo({
-    url: `/pagesSetting/${link}/${link}`,
-  });
-}
-
-// Simulate fetching data from backend
+/* ----------------- Lifecycle ----------------- */
 onMounted(() => {
-  // Example of an API call to fetch user data
-});
+  // 可以在此处发请求获取更多详细信息
+})
 </script>
 
 <style scoped>

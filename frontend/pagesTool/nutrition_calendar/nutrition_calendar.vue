@@ -8,7 +8,7 @@
     <!-- 日期导航 -->
     <uni-section title="" padding>
       <view class="header">
-        <text class="title">{{ $t('nutrition_calendar') }}</text>
+        <text class="title">{{ t('nutrition_calendar') }}</text>
         <scroll-view
           class="date-selector"
           scroll-x
@@ -44,14 +44,14 @@
         />
         <view class="chart-center-text">
           <text class="center-title">
-            {{ $t('nutrition\noverview') }}
+            {{ t('nutrition\noverview') }}
           </text>
         </view>
       </view>
     </uni-section>
 
     <!-- 营养摄入详情 -->
-    <uni-section :title="$t('nutrition_details')" padding>
+    <uni-section :title="t('nutrition_details')" padding>
       <view class="nutrition-details">
         <view
             v-for="item in summaryNutrition"
@@ -78,16 +78,16 @@
       <!-- 仅今天可设置目标 -->
       <view class="set-goals-button-wrapper" v-if="isTodaySelected">
         <button class="set-goals-button" @click="navigateToSetGoals">
-          {{ $t('set_nutrition_goals') }}
+          {{ t('set_nutrition_goals') }}
         </button>
       </view>
     </uni-section>
 
     <!-- 膳食记录部分 -->
-    <uni-section :title="$t('meal_detail_records')" padding>
+    <uni-section :title="t('meal_detail_records')" padding>
       <view class="meal-records">
         <uni-collapse v-model="activeMeal" @change="onMealChange">
-          <uni-collapse-item :title="$t('breakfast')" name="breakfast">
+          <uni-collapse-item :title="t('breakfast')" name="breakfast">
             <view class="meal-content">
               <view
                   v-for="nutrient in breakfastNutrients"
@@ -99,7 +99,7 @@
               </view>
             </view>
           </uni-collapse-item>
-          <uni-collapse-item :title="$t('lunch')" name="lunch">
+          <uni-collapse-item :title="t('lunch')" name="lunch">
             <view class="meal-content">
               <view
                   v-for="nutrient in lunchNutrients"
@@ -111,7 +111,7 @@
               </view>
             </view>
           </uni-collapse-item>
-          <uni-collapse-item :title="$t('dinner')" name="dinner">
+          <uni-collapse-item :title="t('dinner')" name="dinner">
             <view class="meal-content">
               <view
                   v-for="nutrient in dinnerNutrients"
@@ -123,7 +123,7 @@
               </view>
             </view>
           </uni-collapse-item>
-          <uni-collapse-item :title="$t('other')" name="other">
+          <uni-collapse-item :title="t('other')" name="other">
             <view class="meal-content">
               <view
                   v-for="nutrient in otherNutrients"

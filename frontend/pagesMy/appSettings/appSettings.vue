@@ -1,7 +1,7 @@
 <template>
   <view class="settings">
     <view class="header">
-      <text class="title">{{ $t('settings_app_settings') }}</text>
+      <text class="title">{{ t('settings_app_settings') }}</text>
       <view class="header-actions">
         <button class="menu-icon"></button>
         <button class="camera-icon"></button>
@@ -10,39 +10,42 @@
 
     <view class="list">
       <view class="divider">
-        <text class="divider-text">{{ $t('settings_display') }}</text>
+        <text class="divider-text">{{ t('settings_display') }}</text>
       </view>
       <view class="list-item" @click="navigateTo('language')">
-        <text>{{ $t('settings_language') }}</text>
+        <text>{{ t('settings_language') }}</text>
         <text class="arrow">></text>
       </view>
+
       <view class="divider">
-        <text class="divider-text">{{ $t('settings_storage_data') }}</text>
+        <text class="divider-text">{{ t('settings_storage_data') }}</text>
       </view>
-      <view class="list-item" @click="Seal()">
-        <text>{{ $t('settings_clear_data') }}</text>
+      <view class="list-item" @click="Seal">
+        <text>{{ t('settings_clear_data') }}</text>
         <text class="arrow">></text>
       </view>
+
       <view class="divider">
-        <text class="divider-text">{{ $t('settings_accessibility') }}</text>
+        <text class="divider-text">{{ t('settings_accessibility') }}</text>
       </view>
-      <view class="list-item" @click="Seal()">
-        <text>{{ $t('settings_development_features') }}</text>
+      <view class="list-item" @click="Seal">
+        <text>{{ t('settings_development_features') }}</text>
         <text class="arrow">></text>
       </view>
+
       <view class="divider">
-        <text class="divider-text">{{ $t('settings_about_software') }}</text>
+        <text class="divider-text">{{ t('settings_about_software') }}</text>
       </view>
       <view class="list-item" @click="navigateTo('FeedBack')">
-        <text>{{ $t('settings_help_feedback') }}</text>
+        <text>{{ t('settings_help_feedback') }}</text>
         <text class="arrow">></text>
       </view>
       <view class="list-item" @click="navigateTo('SoftwareInfo')">
-        <text>{{ $t('settings_software_info') }}</text>
+        <text>{{ t('settings_software_info') }}</text>
         <text class="arrow">></text>
       </view>
       <view class="list-item" @click="navigateTo('ConnectUs')">
-        <text>{{ $t('settings_contact_us') }}</text>
+        <text>{{ t('settings_contact_us') }}</text>
         <text class="arrow">></text>
       </view>
     </view>
@@ -50,25 +53,26 @@
 </template>
 
 <script setup>
-function goBack() {
-  uni.navigateBack();
-}
+/* ----------------- Imports ----------------- */
+import { useI18n } from 'vue-i18n'
 
+/* ----------------- Setup ----------------- */
+const { t } = useI18n()
+
+/* ----------------- Methods ----------------- */
 function navigateTo(link) {
   uni.navigateTo({
     url: `/pagesSetting/${link}/${link}`,
-  });
+  })
 }
 
 function Seal() {
-	uni.showToast({
-	  title: '正在开发',
-	  icon: "error",
-	  duration: 2000,
-	});
+  uni.showToast({
+    title: '正在开发',
+    icon: 'error',
+    duration: 2000,
+  })
 }
-
-const dividerText = ""; // Set this to the desired text to add text to dividers
 </script>
 
 <style scoped>
@@ -138,4 +142,3 @@ const dividerText = ""; // Set this to the desired text to add text to dividers
   color: red;
 }
 </style>
-

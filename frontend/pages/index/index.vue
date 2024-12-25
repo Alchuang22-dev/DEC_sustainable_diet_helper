@@ -1,7 +1,7 @@
 <template>
   <view class="container">
     <!-- 全屏背景图片 -->
-    <image src="/static/images/index/background_img.jpg" class="background-image"></image>
+    <image src="/static/images/index/background_img.jpg" class="background-image" />
 
     <!-- 头部 -->
     <view class="dec_header">
@@ -10,22 +10,21 @@
         :alt="t('dec_logo_alt')"
         class="dec_logo"
         mode="aspectFit"
-      ></image>
-      <text class="title">{{t('welcome_title')}}</text>
+      />
+      <text class="title">{{ t('welcome_title') }}</text>
     </view>
 
     <!-- 碳排放信息 -->
     <view class="carbon-info">
       <view class="carbon-progress">
-        <text class="carbon-description">{{t('carbon_description')}}</text>
-        <!-- 替换 days 为 registeredDays -->
-        <text class="carbon-number">{{ registeredDays }}{{t('carbon_days')}}</text>
+        <text class="carbon-description">{{ t('carbon_description') }}</text>
+        <text class="carbon-number">{{ registeredDays }}{{ t('carbon_days') }}</text>
       </view>
 
       <view class="charts">
         <!-- 今日碳排放环形图 -->
         <view class="chart today" @click="navigateToCarbonCalculator">
-          <text class="chart-title">{{t('carbon_today')}}</text>
+          <text class="chart-title">{{ t('carbon_today') }}</text>
           <view class="today-charts">
             <qiun-data-charts
               :canvas2d="true"
@@ -38,7 +37,7 @@
 
         <!-- 历史碳排放曲线图 -->
         <view class="chart history">
-          <text class="chart-title">{{t('carbon_history')}}</text>
+          <text class="chart-title">{{ t('carbon_history') }}</text>
           <qiun-data-charts
             :canvas2d="true"
             canvas-id="carbonHistoryChart"
@@ -50,7 +49,7 @@
 
         <!-- 今日营养情况图表（柱状图） -->
         <view class="chart nutrition" @click="navigateToNutritionCalendar">
-          <text class="chart-title">{{t('nutrition_today')}}</text>
+          <text class="chart-title">{{ t('nutrition_today') }}</text>
           <view class="nutrition-charts">
             <qiun-data-charts
               :canvas2d="true"
@@ -67,7 +66,7 @@
 
     <!-- 实用工具 -->
     <view class="useful-tools">
-      <text class="tools-title">{{t('tools_title')}}</text>
+      <text class="tools-title">{{ t('tools_title') }}</text>
       <view class="tools-grid">
         <view class="tool" @click="navigateTo('calculator')" animation="fadeInUp">
           <image
@@ -77,8 +76,8 @@
             mode="aspectFill"
           />
           <view class="tool-description">
-            <text class="tool-name">{{t('tool_carbon_calculator')}}</text>
-            <text class="tool-info">{{t('tool_carbon_calculator_info')}}</text>
+            <text class="tool-name">{{ t('tool_carbon_calculator') }}</text>
+            <text class="tool-info">{{ t('tool_carbon_calculator_info') }}</text>
           </view>
         </view>
         <view class="tool" @click="navigateTo('recommend')" animation="fadeInUp" animation-delay="0.2s">
@@ -89,8 +88,8 @@
             mode="aspectFill"
           />
           <view class="tool-description">
-            <text class="tool-name">{{t('tool_diet_recommendation')}}</text>
-            <text class="tool-info">{{t('tool_diet_recommendation_info')}}</text>
+            <text class="tool-name">{{ t('tool_diet_recommendation') }}</text>
+            <text class="tool-info">{{ t('tool_diet_recommendation_info') }}</text>
           </view>
         </view>
         <view class="tool" @click="navigateTo('nutrition')" animation="fadeInUp" animation-delay="0.4s">
@@ -100,8 +99,8 @@
             class="tool-icon"
           />
           <view class="tool-description">
-            <text class="tool-name">{{t('tool_nutrition_calculator')}}</text>
-            <text class="tool-info">{{t('tool_nutrition_calculator_info')}}</text>
+            <text class="tool-name">{{ t('tool_nutrition_calculator') }}</text>
+            <text class="tool-info">{{ t('tool_nutrition_calculator_info') }}</text>
           </view>
         </view>
         <view class="tool" @click="navigateTo('family')" animation="fadeInUp" animation-delay="0.6s">
@@ -111,8 +110,8 @@
             class="tool-icon"
           />
           <view class="tool-description">
-            <text class="tool-name">{{t('tool_family_recipe')}}</text>
-            <text class="tool-info">{{t('tool_family_recipe_info')}}</text>
+            <text class="tool-name">{{ t('tool_family_recipe') }}</text>
+            <text class="tool-info">{{ t('tool_family_recipe_info') }}</text>
           </view>
         </view>
       </view>
@@ -121,33 +120,24 @@
 </template>
 
 <script setup>
-/**
- * 主页示例：展示今日/历史碳排放、营养数据，并提供工具跳转入口
- * 重点：
- * - 从 Pinia 中获取用户注册天数 (registeredDays)
- * - 动态渲染图表 (今日/历史/营养)
- */
-
+/* ----------------- Imports ----------------- */
 import { ref, computed, watch } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useI18n } from 'vue-i18n'
 import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data.js'
 import { useUserStore } from '@/stores/user.js'
 
-// 初始化多语言
+/* ----------------- Setup ----------------- */
 const { t, locale } = useI18n()
-
-// 获取 Pinia 存储
 const carbonNutritionStore = useCarbonAndNutritionStore()
 const userStore = useUserStore()
 
-// 计算属性：从用户 store 获取注册天数
+/* ----------------- Reactive & State ----------------- */
+// 从用户 store 获取注册天数
 const registeredDays = computed(() => userStore.user.registered_days)
 
 // 今日碳排放环形图数据
-const chartTodayData = ref({
-  series: [{ data: [] }]
-})
+const chartTodayData = ref({ series: [{ data: [] }] })
 
 // 历史碳排放曲线图数据
 const chartHistoryData = ref({
@@ -173,9 +163,10 @@ const chartNutritionData = ref({
   ]
 })
 
-// 环形图动态标题（subtitle）使用 ref
+// 环形图副标题
 const ringSubtitle = ref("")
 
+/* ----------------- Computed ----------------- */
 // 环形图设置
 const ringOpts = computed(() => ({
   rotate: false,
@@ -262,11 +253,11 @@ const nutritionOpts = computed(() => ({
   }
 }))
 
+/* ----------------- Methods ----------------- */
 /**
  * 从 store 获取指定日期的碳排放和营养数据
- * @param {String} dateString 格式 yyyy-MM-dd
  */
-const getDataByDate = (dateString) => {
+function getDataByDate(dateString) {
   const nutritionGoal = carbonNutritionStore.state.nutritionGoals
     .find(g => g.date.startsWith(dateString))
   const carbonGoal = carbonNutritionStore.state.carbonGoals
@@ -281,7 +272,7 @@ const getDataByDate = (dateString) => {
   const totalNutrients = { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
   let totalCarbonEmission = 0
 
-  // 计算每个餐别的营养摄入
+  // 计算营养
   for (const intake of dailyNutritionIntakes) {
     const mealType = intake.meal_type || 'other'
     if (!meals[mealType].nutrients) {
@@ -306,7 +297,7 @@ const getDataByDate = (dateString) => {
     totalNutrients.sodium += intake.sodium || 0
   }
 
-  // 计算每个餐别的碳排放
+  // 计算碳排放
   for (const cIntake of dailyCarbonIntakes) {
     const mealType = cIntake.meal_type || 'other'
     if (!meals[mealType].carbonEmission) {
@@ -319,13 +310,15 @@ const getDataByDate = (dateString) => {
   return {
     nutrients: {
       actual: totalNutrients,
-      target: nutritionGoal ? {
-        calories: nutritionGoal.calories,
-        protein: nutritionGoal.protein,
-        fat: nutritionGoal.fat,
-        carbohydrates: nutritionGoal.carbohydrates,
-        sodium: nutritionGoal.sodium
-      } : { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
+      target: nutritionGoal
+        ? {
+            calories: nutritionGoal.calories,
+            protein: nutritionGoal.protein,
+            fat: nutritionGoal.fat,
+            carbohydrates: nutritionGoal.carbohydrates,
+            sodium: nutritionGoal.sodium
+          }
+        : { calories: 0, protein: 0, fat: 0, carbohydrates: 0, sodium: 0 }
     },
     carbonEmission: {
       actual: totalCarbonEmission,
@@ -336,22 +329,19 @@ const getDataByDate = (dateString) => {
 }
 
 /**
- * 渲染图表（今日环形图、今日营养柱状图、近7天碳排放历史曲线图）
+ * 渲染所有图表（今日环形图、今日营养柱状图、近7天碳排放历史）
  */
 function renderCharts() {
-  // 今日日期
+  // 今日
   const today = new Date()
   const dateString = [
     today.getFullYear(),
     String(today.getMonth() + 1).padStart(2, '0'),
     String(today.getDate()).padStart(2, '0')
   ].join('-')
-
   const todayData = getDataByDate(dateString)
 
-  // ----------------
-  // 1. 今日环形图
-  // ----------------
+  // 1) 今日环形图
   if (todayData) {
     const mealTypes = ['breakfast', 'lunch', 'dinner', 'other']
     const mealData = []
@@ -359,21 +349,15 @@ function renderCharts() {
 
     mealTypes.forEach(mealType => {
       const emission = todayData.meals[mealType].carbonEmission || 0
-      mealData.push({
-        name: t(mealType),
-        value: emission
-      })
+      mealData.push({ name: t(mealType), value: emission })
       totalCarbonEmission += emission
     })
 
-    // 更新 chartTodayData
     chartTodayData.value = { series: [{ data: mealData }] }
     ringSubtitle.value = `${totalCarbonEmission.toFixed(1)}Kg`
   }
 
-  // ----------------
-  // 2. 今日营养柱状图
-  // ----------------
+  // 2) 今日营养柱状图
   if (todayData) {
     const nutrients = ['calories', 'protein', 'fat', 'carbohydrates', 'sodium']
     const intakeData = nutrients.map(n => todayData.nutrients.actual[n] || 0)
@@ -394,9 +378,7 @@ function renderCharts() {
     }
   }
 
-  // ----------------
-  // 3. 历史碳排放曲线图
-  // ----------------
+  // 3) 近7天碳排放历史
   const categories = []
   const targetData = []
   const actualData = []
@@ -426,14 +408,13 @@ function renderCharts() {
   }
 }
 
-// 语言切换，重新渲染图表文本
+/* ----------------- Watch ----------------- */
+// 切换语言时刷新图表
 watch(locale, () => {
   renderCharts()
 })
 
-/**
- * 页面显示时，刷新 store 数据并渲染图表
- */
+/* ----------------- Lifecycle ----------------- */
 onShow(async () => {
   uni.setNavigationBarTitle({ title: t('index') })
   uni.setTabBarItem({ index: 0, text: t('index') })
@@ -441,38 +422,26 @@ onShow(async () => {
   uni.setTabBarItem({ index: 2, text: t('news_index') })
   uni.setTabBarItem({ index: 3, text: t('my_index') })
 
-  // 获取数据
+  // 获取最新数据
   await carbonNutritionStore.getNutritionGoals()
   await carbonNutritionStore.getCarbonGoals()
   await carbonNutritionStore.getNutritionIntakes()
   await carbonNutritionStore.getCarbonIntakes()
 
-  // 调用渲染
+  // 渲染图表
   renderCharts()
 })
 
-/**
- * 页面跳转：营养日历
- */
-const navigateToNutritionCalendar = () => {
-  uni.navigateTo({
-    url: "/pagesTool/nutrition_calendar/nutrition_calendar"
-  })
+/* ----------------- Methods: Page Navigation ----------------- */
+function navigateToNutritionCalendar() {
+  uni.navigateTo({ url: "/pagesTool/nutrition_calendar/nutrition_calendar" })
 }
 
-/**
- * 页面跳转：碳排放计算器
- */
-const navigateToCarbonCalculator = () => {
-  uni.navigateTo({
-    url: "/pagesTool/carbon_calculator/carbon_calculator"
-  })
+function navigateToCarbonCalculator() {
+  uni.navigateTo({ url: "/pagesTool/carbon_calculator/carbon_calculator" })
 }
 
-/**
- * 页面跳转
- */
-const navigateTo = (page) => {
+function navigateTo(page) {
   if (page === 'recommend') {
     uni.navigateTo({ url: "/pagesTool/food_recommend/food_recommend" })
   } else if (page === 'nutrition') {
@@ -480,14 +449,13 @@ const navigateTo = (page) => {
   } else if (page === 'family') {
     uni.navigateTo({ url: "/pagesTool/home_servant/home_servant" })
   } else {
-    // 默认跳转到carbon_calculator
+    // 默认跳转
     uni.navigateTo({ url: "/pagesTool/carbon_calculator/carbon_calculator" })
   }
 }
 </script>
 
 <style scoped>
-/* 通用变量 */
 :root {
   --primary-color: #4CAF50;
   --secondary-color: #2fc25b;
@@ -499,7 +467,6 @@ const navigateTo = (page) => {
   --font-size-subtitle: 24rpx;
 }
 
-/* 容器 */
 .container {
   display: flex;
   flex-direction: column;
@@ -510,7 +477,6 @@ const navigateTo = (page) => {
   overflow: hidden;
 }
 
-/* 全屏背景图片 */
 .background-image {
   position: fixed;
   top: 0;
@@ -520,9 +486,9 @@ const navigateTo = (page) => {
   object-fit: cover;
   z-index: 0;
   opacity: 0.1;
+  pointer-events: none;
 }
 
-/* 头部 */
 .dec_header {
   display: flex;
   align-items: center;
@@ -545,7 +511,6 @@ const navigateTo = (page) => {
   margin-left: 20rpx;
 }
 
-/* 碳排放信息 */
 .carbon-info {
   display: flex;
   flex-direction: column;

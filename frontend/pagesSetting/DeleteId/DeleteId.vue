@@ -1,7 +1,7 @@
 <template>
   <view class="container">
     <view class="icon_holder">
-      <img src="/static/images/settings/trash.png" class="delete-icon"></img>
+      <img src="/static/images/settings/trash.png" class="delete-icon" />
     </view>
     <view class="text_holder" :style="{ fontSize: fontSizeBig + 'px' }">
       <text style="font-weight: bold;">注销账号</text>
@@ -10,34 +10,34 @@
       <text>账号注销不可恢复，请谨慎操作。</text>
     </view>
     <view class="button_holder">
-      <button class="confirm-button" @click="deleteId">注销账号</button> 
+      <button class="confirm-button" @click="deleteId">注销账号</button>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+/* ----------------- Imports ----------------- */
+import { ref } from 'vue'
 
-// 定义字体大小
-const fontSize = ref(16);
-const fontSizeBig = fontSize.value + 4;
+/* ----------------- Setup ----------------- */
+const fontSize = ref(16)
+const fontSizeBig = fontSize.value + 4
 
+/* ----------------- Methods ----------------- */
 function deleteId() {
-  // TODO：这一部分没找到对应的后端
   uni.showToast({
     title: '不支持此操作',
     icon: 'error'
-  });
+  })
 }
 </script>
 
-<style>
-/* 设置容器为 Flex 布局 */
+<style scoped>
 .container {
   display: flex;
   flex-direction: column;
-  height: 100vh; /* 设置页面高度为全屏 */
-  justify-content: space-between; /* 自动分布内容，按钮会被推到底部 */
+  height: 100vh;
+  justify-content: space-between;
 }
 
 .icon_holder {
@@ -57,8 +57,8 @@ function deleteId() {
 
 .button_holder {
   text-align: center;
-  margin-top: auto; /* 将按钮推到底部 */
-  padding-bottom: 30px; /* 底部留一些空间 */
+  margin-top: auto;
+  padding-bottom: 30px;
 }
 
 .confirm-button {

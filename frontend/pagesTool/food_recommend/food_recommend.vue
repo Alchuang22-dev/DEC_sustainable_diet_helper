@@ -1,6 +1,6 @@
 <template>
   <view class="recommendation-section">
-    <text class="recommend-title">{{ $t('recommendation_title') }}</text>
+    <text class="recommend-title">{{ t('recommendation_title') }}</text>
 
     <view class="dishes">
       <view
@@ -27,13 +27,12 @@
     <!-- 生成菜谱按钮 -->
     <view class="button-container">
       <button class="generate-button fade-in-up delay-7" @click="regetRecipe">
-        {{ $t('change_food') }}
+        {{ t('change_food') }}
       </button>
       <button class="generate-button fade-in-up delay-7" @click="generateRecipe">
-        {{ $t('generate_recipe') }}
+        {{ t('generate_recipe') }}
       </button>
     </view>
-
   </view>
 
   <!-- 推荐菜谱列表 -->
@@ -59,41 +58,35 @@
 
 <script setup>
 /* ----------------- Imports ----------------- */
-import { onMounted, ref, reactive, computed } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFoodListStore } from '../stores/food_list'
 import { useUserStore } from '@/stores/user.js'
 
-/* ----------------- i18n ----------------- */
+/* ----------------- Setup ----------------- */
 const { t } = useI18n()
-
-/* ----------------- Stores & Refs ----------------- */
 const foodStore = useFoodListStore()
 const userStore = useUserStore()
 
 const BASE_URL = ref('http://122.51.231.155:8095')
+const token = ref(userStore.user.token)
 
-const token = computed(() => userStore.user.token)
-
-// 推荐菜谱相关
-const recommendedRecipes = ref([]) // 推荐的菜谱
+/* ----------------- Reactive & State ----------------- */
+const recommendedRecipes = ref([])
 const showRecipeBoxes = ref(false)
 
-// 菜品相关
-const dishes = ref([]) // 推荐的前6个菜品
-const availableNewDishes = ref([]) // 其他的菜品
+const dishes = ref([])
+const availableNewDishes = ref([])
 
-// 模拟用户的偏好
 const likedIngredients = []
 const dislikedIngredients = []
 
-/* ----------------- Lifecycle: onMounted ----------------- */
+/* ----------------- Lifecycle ----------------- */
 onMounted(() => {
   fetchRecommendedDishes()
 })
 
 /* ----------------- Methods ----------------- */
-// 获取推荐食材数据
 async function fetchRecommendedDishes() {
   try {
     const response = await uni.request({
@@ -136,7 +129,6 @@ async function fetchRecommendedDishes() {
   }
 }
 
-// 重新获取推荐食材
 async function regetRecipe() {
   try {
     dishes.value = []
@@ -154,10 +146,7 @@ async function regetRecipe() {
         disliked_ingredients: dislikedIngredients
       }
     })
-    if (
-      response.statusCode === 200 &&
-      response.data.recommended_ingredients
-    ) {
+    if (response.statusCode === 200 && response.data.recommended_ingredients) {
       const recommendedIngredients = response.data.recommended_ingredients
       dishes.value = recommendedIngredients.slice(0, 6).map(ingredient => ({
         id: ingredient.id,
@@ -177,10 +166,8 @@ async function regetRecipe() {
   }
 }
 
-// 生成菜谱
 async function generateRecipe() {
   try {
-    // 获取当前选择的食材ID
     const selectedIngredients = dishes.value.map(dish => dish.id)
 
     // 步骤1：保存用户选择的食材
@@ -211,12 +198,8 @@ async function generateRecipe() {
         }
       })
 
-      if (
-        recommendResponse.statusCode === 200 &&
-        recommendResponse.data.recommended_recipes
-      ) {
-        recommendedRecipes.value =
-          recommendResponse.data.recommended_recipes
+      if (recommendResponse.statusCode === 200 && recommendResponse.data.recommended_recipes) {
+        recommendedRecipes.value = recommendResponse.data.recommended_recipes
         showRecipeBoxes.value = true
       }
     }
@@ -225,7 +208,6 @@ async function generateRecipe() {
   }
 }
 
-// 解析食材
 function parseIngredients(ingredientsStr) {
   try {
     const ingredients = JSON.parse(ingredientsStr)
@@ -246,25 +228,18 @@ function parseIngredients(ingredientsStr) {
   }
 }
 
-// 跳转到推荐的食谱详情
 function goToRecipe(index) {
   const recipe = recommendedRecipes.value[index]
   uni.navigateTo({
-    url: `/pagesTool/recipe/recipe?name=${encodeURIComponent(
-      recipe.name
-    )}&ingredients=${encodeURIComponent(
-      recipe.ingredients
-    )}&image_url=${encodeURIComponent(recipe.image_url)}`
+    url: `/pagesTool/recipe/recipe?name=${encodeURIComponent(recipe.name)}&ingredients=${encodeURIComponent(recipe.ingredients)}&image_url=${encodeURIComponent(recipe.image_url)}`
   })
 }
 
-// 用户喜欢菜品
 function likeDish(index) {
   dishes.value[index].liked = !dishes.value[index].liked
   likedIngredients.push(dishes.value[index].id)
 }
 
-// 删除菜品后模拟获取新菜品
 async function deleteDish(index) {
   dislikedIngredients.push(dishes.value[index].id)
   const removedDish = dishes.value.splice(index, 1)[0]
@@ -275,6 +250,7 @@ async function deleteDish(index) {
 
 function simulateBackendDelete(dish) {
   return new Promise(resolve => {
+    // 模拟后端删除
     resolve()
   })
 }
@@ -284,15 +260,12 @@ function simulateFetchNewDish() {
     if (availableNewDishes.value.length === 0) {
       resolve({
         name: t('default_dish'),
-        image:
-          'https://cdn.pixabay.com/photo/2016/11/18/14/40/pasta-1836457_1280.jpg',
+        image: 'https://cdn.pixabay.com/photo/2016/11/18/14/40/pasta-1836457_1280.jpg',
         liked: false
       })
       return
     }
-    const randomIndex = Math.floor(
-      Math.random() * availableNewDishes.value.length
-    )
+    const randomIndex = Math.floor(Math.random() * availableNewDishes.value.length)
     const newDish = availableNewDishes.value.splice(randomIndex, 1)[0]
     resolve(newDish)
   })
@@ -402,7 +375,6 @@ function simulateFetchNewDish() {
 .like-button {
   color: #e91e63;
 }
-
 .like-button.liked {
   color: #ff4081;
 }
