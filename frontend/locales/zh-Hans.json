@@ -605,6 +605,7 @@
     "Save Results": "保存结果",
     "Family Sharing": "家庭共享",
 	"weight_must_be_positive_number": "重量必须是正数",
-	"price_must_be_positive_number": "价格必须是正数"
+	"price_must_be_positive_number": "价格必须是正数",
+	"fetch_user_info_error": "获取用户信息失败"
 
 }

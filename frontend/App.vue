@@ -9,9 +9,6 @@ import { useUserStore } from './stores/user.js'; // 确保路径正确
 export default {
   data() {
     return {
-      // globalData: {
-      //   url: 'http://122.51.231.155:8080' // 全局基础URL
-      // }
     };
   },
   onLaunch: async function() {

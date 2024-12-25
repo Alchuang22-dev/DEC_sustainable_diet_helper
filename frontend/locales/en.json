@@ -590,5 +590,6 @@
     "Save Results": "Save Results",
     "Family Sharing": "Family Sharing",
 	"weight_must_be_positive_number": "Weight must be a positive number",
-	"price_must_be_positive_number": "Price must be a positive number"
+	"price_must_be_positive_number": "Price must be a positive number",
+	"fetch_user_info_error": "Failed to fetch user information"
 }
