@@ -1228,14 +1228,12 @@ func TestGetMyDrafts(t *testing.T) {
 
 func TestPreviewNews(t *testing.T) {
     db := setupNewsTestDB()
-    // 需要迁移相关模型
     db.AutoMigrate(&models.News{}, &models.NewsImage{}, &models.Paragraph{}, &models.User{})
 
-    // 设置路由
     router := gin.Default()
     newsController := NewNewsController(db)
     newsGroup := router.Group("/news")
-    newsGroup.Use(middleware.AuthMiddleware()) // 需要鉴权
+    newsGroup.Use(middleware.AuthMiddleware())
     {
         newsGroup.POST("/preview_news", newsController.PreviewNews)
     }
@@ -1339,10 +1337,122 @@ func TestPreviewNews(t *testing.T) {
                 var resp map[string]interface{}
                 err := json.Unmarshal(w.Body.Bytes(), &resp)
                 assert.NoError(t, err)
-                // 可以根据需要更精细地断言
-                // 如: assert.Len(t, resp.Previews, 2)
             } else {
                 // 错误时检查 error 字段
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
+
+func TestPreviewDrafts(t *testing.T) {
+    db := setupNewsTestDB()
+    db.AutoMigrate(&models.Draft{}, &models.DraftParagraph{}, &models.DraftImage{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.POST("/preview_drafts", newsController.PreviewDrafts)
+    }
+
+    // 创建用户
+    user := models.User{
+        OpenID:   "OpenID_PreviewDrafts_User",
+        Nickname: "PreviewDraftsUser",
+    }
+    db.Create(&user)
+
+    // 创建几个草稿
+    d1 := models.Draft{Title: "DraftTitle1", AuthorID: user.ID}
+    db.Create(&d1)
+    db.Create(&models.DraftParagraph{DraftID: d1.ID, Text: "Draft1 Para1"})
+    db.Create(&models.DraftImage{DraftID: d1.ID, URL: "draft1_img1.jpg", Description: "desc_draft1_img1"})
+
+    d2 := models.Draft{Title: "DraftTitle2", AuthorID: user.ID}
+    db.Create(&d2)
+    db.Create(&models.DraftParagraph{DraftID: d2.ID, Text: "Draft2 Para1"})
+    db.Create(&models.DraftImage{DraftID: d2.ID, URL: "draft2_img1.jpg", Description: "desc_draft2_img1"})
+
+    tests := []struct {
+        name           string
+        userID         uint
+        requestBody    interface{}
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            requestBody:    gin.H{"ids": []uint{d1.ID, d2.ID}},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid Request Body",
+            userID:         user.ID,
+            requestBody:    "not_json",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid request body",
+        },
+        {
+            name:           "DB Error (simulate)",
+            userID:         user.ID,
+            requestBody:    gin.H{"ids": []uint{d1.ID, d2.ID}},
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_preview_drafts_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "drafts" {
+                        tx.Error = fmt.Errorf("forced preview drafts error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to fetch drafts",
+        },
+        {
+            name:           "Success Preview Drafts",
+            userID:         user.ID,
+            requestBody:    gin.H{"ids": []uint{d1.ID, d2.ID}},
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_preview_drafts_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            bodyBytes, _ := json.Marshal(tc.requestBody)
+            req, _ := http.NewRequest("POST", "/news/preview_drafts", bytes.NewBuffer(bodyBytes))
+            req.Header.Set("Content-Type", "application/json")
+
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            if tc.isSuccess {
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+            } else {
                 var resp map[string]interface{}
                 err := json.Unmarshal(w.Body.Bytes(), &resp)
                 assert.NoError(t, err)
