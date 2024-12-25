@@ -32,12 +32,6 @@
         <text class="arrow">></text>
       </view>
       <view class="divider"></view>
-      <view class="list-item" @click="Seal()">
-        <text>{{$t('settings_password')}}</text>
-        <text class="numbers right-align">{{$t('settings_done')}}</text>
-        <text class="arrow">></text>
-      </view>
-      <view class="divider"></view>
       <view class="list-item centered" @click="Seal()">
         <text>{{$t('settings_security')}}</text>
       </view>

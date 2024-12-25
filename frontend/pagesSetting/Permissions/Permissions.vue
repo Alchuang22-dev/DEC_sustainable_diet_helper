@@ -30,6 +30,16 @@
 
 <script setup>
 import { reactive } from 'vue'
+import { useI18n } from 'vue-i18n';
+import { onShow } from '@dcloudio/uni-app'
+
+const { t } = useI18n()
+
+onShow(() => {
+  uni.setNavigationBarTitle({
+    title: t('Personal Information Collection List')
+  })
+})
 
 // 定义信息分类及其项目
 const sections = [

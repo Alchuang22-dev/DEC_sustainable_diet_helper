@@ -18,17 +18,21 @@
         <text>{{$t('lang.zh-hans')}}</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item centered red-text" @click="resetLocale">
-        <text>{{$t('resetSystemLanguage')}}</text>
-      </view>
     </view>
   </view>
 </template>
 
 <script setup>
 import { useI18n } from 'vue-i18n';
+import { onShow } from '@dcloudio/uni-app';
 
-const { locale } = useI18n();
+onShow(() => {
+  uni.setNavigationBarTitle({
+    title: t('lanSettings'),
+  });
+});
+
+const { t, locale } = useI18n();
 
 function goBack() {
   uni.navigateBack();
@@ -36,17 +40,18 @@ function goBack() {
 
 function switchToEn() {
   locale.value = 'en';
+  uni.reLaunch({
+    url: '/pagesSetting/language/language',
+  });
 }
 
 function switchToZhHans() {
   locale.value = 'zh-Hans';
+    uni.reLaunch({
+    url: '/pagesSetting/language/language',
+  });
 }
 
-function resetLocale() {
-  const systemLocale = uni.getSystemInfoSync().language.toLowerCase();
-  // 您可能需要对 systemLocale 进行处理，以匹配您的语言代码
-  locale.value = systemLocale.includes('zh') ? 'zh-hans' : 'en';
-}
 </script>
 
 <style scoped>
