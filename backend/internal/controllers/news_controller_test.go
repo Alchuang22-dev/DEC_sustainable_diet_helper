@@ -1002,3 +1002,115 @@ func TestDeleteNews(t *testing.T) {
         })
     }
 }
+
+func TestGetMyNews(t *testing.T) {
+    db := setupNewsTestDB()
+    // 需要存储 News，AutoMigrate 以免报错
+    db.AutoMigrate(&models.News{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.GET("/my_news", newsController.GetMyNews)
+    }
+
+    // 创建用户: userWithNews, userNoNews
+    userWithNews := models.User{
+        OpenID:   "OpenID_GetMyNews_Has",
+        Nickname: "UserHasNews",
+    }
+    db.Create(&userWithNews)
+
+    userNoNews := models.User{
+        OpenID:   "OpenID_GetMyNews_None",
+        Nickname: "UserNoNews",
+    }
+    db.Create(&userNoNews)
+
+    // 为 userWithNews 创建一些 news
+    news1 := models.News{Title: "My News1", AuthorID: userWithNews.ID, UploadTime: time.Now().Add(-2 * time.Hour)}
+    db.Create(&news1)
+    news2 := models.News{Title: "My News2", AuthorID: userWithNews.ID, UploadTime: time.Now().Add(-1 * time.Hour)}
+    db.Create(&news2)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        setupFunc      func()
+        expectedStatus int
+        expectedIDs    []uint
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedIDs:    nil,
+        },
+        {
+            name:           "User With No News",
+            userID:         userNoNews.ID,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusOK,
+            expectedIDs:    []uint{},
+        },
+        {
+            name:   "Failed To Fetch News (simulate DB error)",
+            userID: userWithNews.ID,
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_get_my_news_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "news" {
+                        tx.Error = fmt.Errorf("forced get my news error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedIDs:    nil,
+        },
+        {
+            name:   "Success Get My News",
+            userID: userWithNews.ID,
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_get_my_news_err")
+            },
+            expectedStatus: http.StatusOK,
+            // Order("upload_time DESC") => news2 比 news1 时间更新 => [news2, news1]
+            expectedIDs: []uint{news2.ID, news1.ID},
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            req, _ := http.NewRequest("GET", "/news/my_news", nil)
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            if w.Code == http.StatusOK {
+                var resp map[string][]uint
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                assert.Equal(t, tc.expectedIDs, resp["news_ids"])
+            } else if w.Code == http.StatusUnauthorized {
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                assert.Equal(t, "Authorization header missing", resp["error"])
+            } else if w.Code == http.StatusInternalServerError {
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                assert.Equal(t, "Failed to fetch news", resp["error"])
+            }
+        })
+    }
+}
