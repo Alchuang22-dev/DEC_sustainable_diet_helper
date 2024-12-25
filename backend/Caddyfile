@@ -1,0 +1,9 @@
+{
+	email 19910500882@163.com  # 申请证书时用的邮箱
+	# debug  # 如果想看更详细日志，可启用
+}
+
+xcxcs.uwdjl.cn {
+	# 将所有请求反向代理给 nginx:80
+	reverse_proxy nginx:80
+}
