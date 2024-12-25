@@ -1847,3 +1847,117 @@ func TestGetNewsByViewCount(t *testing.T) {
         })
     }
 }
+
+func TestGetNewsByLikeCount(t *testing.T) {
+    db := setupNewsTestDB()
+    db.AutoMigrate(&models.News{}, &models.User{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.GET("/paginated/like_count", newsController.GetNewsByLikeCount)
+    }
+
+    // 创建用户
+    user := models.User{
+        OpenID:   "OpenID_GetNewsByLikeCount_User",
+        Nickname: "LikeCountUser",
+    }
+    db.Create(&user)
+
+    // 插入新闻
+    n1 := models.News{Title: "News1", LikeCount: 50}
+    db.Create(&n1)
+    n2 := models.News{Title: "News2", LikeCount: 100}
+    db.Create(&n2)
+    n3 := models.News{Title: "News3", LikeCount: 10}
+    db.Create(&n3)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        page           string
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+        expectedIDs    []uint
+    }{
+        {
+            name:           "Unauthorized",
+            userID:         0,
+            page:           "1",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid Page Number",
+            userID:         user.ID,
+            page:           "zero",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid page number",
+        },
+        {
+            name:           "DB Error",
+            userID:         user.ID,
+            page:           "1",
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_likecount_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "news" {
+                        tx.Error = fmt.Errorf("forced likecount error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to fetch news",
+        },
+        {
+            name:           "Success (like_count desc)",
+            userID:         user.ID,
+            page:           "1",
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_likecount_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            // 按 like_count 降序 => n2(100), n1(50), n3(10)
+            expectedIDs: []uint{n2.ID, n1.ID, n3.ID},
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            url := "/news/paginated/like_count?page=" + tc.page
+            req, _ := http.NewRequest("GET", url, nil)
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            if tc.isSuccess {
+                var resp map[string][]uint
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                assert.Equal(t, tc.expectedIDs, resp["news_ids"])
+            } else {
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
