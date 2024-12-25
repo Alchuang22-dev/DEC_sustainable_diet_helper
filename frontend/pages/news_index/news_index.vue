@@ -1,33 +1,40 @@
 <template>
   <view>
-    <!-- Header Section -->
-    <image src="/static/images/index/background_img.jpg" class="background-image"></image>
+    <!-- Header: 包含搜索、排序抽屉、以及“去信”按钮 -->
+    <image
+      src="/static/images/index/background_img.jpg"
+      class="background-image"
+    ></image>
+
     <view class="header">
-	  <button @click="toggleDrawer" class="drawer-button">
-		  <image src="@/pagesNews/static/gengduo.png" alt=">" class="icon-news"></image>
-	  </button>
+      <!-- 打开抽屉按钮 -->
+      <button @click="toggleDrawer" class="drawer-button">
+        <image src="@/pagesNews/static/gengduo.png" alt=">" class="icon-news"></image>
+      </button>
+
+      <!-- 搜索框 -->
       <input
         class="search-box"
         v-model="searchText"
-        @input="onSearchInput"
-        :placeholder="placeholderText"
+        :placeholder="t('text_search')"
       />
       <button @click="onSearch" class="search-button">
-        {{$t('text_search')}}
+        {{ t('text_search') }}
       </button>
-      <button v-if="isLoggedIn" @click="createNews()" class="create-button">
-        去信
+
+      <!-- “去信”按钮：仅已登录时可见 -->
+      <button v-if="isLoggedIn" @click="createNews" class="create-button">
+        {{ t('create_news_button') }}
       </button>
     </view>
 
-    <!-- Loading Indicator -->
+    <!-- Loading 状态 -->
     <view v-if="isRefreshing" class="loading-overlay">
-      <text class="loading-text">正在加载...</text>
-      <!-- 可选：添加动画 -->
+      <text class="loading-text">{{ t('loading_text') }}</text>
       <view class="loading-spinner"></view>
     </view>
 
-    <!-- News Section -->
+    <!-- News 列表 -->
     <view class="news-section">
       <view
         v-for="(item, index) in filteredNewsItems"
@@ -35,18 +42,18 @@
         :class="['news-item', { active: activeIndex === index }]"
         @click="navigateTo(item.id, item.title)"
         @touchstart="pressFeedback(index)"
-        @touchend="releaseFeedback()"
+        @touchend="releaseFeedback"
       >
         <view class="news-title">{{ item.title }}</view>
         <view v-if="item.image" class="news-image">
           <image :src="item.image" :alt="item.title" mode="widthFix" />
         </view>
         <view class="news-description">{{ item.description }}</view>
-		<view class="news-description">{{ item.info }}</view>
+        <view class="news-description">{{ item.info }}</view>
       </view>
     </view>
 
-    <!-- Drawer Component -->
+    <!-- Drawer: 用于多种排序 -->
     <uni-drawer
       ref="drawer"
       placement="bottom"
@@ -58,23 +65,23 @@
       :style="'background-color: rgba(255, 255, 255, 0.9);'"
     >
       <view class="drawer-content">
-        <button 
-          @click="handleSort('latest')" 
+        <button
+          @click="handleSort('latest')"
           :class="['nav-item', { active: currentSort === 'latest' }]"
         >
-          按时间排序
+          {{ t('sort_by_time') }}
         </button>
-        <button 
-          @click="handleSort('top-views')" 
+        <button
+          @click="handleSort('top-views')"
           :class="['nav-item', { active: currentSort === 'top-views' }]"
         >
-          按观看量排序
+          {{ t('sort_by_views') }}
         </button>
-        <button 
-          @click="handleSort('top-likes')" 
+        <button
+          @click="handleSort('top-likes')"
           :class="['nav-item', { active: currentSort === 'top-likes' }]"
         >
-          按点赞量排序
+          {{ t('sort_by_likes') }}
         </button>
       </view>
     </uni-drawer>
@@ -82,161 +89,161 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { useNewsStore } from '@/stores/news_list';
-import { useI18n } from 'vue-i18n';
-import { onShow, onPullDownRefresh } from '@dcloudio/uni-app';
-import { storeToRefs } from 'pinia';
-import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
+/**
+ * 新闻页面示例：包括新闻列表、搜索、排序，以及创建新闻入口
+ * - 使用下拉刷新获取新闻
+ * - 抽屉式排序功能
+ */
 
-const newsStore = useNewsStore();
-const userStore = useUserStore(); // 使用用户存储
+import { ref, computed } from 'vue'
+import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
+import { useI18n } from 'vue-i18n'
+import { storeToRefs } from 'pinia'
+import { useNewsStore } from '@/stores/news_list'
+import { useUserStore } from '../../stores/user'
 
-const activeIndex = ref(null);
-const currentSort = ref('top-views'); // 默认排序类型
+const newsStore = useNewsStore()
+const userStore = useUserStore()
 
-// 计算属性从 Pinia store 获取用户状态
-const isLoggedIn = computed(() => userStore.user.isLoggedIn);
-const uid = computed(() => userStore.user.nickName);
-const avatarSrc = computed(() =>
-  userStore.user.avatarUrl
-    ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
-    : '/static/images/index/background_img.jpg'
-);
-const jwtToken = computed(() => userStore.user.token);
+// 取出 store 的状态
+const { filteredNewsItems, isRefreshing } = storeToRefs(newsStore)
+const { refreshNews, fetchNews } = newsStore
 
-// 从 Store 获取数据和方法
-const { filteredNewsItems, selectedSection, isRefreshing } = storeToRefs(newsStore);
-const { setSection, refreshNews, fetchNews } = newsStore;
+// 国际化
+const { t } = useI18n()
 
-const { t } = useI18n();
+// 当前登录状态
+const isLoggedIn = computed(() => userStore.user.isLoggedIn)
 
-const searchText = ref('');
+// 抽屉相关
+const drawer = ref(null)
+const mask = true
+const drawWid = '50%'
+const maskClick = true
+const isDrawerVisible = ref(false)
 
-// 新增：Drawer显示状态通过ref控制
-const drawer = ref(null);
-const mask = true;
-const drawWid = '50%'; // 根据需要调整宽度
-const maskClick = true;
+// 搜索相关
+const searchText = ref('')
 
-// 切换Drawer显示/隐藏的方法
-function toggleDrawer() {
-  if (drawer.value) {
-    drawer.value.open();
-    isDrawerVisible.value = true;
-  }
-}
-
-// 隐藏Drawer的方法
-function hideDrawer() {
-  if (drawer.value) {
-    drawer.value.close();
-    isDrawerVisible.value = false;
-  }
-}
-
-// 处理Drawer关闭事件
-function handleDrawerClose() {
-  // 可以在这里处理关闭后的逻辑，如重置状态等
-  isDrawerVisible.value = false;
-  console.log('Drawer closed');
-}
-
-// 新增：isDrawerVisible 状态管理
-const isDrawerVisible = ref(false);
-
-// 页面跳转方法
-function navigateTo(link, name) {
-  console.log('跳转至：', link);
-  setTimeout(() => {
-    uni.navigateTo({
-      url: `/pagesNews/news_detail/news_detail?id=${link}`,
-    });
-  }, 100);
-}
+// 当前排序方式
+const currentSort = ref('top-views')
 
 // 触摸反馈
+const activeIndex = ref(null)
+
+/**
+ * 切换抽屉
+ */
+function toggleDrawer() {
+  if (drawer.value) {
+    drawer.value.open()
+    isDrawerVisible.value = true
+  }
+}
+
+/**
+ * 抽屉关闭
+ */
+function handleDrawerClose() {
+  isDrawerVisible.value = false
+}
+
+/**
+ * 抽屉：执行排序
+ * @param {string} sortType
+ */
+function handleSort(sortType) {
+  currentSort.value = sortType
+  fetchNews(1, sortType)
+  hideDrawer()
+}
+
+/**
+ * 隐藏抽屉
+ */
+function hideDrawer() {
+  if (drawer.value) {
+    drawer.value.close()
+    isDrawerVisible.value = false
+  }
+}
+
+/**
+ * 跳转到新闻详情
+ * @param {string} link 新闻id
+ * @param {string} name 新闻标题
+ */
+function navigateTo(link, name) {
+  setTimeout(() => {
+    uni.navigateTo({
+      url: `/pagesNews/news_detail/news_detail?id=${link}`
+    })
+  }, 100)
+}
+
+/**
+ * 按下时高亮
+ */
 function pressFeedback(index) {
-  activeIndex.value = index;
+  activeIndex.value = index
 }
 
+/**
+ * 松开时取消高亮
+ */
 function releaseFeedback() {
-  activeIndex.value = null;
+  activeIndex.value = null
 }
 
-// 跳转至新建图文页面
+/**
+ * 触发创建新闻
+ */
 function createNews() {
   uni.navigateTo({
-    url: "/pagesNews/create_news/create_news",
-  });
+    url: "/pagesNews/create_news/create_news"
+  })
 }
 
-// 排序功能
-function handleSort(sortType) {
-  currentSort.value = sortType;
-  fetchNews(1, sortType); // 根据排序类型获取新闻
-  hideDrawer(); // 排序后关闭抽屉
+/**
+ * 搜索按钮点击
+ */
+function onSearch() {
+  fetchNews(1, 'search', searchText.value)
 }
 
-const onSearch = () => {
-  console.log('搜索：', searchText.value);
-  fetchNews(1, 'search', searchText.value);
-};
-
-// 异步函数处理下拉刷新
-const handlePullDownRefresh = async () => {
-  console.log('正在处理下拉刷新...');
+/**
+ * 下拉刷新
+ */
+async function handlePullDownRefresh() {
   try {
-    await newsStore.refreshNews();  // 等待 refreshNews 完成
-    uni.stopPullDownRefresh();      // 完成后停止下拉刷新动画
+    await refreshNews()
+    uni.stopPullDownRefresh()
   } catch (error) {
-    console.error('Error during refresh:', error);
-    uni.stopPullDownRefresh();      // 即使出错也停止刷新
+    console.error('Error during refresh:', error)
+    uni.stopPullDownRefresh()
   }
-};
+}
 
-// 使用 uni.onPullDownRefresh() 将处理函数绑定到下拉刷新事件
-onPullDownRefresh(handlePullDownRefresh);
+onPullDownRefresh(handlePullDownRefresh)
 
+/**
+ * 页面显示时：初始化标题，获取新闻等
+ */
 onShow(() => {
-  console.log("token:", jwtToken.value);
-  // 根据需求，这里设置为false，可能需要根据实际登录状态调整
-  isLoggedIn.value = false; // 显式设置为未登录状态
-  uni.setNavigationBarTitle({
-    title: t('news_index')
-  });
-  uni.setTabBarItem({
-    index: 0,
-    text: t('index')
-  });
-  uni.setTabBarItem({
-    index: 1,
-    text: t('tools_index')
-  });
-  uni.setTabBarItem({
-    index: 2,
-    text: t('news_index')
-  });
-  uni.setTabBarItem({
-    index: 3,
-    text: t('my_index')
-  });
-  console.log("in onShow");
-  fetchNews();
-});
+  // 设置页面标题
+  uni.setNavigationBarTitle({ title: t('news_index') })
+  // 更新底部Tab
+  uni.setTabBarItem({ index: 0, text: t('index') })
+  uni.setTabBarItem({ index: 1, text: t('tools_index') })
+  uni.setTabBarItem({ index: 2, text: t('news_index') })
+  uni.setTabBarItem({ index: 3, text: t('my_index') })
+
+  // 默认获取一次数据
+  fetchNews()
+})
 </script>
 
 <style scoped>
-/* Body */
-body {
-  font-family: 'Arial', sans-serif;
-  background: url('/static/images/index/background_img.jpg') no-repeat center center fixed;
-  background-size: cover;
-  background-color: #f0f4f7;
-  margin: 0;
-  padding: 0;
-}
-
 .background-image {
   position: fixed;
   top: 0;
@@ -255,29 +262,28 @@ body {
   padding: 10px;
   background-color: #ffffff;
   border-bottom: 1px solid #e0e0e0;
-  justify-content: flex-start;
-  position: fixed; /* 固定头部 */
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  z-index: 10; /* 确保在页面的最上层 */
-  overflow-x: scroll; /* 允许水平滚动 */
-  white-space: nowrap; /* 防止内容换行 */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 可选，增加阴影效果 */
+  z-index: 10;
+  overflow-x: scroll;
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* 防止按钮换行，确保每个按钮都保持在一行 */
 .header button {
   border: none;
   margin-left: 5px;
   font-size: 16px;
   cursor: pointer;
   transition: color 0.3s;
-  white-space: nowrap; /* 防止按钮文本换行 */
+  white-space: nowrap;
   padding: 5px 15px;
-  flex-shrink: 0; /* 防止按钮被压缩 */
+  flex-shrink: 0;
 }
 
+/* 搜索框 */
 .search-box {
   flex: 1;
   padding: 13px;
@@ -285,48 +291,42 @@ body {
   border-radius: 4px;
 }
 
+/* 抽屉按钮 */
 .drawer-button {
   background-color: #ffffff;
   color: black;
   border: none;
   font-size: 16px;
   cursor: pointer;
-  transition: color 0.3s;
-  white-space: nowrap; /* 防止按钮文本换行 */
+  white-space: nowrap;
   margin-left: 0;
-  flex-shrink: 0; /* 防止按钮被压缩 */
+  flex-shrink: 0;
   align-items: center;
 }
 
+/* 搜索按钮 */
 .search-button {
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
   border: none;
   font-size: 16px;
   cursor: pointer;
-  transition: color 0.3s;
-  white-space: nowrap; /* 防止按钮文本换行 */
+  white-space: nowrap;
   padding: 5px 15px;
-  flex-shrink: 0; /* 防止按钮被压缩 */
+  flex-shrink: 0;
 }
 
+/* “去信”按钮 */
 .create-button {
   background-color: #ffffff;
   color: black;
   border: none;
   font-size: 16px;
   cursor: pointer;
-  transition: color 0.3s;
-  white-space: nowrap; /* 防止按钮文本换行 */
+  white-space: nowrap;
   padding: 5px 15px;
   margin-right: 20px;
-  flex-shrink: 0; /* 防止按钮被压缩 */
-}
-
-/* 选中的按钮样式 */
-.header button.active {
-  color: #4caf50; /* 选中状态颜色 */
-  font-weight: bold; /* 选中状态加粗 */
+  flex-shrink: 0;
 }
 
 /* Loading Overlay */
@@ -341,7 +341,7 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  z-index: 10; /* 确保在最上层 */
+  z-index: 10;
 }
 
 .loading-text {
@@ -367,7 +367,7 @@ body {
 /* News Section */
 .news-section {
   padding: 20px;
-  padding-top: 70px; /* 根据header的高度调整，确保内容不被遮挡 */
+  padding-top: 70px;
   padding-bottom: 80px;
 }
 
@@ -379,8 +379,8 @@ body {
   margin-bottom: 20px;
   cursor: pointer;
   transition: transform 0.1s, box-shadow 0.1s;
-  position: relative;              /* 确保其层级设置有效 */
-  z-index: 1;                      /* 确保点击事件可以被接收 */
+  position: relative;
+  z-index: 1;
 }
 
 .news-item.active {
@@ -390,9 +390,10 @@ body {
 }
 
 .news-image {
-  pointer-events: none; /* 确保图片不会阻止父元素的点击事件 */
+  pointer-events: none;
 }
 
+/* 标题与描述 */
 .news-title {
   font-size: 18px;
   font-weight: bold;
@@ -403,8 +404,6 @@ body {
   font-size: 14px;
   margin-bottom: 10px;
 }
-
-/* Footer Toggle Button */
 
 /* Drawer Content */
 .drawer-content {
@@ -422,8 +421,9 @@ body {
   height: 40px;
   transition: color 0.3s, background-color 0.3s;
   margin-bottom: 10px;
-  width: 80%; /* 适应抽屉宽度 */
+  width: 80%;
   border-radius: 5px;
+  text-align: center;
 }
 
 .nav-item:hover {
@@ -434,29 +434,6 @@ body {
 .nav-item.active {
   color: #4caf50;
   border-bottom: 2px solid #4caf50;
-}
-
-/* 关闭按钮样式 */
-.close-button {
-  background-color: #f44336;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 10px 20px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  width: 80%;
-  text-align: center;
-}
-
-.close-button:hover {
-  background-color: #d32f2f;
-}
-
-/* 确保uni-drawer有足够的z-index */
-.uni-drawer {
-  transition: all 0.3s ease;
-  z-index: 1000;
 }
 
 .icon-news {

@@ -560,5 +560,11 @@
 	"fail": "失败",
 	"failed": "失败",
 	"input_specification": "最多可输入一位小数",
-	"no_matching_food": "未找到匹配食品"
+	"no_matching_food": "未找到匹配食品",
+
+	"create_news_button": "去信",
+	"loading_text": "加载中，请稍后...",
+	"sort_by_time": "按时间排序",
+	"sort_by_views": "按浏览量排序",
+	"sort_by_likes": "按点赞排序"
 }

@@ -545,6 +545,12 @@
 	"fail": "Failed",
 	"failed": "Failed",
 	"input_specification": "Up to one decimal place allowed",
-	"no_matching_food": "No matching food"
+	"no_matching_food": "No matching food",
+
+	"create_news_button": "Create",
+	"loading_text": "Loading, please wait...",
+	"sort_by_time": "Sort by time",
+	"sort_by_views": "Sort by views",
+	"sort_by_likes": "Sort by likes"
 
 }
