@@ -490,8 +490,9 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: -1;
-  opacity: 0.05;
+  z-index: 0;
+  opacity: 0.08;
+  pointer-events: none;
 }
 
 /* 头部卡片 */
