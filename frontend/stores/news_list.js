@@ -3,6 +3,8 @@ import { defineStore } from 'pinia'
 import { computed } from 'vue'
 import { useUserStore } from './user.js'
 
+const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
+
 // 统一使用与 carbon_and_nutrition_data.js 类似的请求封装
 function createRequestConfig(config) {
   const userStore = useUserStore()
@@ -83,22 +85,22 @@ export const useNewsStore = defineStore('news', {
         let ifSearch = false
         switch (type) {
           case 'top-views':
-            url = `http://122.51.231.155:8080/news/paginated/view_count?page=${page}`
+            url = `${BASE_URL}/news/paginated/view_count?page=${page}`
             break
           case 'top-likes':
-            url = `http://122.51.231.155:8080/news/paginated/like_count?page=${page}`
+            url = `${BASE_URL}/news/paginated/like_count?page=${page}`
             break
           case 'latest':
-            url = `http://122.51.231.155:8080/news/paginated/upload_time?page=${page}`
+            url = `${BASE_URL}/news/paginated/upload_time?page=${page}`
             break
           case 'favorite':
-            url = `http://122.51.231.155:8080/users/favorited`
+            url = `${BASE_URL}/users/favorited`
             break
           case 'viewed':
-            url = `http://122.51.231.155:8080/users/viewed`
+            url = `${BASE_URL}/users/viewed`
             break
           case 'search':
-            url = `http://122.51.231.155:8080/news/search`
+            url = `${BASE_URL}/news/search`
             data = { query: text }
             ifSearch = true
             break
@@ -141,7 +143,7 @@ export const useNewsStore = defineStore('news', {
       try {
         const res = await request(
           createRequestConfig({
-            url: `http://122.51.231.155:8080/news/details/news/${id}`,
+            url: `${BASE_URL}/news/details/news/${id}`,
             method: 'GET'
           })
         )

@@ -12,7 +12,7 @@
         <view class="member-wrapper">
           <view class="member-info">
             <image
-              :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+              :src="`${BASE_URL}/static/${member.avatarUrl}`"
               mode="aspectFill"
               class="avatar"
             />
@@ -61,7 +61,7 @@
           <view class="member-wrapper">
             <view class="member-info">
               <image
-                :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+                :src="`${BASE_URL}/static/${member.avatarUrl}`"
                 mode="aspectFill"
                 class="avatar"
               />
@@ -108,6 +108,7 @@ const familyStore = useFamilyStore()
 const family = computed(() => familyStore.family)
 const userStore = useUserStore()
 const currentUserId = computed(() => userStore.user.uid)
+const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
 
 /* ----------------- Computed ----------------- */
 const isCurrentUserAdmin = computed(() => familyStore.isAdmin(currentUserId.value))
