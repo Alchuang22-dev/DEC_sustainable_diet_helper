@@ -30,7 +30,7 @@
           @click="createNews"
           type="compose"
           size="24"
-          color="#007AFF"
+          color="#4caf50"
           class="create-icon"
         />
       </view>
