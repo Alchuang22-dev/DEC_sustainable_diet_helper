@@ -156,20 +156,20 @@ const token = computed(() => userStore.user.token);
 
 // 初始化 preferences 可以保留初始项
 const preferences = ref([
-  { name: t('foodpreference_greeting'), key: 'foodpreference_greeting', icon: 'https://via.placeholder.com/50' },
+  { name: t('foodpreference_greeting'), key: 'foodpreference_greeting', icon: 'https://cdn.pixabay.com/photo/2015/03/28/10/21/diet-695723_1280.jpg' },
 ]);
 
 const preferenceOptions = ref([
-  { name: t('highProtein'), key: 'highProtein', icon: 'https://via.placeholder.com/50' },
-  { name: t('highEnergy'), key: 'highEnergy', icon: 'https://via.placeholder.com/50' },
-  { name: t('lowFat'), key: 'lowFat', icon: 'https://via.placeholder.com/50' },
-  { name: t('lowCH'), key: 'lowCH', icon: 'https://via.placeholder.com/50' },
-  { name: t('lowsodium'), key: 'lowsodium', icon: 'https://via.placeholder.com/50' },
-  { name: t('vegan'), key: 'vegan', icon: 'https://via.placeholder.com/50' },
-  { name: t('vegetarian'), key: 'vegetarian', icon: 'https://via.placeholder.com/50' },
-  { name: t('glulenFree'), key: 'glulenFree', icon: 'https://via.placeholder.com/50' },
-  { name: t('alcoholFree'), key: 'alcoholFree', icon: 'https://via.placeholder.com/50' },
-  { name: t('dairyFree'), key: 'dairyFree', icon: 'https://via.placeholder.com/50' },
+  { name: t('highProtein'), key: 'highProtein', icon: 'https://cdn.pixabay.com/photo/2023/09/22/07/23/ai-generated-8268310_1280.jpg' },
+  { name: t('highEnergy'), key: 'highEnergy', icon: 'https://cdn.pixabay.com/photo/2019/06/01/05/45/dumplings-4243484_1280.jpg' },
+  { name: t('lowFat'), key: 'lowFat', icon: 'https://cdn.pixabay.com/photo/2023/06/09/18/18/keto-8052361_1280.png' },
+  { name: t('lowCH'), key: 'lowCH', icon: 'https://cdn.pixabay.com/photo/2018/09/23/09/31/smoothie-3697014_1280.jpg' },
+  { name: t('lowsodium'), key: 'lowsodium', icon: 'https://cdn.pixabay.com/photo/2016/11/19/09/42/berries-1838314_1280.jpg' },
+  { name: t('vegan'), key: 'vegan', icon: 'https://cdn.pixabay.com/photo/2019/04/13/19/03/cow-4125323_1280.png' },
+  { name: t('vegetarian'), key: 'vegetarian', icon: 'https://cdn.pixabay.com/photo/2016/09/22/18/51/heart-1688029_1280.png' },
+  { name: t('glulenFree'), key: 'glulenFree', icon: 'https://cdn.pixabay.com/photo/2011/08/17/12/31/spike-8743_1280.jpg' },
+  { name: t('alcoholFree'), key: 'alcoholFree', icon: 'https://cloud.tsinghua.edu.cn/thumbnail/cf9dba3a498247469fd4/1024/alcohol_free.png' },
+  { name: t('dairyFree'), key: 'dairyFree', icon: 'https://cdn.pixabay.com/photo/2022/04/04/14/17/milk-7111433_1280.jpg' },
 ]);
 
 const showModal = ref(false);

@@ -1,7 +1,6 @@
 <template>
-  <image src="/static/images/index/background_index_new.png" class="background-image"></image>
   <view class="recipe-page">
-    <image src="https://cloud.tsinghua.edu.cn/thumbnail/cf9dba3a498247469fd4/1024/pexels-sebastian-palomino-933481-1955134.png" alt="Recipe Image" class="recipe-image" mode="widthFix"></image>
+    <image :src="imageUrl" alt="Recipe Image" class="recipe-image" mode="widthFix"></image>
     <text class="recipe-name">{{ name }}</text>
     <view class="ingredients-container">
       <view
@@ -52,7 +51,7 @@ uniOnLoad((options) => {
   name.value = decodeURIComponent(options.name || '');
   ingredients.value = decodeURIComponent(options.ingredients || '');
   imageUrl.value = decodeURIComponent(options.image_url || '')
-
+  console.log("菜谱的图像信息：",imageUrl.value)
   // 解析原料信息
   parsedIngredients.value = parseIngredients(ingredients.value)
 })

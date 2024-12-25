@@ -103,12 +103,15 @@ const avatarSrc = computed(() =>
     ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
     : '/static/images/index/background_img.jpg'
 );
+const jwtToken = computed(() => userStore.user.token);
 
 // 从 Store 获取数据和方法
 const { filteredNewsItems, selectedSection, isRefreshing } = storeToRefs(newsStore);
 const { setSection, refreshNews, fetchNews } = newsStore;
 
 const { t } = useI18n();
+
+const searchText = ref('');
 
 // 新增：Drawer显示状态通过ref控制
 const drawer = ref(null);
@@ -175,6 +178,11 @@ function handleSort(sortType) {
   hideDrawer(); // 排序后关闭抽屉
 }
 
+const onSearch = () => {
+  console.log('搜索：', searchText.value);
+  fetchNews(1, 'search', searchText.value);
+};
+
 // 异步函数处理下拉刷新
 const handlePullDownRefresh = async () => {
   console.log('正在处理下拉刷新...');
@@ -191,7 +199,7 @@ const handlePullDownRefresh = async () => {
 onPullDownRefresh(handlePullDownRefresh);
 
 onShow(() => {
-  console.log("用户进入社区");
+  console.log("token:", jwtToken.value);
   // 根据需求，这里设置为false，可能需要根据实际登录状态调整
   isLoggedIn.value = false; // 显式设置为未登录状态
   uni.setNavigationBarTitle({
