@@ -21,7 +21,7 @@
 		{
 			"path": "pages/news_index/news_index",
 			"style": {
-				"navigationBarTitleText": "资讯",
+				"navigationBarTitleText": "星球",
 				"enablePullDownRefresh": true
 			}
 		},
@@ -103,16 +103,9 @@
 		{
 			"root": "pagesSetting",
 			"pages": [{
-				"path": "language/language"
-			}, {
-				"path": "Authorizations/Authorizations",
+				"path": "language/language",
 				"style": {
-					"navigationBarTitleText": "个人信息与权限"
-				}
-			}, {
-				"path": "Bend/Bend",
-				"style": {
-					"navigationBarTitleText": "账户绑定"
+					"navigationBarTitleText": "语言设置"
 				}
 			}, {
 				"path": "ConnectUs/ConnectUs",
@@ -120,19 +113,9 @@
 					"navigationBarTitleText": "联系我们"
 				}
 			}, {
-				"path": "DeleteData/DeleteData",
-				"style": {
-					"navigationBarTitleText": "删除数据"
-				}
-			}, {
 				"path": "DeleteId/DeleteId",
 				"style": {
 					"navigationBarTitleText": "账户注销"
-				}
-			}, {
-				"path": "DevelopingFunc/DevelopingFunc",
-				"style": {
-					"navigationBarTitleText": "开发中功能"
 				}
 			}, {
 				"path": "FeedBack/FeedBack",
@@ -140,24 +123,9 @@
 					"navigationBarTitleText": "帮助与反馈"
 				}
 			}, {
-				"path": "Fonts/Fonts",
-				"style": {
-					"navigationBarTitleText": "调整字体"
-				}
-			}, {
 				"path": "Idinfo/Idinfo",
 				"style": {
 					"navigationBarTitleText": "账号与安全"
-				}
-			}, {
-				"path": "InfoShared/InfoShared",
-				"style": {
-					"navigationBarTitleText": "通信权限"
-				}
-			}, {
-				"path": "newsSetting/newsSetting",
-				"style": {
-					"navigationBarTitleText": "消息通知"
 				}
 			}, {
 				"path": "Permissions/Permissions",
@@ -170,19 +138,9 @@
 					"navigationBarTitleText": "第三方信息共享清单"
 				}
 			}, {
-				"path": "recoSetting/recoSetting",
-				"style": {
-					"navigationBarTitleText": "个性化推荐设置"
-				}
-			}, {
 				"path": "SoftwareInfo/SoftwareInfo",
 				"style": {
 					"navigationBarTitleText": "关于软件"
-				}
-			}, {
-				"path": "Storage/Storage",
-				"style": {
-					"navigationBarTitleText": "存储空间"
 				}
 			}]
 		},
@@ -195,7 +153,10 @@
 					}
 				},
 				{
-					"path": "foodPreferences/foodPreferences"
+					"path": "foodPreferences/foodPreferences",
+					"style": {
+						"navigationBarTitleText": "饮食偏好"
+					}
 				}, 
 				{
 					"path": "nutrition_calendar/nutrition_calendar",
@@ -234,7 +195,10 @@
 					}
 				},
 				{
-					"path": "myFamily/myFamily"
+					"path": "myFamily/myFamily",
+					"style": {
+						"navigationBarTitleText": "为家人计算"
+					}
 				}, 
 				{
 					"path" : "save_options/save_options",
