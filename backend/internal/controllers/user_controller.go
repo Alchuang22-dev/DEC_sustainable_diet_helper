@@ -21,10 +21,14 @@ import (
 
 type UserController struct {
     DB *gorm.DB
+    Utils utils.UtilsInterface
 }
 
-func NewUserController(db *gorm.DB) *UserController {
-    return &UserController{DB: db}
+func NewUserController(db *gorm.DB, utils utils.UtilsInterface) *UserController {
+    return &UserController{
+        DB: db,
+        Utils: utils,
+    }
 }
 
 // WeChatAuth 用户注册/登录
@@ -339,7 +343,7 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
         relativePath := "avatars/default.jpg"
         defaultAvatarPath := filepath.Join(BaseUploadPath, "avatars", "default.jpg")
         newAvatarPath := filepath.Join(BaseUploadPath, relativePath)
-        if err := utils.CopyFile(defaultAvatarPath, newAvatarPath); err != nil {
+        if err := uc.Utils.CopyFile(defaultAvatarPath, newAvatarPath); err != nil {
             log.Printf("复制默认头像失败: %v\n", err)
             c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default avatar"})
             return
@@ -360,7 +364,7 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
     }
 
     // 生成 Access Token
-    accessToken, err := utils.GenerateAccessToken(user.ID)
+    accessToken, err := uc.Utils.GenerateAccessToken(user.ID)
     if err != nil {
         log.Println("生成 Access Token 失败:", err)
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
@@ -368,7 +372,7 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
     }
 
     // 生成 Refresh Token
-    refreshToken, err := utils.GenerateRefreshToken(user.ID)
+    refreshToken, err := uc.Utils.GenerateRefreshToken(user.ID)
     if err != nil {
         log.Println("生成 Refresh Token 失败:", err)
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
@@ -512,7 +516,7 @@ func (uc *UserController) RefreshTokenHandler(c *gin.Context) {
     }
 
     // 验证 Refresh Token
-    claims, err := utils.ValidateToken(req.RefreshToken)
+    claims, err := uc.Utils.ValidateToken(req.RefreshToken)
     if err != nil {
         c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
         return
@@ -546,14 +550,14 @@ func (uc *UserController) RefreshTokenHandler(c *gin.Context) {
     }
 
     // 生成新的 Access Token
-    newAccessToken, err := utils.GenerateAccessToken(uint(userID))
+    newAccessToken, err := uc.Utils.GenerateAccessToken(uint(userID))
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
         return
     }
 
     // 可选：生成新的 Refresh Token，并撤销旧的
-    newRefreshToken, err := utils.GenerateRefreshToken(uint(userID))
+    newRefreshToken, err := uc.Utils.GenerateRefreshToken(uint(userID))
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
         return
@@ -598,7 +602,7 @@ func (uc *UserController) LogoutHandler(c *gin.Context) {
     }
 
     // 验证 Refresh Token
-    claims, err := utils.ValidateToken(req.RefreshToken)
+    claims, err := uc.Utils.ValidateToken(req.RefreshToken)
     if err != nil {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
         return
