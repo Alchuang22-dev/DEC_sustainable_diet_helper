@@ -126,6 +126,156 @@ func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
     return m.RoundTripFunc(req)
 }
 
+func TestGetUserProfile(t *testing.T) {
+    db := setupUserTestDB()
+    router := setupUserRouter(db, utils.UtilsImpl{})
+
+    // 创建用户
+    user := models.User{
+        OpenID:    "OpenID_GetUserProfile",
+        Nickname:  "ProfileTester",
+        AvatarURL: "avatars/some_avatar.jpg",
+    }
+    db.Create(&user)
+
+    // 创建用户的新闻
+    n1 := models.News{Title: "Profile News1", AuthorID: user.ID}
+    db.Create(&n1)
+    n2 := models.News{Title: "Profile News2", AuthorID: user.ID}
+    db.Create(&n2)
+
+    // 创建另一个用户
+    otherUser := models.User{
+        OpenID:   "OpenID_OtherUser",
+        Nickname: "NotProfile",
+    }
+    db.Create(&otherUser)
+
+    tests := []struct {
+        name           string
+        paramID        string // 路径 /users/:id/profile 中的 id
+        userID         uint   // 模拟的JWT userID
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+        expectedNews   []uint
+    }{
+        {
+            name:           "Unauthorized",
+            paramID:        fmt.Sprintf("%d", user.ID),
+            userID:         0, // 不带有效 token
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid User ID",
+            paramID:        "abc", // 无法转换成 int
+            userID:         user.ID,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid user ID",
+        },
+        {
+            name:           "User Not Found",
+            paramID:        "99999", // 数据库里无此用户
+            userID:         user.ID,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "User not found",
+        },
+        {
+            name:           "Failed To Fetch User Data (simulate DB error)",
+            paramID:        fmt.Sprintf("%d", user.ID),
+            userID:         user.ID,
+            setupFunc: func() {
+                // 在 Model(&user).First(...) 时注入错误
+                db.Callback().Query().Before("gorm:query").Register("force_fetch_user_data_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "users" {
+                        tx.Error = fmt.Errorf("forced fetch user data error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to fetch user data",
+        },
+        {
+            name:           "Failed To Fetch User's News",
+            paramID:        fmt.Sprintf("%d", user.ID),
+            userID:         user.ID,
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_fetch_user_data_err")
+                // 在查 user 写的新闻时注入错误 => Model(&models.News{})
+                db.Callback().Query().Before("gorm:query").Register("force_fetch_user_news_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "news" {
+                        tx.Error = fmt.Errorf("forced fetch user's news error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to fetch user's news",
+        },
+        {
+            name: "Success Get Profile With News",
+            paramID: fmt.Sprintf("%d", user.ID),
+            userID:  user.ID,
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_fetch_user_news_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            expectedNews:   []uint{n1.ID, n2.ID}, // user 写的新闻
+        },
+        {
+            name: "Success Get Profile With No News",
+            paramID: fmt.Sprintf("%d", otherUser.ID),
+            userID:  user.ID,
+            setupFunc: func() {
+                // otherUser 并无写新闻
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            expectedNews:   []uint(nil),
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            url := "/users/" + tc.paramID + "/profile"
+            req, _ := http.NewRequest("GET", url, nil)
+
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTUser(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.isSuccess {
+                // { "nickname":"...", "avatar_url":"...", "news":[ {...} ] }
+                newsList, ok := resp["news"].([]interface{})
+                assert.True(t, ok)
+                var gotIDs []uint
+                for _, item := range newsList {
+                    m := item.(map[string]interface{})
+                    gotIDs = append(gotIDs, uint(m["id"].(float64)))
+                }
+                assert.Equal(t, tc.expectedNews, gotIDs)
+            } else if tc.expectedError != "" {
+                assert.Equal(t, tc.expectedError, resp["error"])
+            }
+        })
+    }
+}
+
 func TestWeChatAuth(t *testing.T) {
     // 1. 初始化测试DB和路由
     db := setupUserTestDB()
@@ -1347,156 +1497,6 @@ func TestGetMyViewedNews(t *testing.T) {
                     got = append(got, uint(idVal.(float64)))
                 }
                 assert.Equal(t, tc.expectedIDs, got)
-            } else if tc.expectedError != "" {
-                assert.Equal(t, tc.expectedError, resp["error"])
-            }
-        })
-    }
-}
-
-func TestGetUserProfile(t *testing.T) {
-    db := setupUserTestDB()
-    router := setupUserRouter(db, utils.UtilsImpl{})
-
-    // 创建用户
-    user := models.User{
-        OpenID:    "OpenID_GetUserProfile",
-        Nickname:  "ProfileTester",
-        AvatarURL: "avatars/some_avatar.jpg",
-    }
-    db.Create(&user)
-
-    // 创建用户的新闻
-    n1 := models.News{Title: "Profile News1", AuthorID: user.ID}
-    db.Create(&n1)
-    n2 := models.News{Title: "Profile News2", AuthorID: user.ID}
-    db.Create(&n2)
-
-    // 创建另一个用户
-    otherUser := models.User{
-        OpenID:   "OpenID_OtherUser",
-        Nickname: "NotProfile",
-    }
-    db.Create(&otherUser)
-
-    tests := []struct {
-        name           string
-        paramID        string // 路径 /users/:id/profile 中的 id
-        userID         uint   // 模拟的JWT userID
-        setupFunc      func()
-        expectedStatus int
-        expectedError  string
-        isSuccess      bool
-        expectedNews   []uint
-    }{
-        {
-            name:           "Unauthorized",
-            paramID:        fmt.Sprintf("%d", user.ID),
-            userID:         0, // 不带有效 token
-            setupFunc:      func() {},
-            expectedStatus: http.StatusUnauthorized,
-            expectedError:  "Authorization header missing",
-        },
-        {
-            name:           "Invalid User ID",
-            paramID:        "abc", // 无法转换成 int
-            userID:         user.ID,
-            setupFunc:      func() {},
-            expectedStatus: http.StatusBadRequest,
-            expectedError:  "Invalid user ID",
-        },
-        {
-            name:           "User Not Found",
-            paramID:        "99999", // 数据库里无此用户
-            userID:         user.ID,
-            setupFunc:      func() {},
-            expectedStatus: http.StatusNotFound,
-            expectedError:  "User not found",
-        },
-        {
-            name:           "Failed To Fetch User Data (simulate DB error)",
-            paramID:        fmt.Sprintf("%d", user.ID),
-            userID:         user.ID,
-            setupFunc: func() {
-                // 在 Model(&user).First(...) 时注入错误
-                db.Callback().Query().Before("gorm:query").Register("force_fetch_user_data_err", func(tx *gorm.DB) {
-                    if tx.Statement.Table == "users" {
-                        tx.Error = fmt.Errorf("forced fetch user data error")
-                    }
-                })
-            },
-            expectedStatus: http.StatusInternalServerError,
-            expectedError:  "Failed to fetch user data",
-        },
-        {
-            name:           "Failed To Fetch User's News",
-            paramID:        fmt.Sprintf("%d", user.ID),
-            userID:         user.ID,
-            setupFunc: func() {
-                db.Callback().Query().Remove("force_fetch_user_data_err")
-                // 在查 user 写的新闻时注入错误 => Model(&models.News{})
-                db.Callback().Query().Before("gorm:query").Register("force_fetch_user_news_err", func(tx *gorm.DB) {
-                    if tx.Statement.Table == "news" {
-                        tx.Error = fmt.Errorf("forced fetch user's news error")
-                    }
-                })
-            },
-            expectedStatus: http.StatusInternalServerError,
-            expectedError:  "Failed to fetch user's news",
-        },
-        {
-            name: "Success Get Profile With News",
-            paramID: fmt.Sprintf("%d", user.ID),
-            userID:  user.ID,
-            setupFunc: func() {
-                db.Callback().Query().Remove("force_fetch_user_news_err")
-            },
-            expectedStatus: http.StatusOK,
-            isSuccess:      true,
-            expectedNews:   []uint{n1.ID, n2.ID}, // user 写的新闻
-        },
-        {
-            name: "Success Get Profile With No News",
-            paramID: fmt.Sprintf("%d", otherUser.ID),
-            userID:  user.ID,
-            setupFunc: func() {
-                // otherUser 并无写新闻
-            },
-            expectedStatus: http.StatusOK,
-            isSuccess:      true,
-            expectedNews:   []uint(nil),
-        },
-    }
-
-    for _, tc := range tests {
-        t.Run(tc.name, func(t *testing.T) {
-            tc.setupFunc()
-
-            url := "/users/" + tc.paramID + "/profile"
-            req, _ := http.NewRequest("GET", url, nil)
-
-            if tc.userID != 0 {
-                req.Header.Set("Authorization", "Bearer "+generateValidJWTUser(tc.userID))
-            }
-
-            w := httptest.NewRecorder()
-            router.ServeHTTP(w, req)
-            assert.Equal(t, tc.expectedStatus, w.Code)
-
-            var resp map[string]interface{}
-            err := json.Unmarshal(w.Body.Bytes(), &resp)
-            assert.NoError(t, err)
-
-            if tc.isSuccess {
-                // { "nickname":"...", "avatar_url":"...", "news":[ {...} ] }
-                newsList, ok := resp["news"].([]interface{})
-                assert.True(t, ok)
-                var gotIDs []uint
-                for _, item := range newsList {
-                    m := item.(map[string]interface{})
-                    gotIDs = append(gotIDs, uint(m["id"].(float64)))
-                }
-                assert.Equal(t, tc.expectedNews, gotIDs)
             } else if tc.expectedError != "" {
                 assert.Equal(t, tc.expectedError, resp["error"])
             }
