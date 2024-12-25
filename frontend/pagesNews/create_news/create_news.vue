@@ -98,11 +98,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n'
-import { onHide, onUnload } from '@dcloudio/uni-app'; // 导入 onUnload
+import { onUnload } from '@dcloudio/uni-app'; // 导入 onUnload
 import { useDraftStore } from '../stores/draft';
-import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
+import { useUserStore } from '@/stores/user'; // 引入 Pinia 用户存储
 const draftStore = useDraftStore();
 const userStore = useUserStore();
 
@@ -389,12 +389,15 @@ const handleImageChange = (index) => {
   });
 };
 
-
-// Simulate fetching data from backend
-onMounted(() => {
-  console.log('进入新闻创作页');
+onUnload(() => {
+  console.log('页面即将卸载，自动保存草稿');
+  try {
+    const pageId = saveDraft();
+    console.log('自动保存草稿成功，草稿编号:', pageId);
+  } catch (error) {
+    console.error('自动保存草稿失败:', error);
+  }
 });
-
 </script>
 
 <style scoped>
