@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"time"
+    "math"
 
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
@@ -118,6 +119,10 @@ func getStartOfDay(t time.Time, loc *time.Location) time.Time {
 }
 
 // 查看自己的家庭的信息, 如果自己不在家庭或在 waiting list 也要相应显示
+func truncateToOneDecimal(value float64) float64 {
+    return math.Floor(value*10) / 10
+}
+
 func (fc *FamilyController) FamilyDetails(c *gin.Context) {
     // 从 JWT 中解析用户 ID
     userID, exists := c.Get("user_id")
@@ -146,12 +151,9 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
 
     now := time.Now().In(loc)
     today := getStartOfDay(now, loc)
-
     utcToday := today.UTC()
 
-    // fmt.Println(utcToday)
-
-    if user.PendingFamilyID != nil { // 用户在某个家庭的 waiting list 中
+    if user.PendingFamilyID != nil {
         c.JSON(http.StatusOK, gin.H{
             "status":    "waiting",
             "id":        user.PendingFamily.ID,
@@ -159,8 +161,7 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
             "family_id": user.PendingFamily.Token,
         })
         return
-    } else if user.Family != nil { // 用户已在某个家庭中
-        // 准备管理员和成员的信息
+    } else if user.Family != nil {
         admins := make([]gin.H, len(user.Family.Admins))
         for i, admin := range user.Family.Admins {
             admins[i] = gin.H{
@@ -179,19 +180,16 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
             }
         }
 
-        waiting_members := make([]gin.H, len(user.Family.WaitingList))
-        for i, waiting_member := range user.Family.WaitingList {
-            waiting_members[i] = gin.H{
-                "id":         waiting_member.ID,
-                "nickname":   waiting_member.Nickname,
-                "avatar_url": waiting_member.AvatarURL,
+        waitingMembers := make([]gin.H, len(user.Family.WaitingList))
+        for i, waitingMember := range user.Family.WaitingList {
+            waitingMembers[i] = gin.H{
+                "id":         waitingMember.ID,
+                "nickname":   waitingMember.Nickname,
+                "avatar_url": waitingMember.AvatarURL,
             }
         }
 
-        // 3. 遍历所有“真实成员”（Members 和 Admins 合并）
-        realMembers := user.Family.Members
-        realMembers = append(realMembers, user.Family.Admins...)
-
+        realMembers := append(user.Family.Members, user.Family.Admins...)
         memberDailyData := make([]gin.H, 0, len(realMembers))
 
         var (
@@ -216,6 +214,7 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
             if err := fc.DB.Where("user_id = ? AND DATE(date) = DATE(?)", m.ID, utcToday).Find(&carbonIntakes).Error; err != nil {
                 carbonIntakes = nil
             }
+
             var carbonIntakeSum float64
             for _, ci := range carbonIntakes {
                 carbonIntakeSum += ci.Emission
@@ -230,6 +229,7 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
             if err := fc.DB.Where("user_id = ? AND DATE(date) = DATE(?)", m.ID, utcToday).Find(&nutritionIntakes).Error; err != nil {
                 nutritionIntakes = nil
             }
+
             var (
                 niCals, niProtein, niFat, niCarbs, niSodium float64
             )
@@ -242,26 +242,26 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
             }
 
             singleMemberData := gin.H{
-                "user_id": m.ID,
-                "nickname": m.Nickname,
+                "user_id":    m.ID,
+                "nickname":   m.Nickname,
                 "avatar_url": m.AvatarURL,
 
-                "carbon_goal_emission": carbonGoal.Emission,
-                "carbon_intake_sum":    carbonIntakeSum,
+                "carbon_goal_emission": truncateToOneDecimal(carbonGoal.Emission),
+                "carbon_intake_sum":    truncateToOneDecimal(carbonIntakeSum),
 
                 "nutrition_goal": gin.H{
-                    "calories":      nutritionGoal.Calories,
-                    "protein":       nutritionGoal.Protein,
-                    "fat":           nutritionGoal.Fat,
-                    "carbohydrates": nutritionGoal.Carbohydrates,
-                    "sodium":        nutritionGoal.Sodium,
+                    "calories":      truncateToOneDecimal(nutritionGoal.Calories),
+                    "protein":       truncateToOneDecimal(nutritionGoal.Protein),
+                    "fat":           truncateToOneDecimal(nutritionGoal.Fat),
+                    "carbohydrates": truncateToOneDecimal(nutritionGoal.Carbohydrates),
+                    "sodium":        truncateToOneDecimal(nutritionGoal.Sodium),
                 },
                 "nutrition_intake_sum": gin.H{
-                    "calories":      niCals,
-                    "protein":       niProtein,
-                    "fat":           niFat,
-                    "carbohydrates": niCarbs,
-                    "sodium":        niSodium,
+                    "calories":      truncateToOneDecimal(niCals),
+                    "protein":       truncateToOneDecimal(niProtein),
+                    "fat":           truncateToOneDecimal(niFat),
+                    "carbohydrates": truncateToOneDecimal(niCarbs),
+                    "sodium":        truncateToOneDecimal(niSodium),
                 },
             }
             memberDailyData = append(memberDailyData, singleMemberData)
@@ -283,21 +283,21 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
         }
 
         familySumData := gin.H{
-            "carbon_goal_sum":   totalCarbonGoalSum,
-            "carbon_intake_sum": totalCarbonIntakeSum,
+            "carbon_goal_sum":   truncateToOneDecimal(totalCarbonGoalSum),
+            "carbon_intake_sum": truncateToOneDecimal(totalCarbonIntakeSum),
             "nutrition_goal_sum": gin.H{
-                "calories":      totalNutritionGoal.Calories,
-                "protein":       totalNutritionGoal.Protein,
-                "fat":           totalNutritionGoal.Fat,
-                "carbohydrates": totalNutritionGoal.Carbohydrates,
-                "sodium":        totalNutritionGoal.Sodium,
+                "calories":      truncateToOneDecimal(totalNutritionGoal.Calories),
+                "protein":       truncateToOneDecimal(totalNutritionGoal.Protein),
+                "fat":           truncateToOneDecimal(totalNutritionGoal.Fat),
+                "carbohydrates": truncateToOneDecimal(totalNutritionGoal.Carbohydrates),
+                "sodium":        truncateToOneDecimal(totalNutritionGoal.Sodium),
             },
             "nutrition_intake_sum": gin.H{
-                "calories":      totalNutritionIntake.Calories,
-                "protein":       totalNutritionIntake.Protein,
-                "fat":           totalNutritionIntake.Fat,
-                "carbohydrates": totalNutritionIntake.Carbohydrates,
-                "sodium":        totalNutritionIntake.Sodium,
+                "calories":      truncateToOneDecimal(totalNutritionIntake.Calories),
+                "protein":       truncateToOneDecimal(totalNutritionIntake.Protein),
+                "fat":           truncateToOneDecimal(totalNutritionIntake.Fat),
+                "carbohydrates": truncateToOneDecimal(totalNutritionIntake.Carbohydrates),
+                "sodium":        truncateToOneDecimal(totalNutritionIntake.Sodium),
             },
         }
 
@@ -309,7 +309,7 @@ func (fc *FamilyController) FamilyDetails(c *gin.Context) {
             "member_count":     user.Family.MemberCount,
             "admins":           admins,
             "members":          members,
-            "waiting_members":  waiting_members,
+            "waiting_members":  waitingMembers,
             "today_date":       today.Format("2006-01-02"),
             "member_daily_data": memberDailyData,
             "family_sums":       familySumData,
