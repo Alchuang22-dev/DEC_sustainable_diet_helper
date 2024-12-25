@@ -18,7 +18,6 @@ import (
 	"strings"
 	"github.com/golang-jwt/jwt/v4"
 
-	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/config"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/middleware"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
@@ -81,29 +80,19 @@ func generateValidJWTUser(userID uint) string {
 	return token
 }
 
-// Helper function to generate a valid Refresh Token for testing
-func generateValidRefreshTokenUser(db *gorm.DB, userID uint) string {
-	refreshToken, err := utils.GenerateRefreshToken(userID)
-	if err != nil {
-		panic("Failed to generate valid Refresh Token for testing")
-	}
-
-	newRefreshToken := models.RefreshToken{
-		Token:     refreshToken,
-		UserID:    userID,
-		ExpiresAt: time.Now().Add(config.JWTConfig.RefreshTokenExpiration),
-		Revoked:   false,
-	}
-	if err := db.Create(&newRefreshToken).Error; err != nil {
-		panic("Failed to store Refresh Token for testing")
-	}
-	return refreshToken
-}
-
 type MockUtils struct {
+	ValidateTokenFunc        func(tokenString string) (*jwt.RegisteredClaims, error)
     GenerateAccessTokenFunc  func(userID uint) (string, error)
     GenerateRefreshTokenFunc func(userID uint) (string, error)
     CopyFileFunc             func(src, dst string) error
+}
+
+func (m *MockUtils) ValidateToken(tokenString string) (*jwt.RegisteredClaims, error) {
+    if m.ValidateTokenFunc != nil {
+        return m.ValidateTokenFunc(tokenString)
+    }
+    // 默认行为，模拟解析成功
+    return &jwt.RegisteredClaims{Subject: "123"}, nil
 }
 
 func (m *MockUtils) GenerateAccessToken(userID uint) (string, error) {
@@ -127,11 +116,6 @@ func (m *MockUtils) CopyFile(src, dst string) error {
     return nil
 }
 
-func (m *MockUtils) ValidateToken(tokenString string) (*jwt.RegisteredClaims, error) {
-    // 不在本测试中使用，可留空或mock
-    return nil, nil
-}
-
 // MockRoundTripper 用于模拟 http.Client 的 Transport，从而在测试中自定义响应
 type MockRoundTripper struct {
     RoundTripFunc func(req *http.Request) (*http.Response, error)
@@ -140,6 +124,156 @@ type MockRoundTripper struct {
 // RoundTrip 实现 http.RoundTripper 接口
 func (m *MockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
     return m.RoundTripFunc(req)
+}
+
+func TestGetUserProfile(t *testing.T) {
+    db := setupUserTestDB()
+    router := setupUserRouter(db, utils.UtilsImpl{})
+
+    // 创建用户
+    user := models.User{
+        OpenID:    "OpenID_GetUserProfile",
+        Nickname:  "ProfileTester",
+        AvatarURL: "avatars/some_avatar.jpg",
+    }
+    db.Create(&user)
+
+    // 创建用户的新闻
+    n1 := models.News{Title: "Profile News1", AuthorID: user.ID}
+    db.Create(&n1)
+    n2 := models.News{Title: "Profile News2", AuthorID: user.ID}
+    db.Create(&n2)
+
+    // 创建另一个用户
+    otherUser := models.User{
+        OpenID:   "OpenID_OtherUser",
+        Nickname: "NotProfile",
+    }
+    db.Create(&otherUser)
+
+    tests := []struct {
+        name           string
+        paramID        string // 路径 /users/:id/profile 中的 id
+        userID         uint   // 模拟的JWT userID
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+        expectedNews   []uint
+    }{
+        {
+            name:           "Unauthorized",
+            paramID:        fmt.Sprintf("%d", user.ID),
+            userID:         0, // 不带有效 token
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid User ID",
+            paramID:        "abc", // 无法转换成 int
+            userID:         user.ID,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid user ID",
+        },
+        {
+            name:           "User Not Found",
+            paramID:        "99999", // 数据库里无此用户
+            userID:         user.ID,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "User not found",
+        },
+        {
+            name:           "Failed To Fetch User Data (simulate DB error)",
+            paramID:        fmt.Sprintf("%d", user.ID),
+            userID:         user.ID,
+            setupFunc: func() {
+                // 在 Model(&user).First(...) 时注入错误
+                db.Callback().Query().Before("gorm:query").Register("force_fetch_user_data_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "users" {
+                        tx.Error = fmt.Errorf("forced fetch user data error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to fetch user data",
+        },
+        {
+            name:           "Failed To Fetch User's News",
+            paramID:        fmt.Sprintf("%d", user.ID),
+            userID:         user.ID,
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_fetch_user_data_err")
+                // 在查 user 写的新闻时注入错误 => Model(&models.News{})
+                db.Callback().Query().Before("gorm:query").Register("force_fetch_user_news_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "news" {
+                        tx.Error = fmt.Errorf("forced fetch user's news error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to fetch user's news",
+        },
+        {
+            name: "Success Get Profile With News",
+            paramID: fmt.Sprintf("%d", user.ID),
+            userID:  user.ID,
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_fetch_user_news_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            expectedNews:   []uint{n1.ID, n2.ID}, // user 写的新闻
+        },
+        {
+            name: "Success Get Profile With No News",
+            paramID: fmt.Sprintf("%d", otherUser.ID),
+            userID:  user.ID,
+            setupFunc: func() {
+                // otherUser 并无写新闻
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            expectedNews:   []uint(nil),
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            url := "/users/" + tc.paramID + "/profile"
+            req, _ := http.NewRequest("GET", url, nil)
+
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTUser(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.isSuccess {
+                // { "nickname":"...", "avatar_url":"...", "news":[ {...} ] }
+                newsList, ok := resp["news"].([]interface{})
+                assert.True(t, ok)
+                var gotIDs []uint
+                for _, item := range newsList {
+                    m := item.(map[string]interface{})
+                    gotIDs = append(gotIDs, uint(m["id"].(float64)))
+                }
+                assert.Equal(t, tc.expectedNews, gotIDs)
+            } else if tc.expectedError != "" {
+                assert.Equal(t, tc.expectedError, resp["error"])
+            }
+        })
+    }
 }
 
 func TestWeChatAuth(t *testing.T) {
@@ -621,252 +755,375 @@ func TestSetAvatar(t *testing.T) {
     }
 }
 
-// func TestRefreshTokenHandler(t *testing.T) {
-//     db := setupUserTestDB()
-//     router := setupUserRouter(db, utils.UtilsImpl{})
+func TestRefreshTokenHandler(t *testing.T) {
+    db := setupUserTestDB()
+    // 准备一个 mockUtils 用于 ValidateToken / GenerateAccessToken / GenerateRefreshToken
+    mockUtils := &MockUtils{
+        ValidateTokenFunc: func(tokenString string) (*jwt.RegisteredClaims, error) {
+            // 缺省实现 => 正常解析
+            // 具体可根据 tokenString 做多分支
+            if tokenString == "InvalidTokenString" {
+                return nil, fmt.Errorf("forced invalid token error")
+            }
+            if tokenString == "BadSubjectToken" {
+                // Subject不合法
+                return &jwt.RegisteredClaims{Subject: "non_integer_id"}, nil
+            }
+            // 缺省 => userID= 123
+            return &jwt.RegisteredClaims{Subject: "123"}, nil
+        },
+        GenerateAccessTokenFunc: func(userID uint) (string, error) {
+            return fmt.Sprintf("AccessToken_ForUser_%d", userID), nil
+        },
+        GenerateRefreshTokenFunc: func(userID uint) (string, error) {
+            return fmt.Sprintf("RefreshToken_ForUser_%d", userID), nil
+        },
+    }
+    router := setupUserRouter(db, mockUtils)
 
-//     // 创建用户
-//     user := models.User{
-//         OpenID: "OpenID_RefreshToken_Test",
-//         Nickname: "RefreshTester",
-//     }
-//     db.Create(&user)
+    // 创建用户
+    user := models.User{
+        OpenID: "OpenID_RefreshTester",
+    }
+    db.Create(&user)
 
-//     // 生成并存储一个合法的 refresh token
-//     validRefresh := generateValidRefreshTokenUser(db, user.ID)
+    // 生成并存储一个合法的 old refresh token => token= "OldRefresh_123"
+    oldRT := models.RefreshToken{
+        Token:     "OldRefresh_123",
+        UserID:    user.ID,
+        ExpiresAt: time.Now().Add(24*time.Hour),
+        Revoked:   false,
+    }
+    db.Create(&oldRT)
 
-//     tests := []struct {
-//         name           string
-//         requestBody    interface{}
-//         setupFunc      func()
-//         expectedStatus int
-//         expectedError  string
-//         isSuccess      bool
-//     }{
-//         {
-//             name:           "Invalid Request Body",
-//             requestBody:    "not_json",
-//             setupFunc:      func() {},
-//             expectedStatus: http.StatusBadRequest,
-//             expectedError:  "Invalid request body",
-//         },
-//         {
-//             name:           "Empty RefreshToken",
-//             requestBody:    gin.H{},
-//             setupFunc:      func() {},
-//             expectedStatus: http.StatusBadRequest,
-//             expectedError:  "Invalid request body",
-//         },
-//         {
-//             name:           "ValidateToken Error",
-//             requestBody:    gin.H{"refresh_token": "InvalidTokenString"},
-//             setupFunc: func() {
-//                 // 可以 mock utils.ValidateToken 返回错误
-//             },
-//             expectedStatus: http.StatusUnauthorized,
-//             expectedError:  "token contains an invalid number of segments", 
-//             // 这是 JWT 常见错误，可按需要改
-//         },
-//         {
-//             name:           "Invalid Token Subject",
-//             requestBody:    gin.H{"refresh_token": validRefresh},
-//             setupFunc: func() {
-//                 // mock ValidateToken => claims.Subject 不可转换
-//                 // 需要 monkey patch或自定义 UtilsInterface
-//             },
-//             expectedStatus: http.StatusUnauthorized,
-//             expectedError:  "Invalid token subject",
-//         },
-//         {
-//             name:           "Refresh token not found in DB",
-//             requestBody:    gin.H{"refresh_token": "NotInDB"},
-//             setupFunc:      func() {},
-//             expectedStatus: http.StatusUnauthorized,
-//             expectedError:  "Refresh token not found",
-//         },
-//         {
-//             name:           "Refresh token is expired or revoked",
-//             requestBody:    gin.H{"refresh_token": validRefresh},
-//             setupFunc: func() {
-//                 // 将 validRefresh 对应记录 设置成 revoked 或 expiresAt<now
-//                 var rt models.RefreshToken
-//                 db.Where("token = ?", validRefresh).First(&rt)
-//                 rt.Revoked = true
-//                 db.Save(&rt)
-//             },
-//             expectedStatus: http.StatusUnauthorized,
-//             expectedError:  "Refresh token is expired or revoked",
-//         },
-//         {
-//             name:           "User not found for this refresh token",
-//             requestBody:    gin.H{"refresh_token": validRefresh},
-//             setupFunc: func() {
-//                 // 重新生成一个 validRefresh
-//                 // 并且把 UserID 指向一个不存在的用户
-//                 db.Where("token = ?", validRefresh).Delete(&models.RefreshToken{})
+    tests := []struct{
+        name           string
+        requestBody    interface{}
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+    }{
+        {
+            name:           "Invalid Request Body",
+            requestBody:    "not_json",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid request body",
+        },
+        {
+            name:           "Empty Refresh Token",
+            requestBody:    gin.H{},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid request body",
+        },
+        {
+            name:           "ValidateToken Error",
+            requestBody:    gin.H{"refresh_token": "InvalidTokenString"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "forced invalid token error",
+        },
+        {
+            name:           "Invalid Token Subject",
+            requestBody:    gin.H{"refresh_token": "BadSubjectToken"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Invalid token subject",
+        },
+        {
+            name:           "Refresh Token Not Found",
+            requestBody:    gin.H{"refresh_token": "NotInDB"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Refresh token not found",
+        },
+        {
+            name:           "Refresh Token Expired or Revoked",
+            requestBody:    gin.H{"refresh_token": "OldRefresh_123"},
+            setupFunc: func() {
+                // 让 oldRT 过期或 revoked
+                db.Model(&oldRT).Update("revoked", true)
+            },
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Refresh token is expired or revoked",
+        },
+        {
+            name:           "User Not Found for this token",
+            requestBody:    gin.H{"refresh_token": "OldRefresh_123"},
+            setupFunc: func() {
+                // 重新插回 oldRT, 并指向 不存在的UserID=999
+                db.Model(&oldRT).UpdateColumns(map[string]interface{}{
+                    "revoked": false,
+                    "user_id": 999,
+                })
+            },
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "User not found",
+        },
+        {
+            name:           "Fail to generate new access token",
+            requestBody:    gin.H{"refresh_token": "OldRefresh_123"},
+            setupFunc: func() {
+                // 把 userID 改回
+                db.Model(&oldRT).Update("user_id", user.ID)
+                // mock GenerateAccessToken => error
+                mockUtils.GenerateAccessTokenFunc = func(uid uint) (string, error) {
+                    return "", fmt.Errorf("forced access token error")
+                }
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to generate access token",
+        },
+        {
+            name: "Fail to generate new refresh token",
+            requestBody: gin.H{"refresh_token": "OldRefresh_123"},
+            setupFunc: func() {
+                mockUtils.GenerateAccessTokenFunc = func(uid uint) (string, error) {
+                    return "AccessToken_Success", nil
+                }
+                mockUtils.GenerateRefreshTokenFunc = func(uid uint) (string, error) {
+                    return "", fmt.Errorf("forced refresh token error")
+                }
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to generate refresh token",
+        },
+        {
+            name:           "Fail to store new refresh token",
+            requestBody:    gin.H{"refresh_token": "OldRefresh_123"},
+            setupFunc: func() {
+                mockUtils.GenerateRefreshTokenFunc = func(uid uint) (string, error) {
+                    return "NewRefresh_ABC", nil
+                }
+                // mock db.Create(newRT) => error
+                db.Callback().Create().Before("gorm:create").Register("force_create_newRT_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "refresh_tokens" {
+                        tx.Error = fmt.Errorf("forced create new RT error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to store new refresh token",
+        },
+        {
+            name:           "Fail to revoke old refresh token",
+            requestBody:    gin.H{"refresh_token": "OldRefresh_123"},
+            setupFunc: func() {
+                db.Callback().Create().Remove("force_create_newRT_err")
+                // mock db.Save(&storedRefreshToken).Error => revoke old token
+                db.Callback().Update().Before("gorm:update").Register("force_revoke_old_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "refresh_tokens" {
+                        tx.Error = fmt.Errorf("forced revoke old RT error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to revoke old refresh token",
+        },
+        {
+            name:           "Success Refresh Token",
+            requestBody:    gin.H{"refresh_token": "OldRefresh_123"},
+            setupFunc: func() {
+                db.Callback().Update().Remove("force_revoke_old_err")
+                // mock tokens => success
+                mockUtils.GenerateAccessTokenFunc = func(uid uint) (string, error) {
+                    return "AccessToken_Success", nil
+                }
+                mockUtils.GenerateRefreshTokenFunc = func(uid uint) (string, error) {
+                    return "NewRefresh_Success", nil
+                }
+                // 让 oldRT 不过期
+                db.Model(&oldRT).UpdateColumns(map[string]interface{}{
+                    "revoked": false,
+                    "user_id": user.ID,
+                    "expires_at": time.Now().Add(24*time.Hour),
+                })
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+        },
+    }
 
-//                 newRT := models.RefreshToken{
-//                     Token:     validRefresh,
-//                     UserID:    99999, // 不存在
-//                     ExpiresAt: time.Now().Add(config.JWTConfig.RefreshTokenExpiration),
-//                 }
-//                 db.Create(&newRT)
-//             },
-//             expectedStatus: http.StatusUnauthorized,
-//             expectedError:  "User not found",
-//         },
-//         {
-//             name:           "Fail to generate new access token",
-//             requestBody:    gin.H{"refresh_token": validRefresh},
-//             setupFunc: func() {
-//                 // 重新添加一个合法记录
-//                 db.Where("token = ?", validRefresh).Delete(&models.RefreshToken{})
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
 
-//                 newRT := models.RefreshToken{
-//                     Token:     validRefresh,
-//                     UserID:    user.ID,
-//                     ExpiresAt: time.Now().Add(config.JWTConfig.RefreshTokenExpiration),
-//                 }
-//                 db.Create(&newRT)
+            bodyBytes, _ := json.Marshal(tc.requestBody)
+            req, _ := http.NewRequest("POST", "/users/refresh", bytes.NewBuffer(bodyBytes))
+            req.Header.Set("Content-Type", "application/json")
 
-//                 // mock GenerateAccessToken => return error
-//                 // 需要对 uc.Utils 做mock
-//             },
-//             expectedStatus: http.StatusInternalServerError,
-//             expectedError:  "Failed to generate access token",
-//         },
-//         {
-//             name:           "Fail to generate new refresh token",
-//             requestBody:    gin.H{"refresh_token": validRefresh},
-//             setupFunc: func() {
-//                 // mock GenerateAccessToken => success
-//                 // mock GenerateRefreshToken => return error
-//             },
-//             expectedStatus: http.StatusInternalServerError,
-//             expectedError:  "Failed to generate refresh token",
-//         },
-//         {
-//             name:           "Failed to store new refresh token",
-//             requestBody:    gin.H{"refresh_token": validRefresh},
-//             setupFunc: func() {
-//                 // mock GenerateRefreshToken => success
-//                 // mock db.Create(&newRT) => error
-//                 db.Callback().Create().Before("gorm:create").Register("force_create_newRT_err", func(tx *gorm.DB) {
-//                     if tx.Statement.Table == "refresh_tokens" {
-//                         tx.Error = fmt.Errorf("forced create new RT error")
-//                     }
-//                 })
-//             },
-//             expectedStatus: http.StatusInternalServerError,
-//             expectedError:  "Failed to store new refresh token",
-//         },
-//         {
-//             name:           "Failed to revoke old refresh token",
-//             requestBody:    gin.H{"refresh_token": validRefresh},
-//             setupFunc: func() {
-//                 db.Callback().Create().Remove("force_create_newRT_err")
-//                 db.Callback().Update().Before("gorm:update").Register("force_revoke_oldRT_err", func(tx *gorm.DB) {
-//                     if tx.Statement.Table == "refresh_tokens" {
-//                         tx.Error = fmt.Errorf("forced revoke RT error")
-//                     }
-//                 })
-//             },
-//             expectedStatus: http.StatusInternalServerError,
-//             expectedError:  "Failed to revoke old refresh token",
-//         },
-//         {
-//             name:           "Success Refresh Token",
-//             requestBody:    gin.H{"refresh_token": validRefresh},
-//             setupFunc: func() {
-//                 db.Callback().Update().Remove("force_revoke_oldRT_err")
-//             },
-//             expectedStatus: http.StatusOK,
-//             isSuccess:      true,
-//         },
-//     }
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
 
-//     for _, tc := range tests {
-//         t.Run(tc.name, func(t *testing.T) {
-//             tc.setupFunc()
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
 
-//             bodyBytes, _ := json.Marshal(tc.requestBody)
-//             req, _ := http.NewRequest("POST", "/users/refresh", bytes.NewBuffer(bodyBytes))
-//             req.Header.Set("Content-Type", "application/json")
+            if tc.isSuccess {
+                _, ok1 := resp["access_token"]
+                _, ok2 := resp["refresh_token"]
+                assert.True(t, ok1 && ok2)
+            } else if tc.expectedError != "" {
+                assert.Equal(t, tc.expectedError, resp["error"])
+            }
+        })
+    }
+}
 
-//             w := httptest.NewRecorder()
-//             router.ServeHTTP(w, req)
+func TestLogoutHandler(t *testing.T) {
+    db := setupUserTestDB()
+    mockUtils := &MockUtils{
+        ValidateTokenFunc: func(tokenString string) (*jwt.RegisteredClaims, error) {
+            // 默认情况 => subject= "123"
+            if tokenString == "InvalidTokenString" {
+                return nil, fmt.Errorf("invalid refresh token")
+            }
+            if tokenString == "BadSubjectToken" {
+                return &jwt.RegisteredClaims{Subject:"non_int"}, nil
+            }
+            return &jwt.RegisteredClaims{Subject:"123"}, nil
+        },
+        // 其余方法不涉及
+    }
+    router := setupUserRouter(db, mockUtils)
 
-//             assert.Equal(t, tc.expectedStatus, w.Code)
+    // 创建用户
+    user := models.User{
+        OpenID: "OpenID_LogoutTester",
+    }
+    db.Create(&user)
 
-//             var resp map[string]interface{}
-//             err := json.Unmarshal(w.Body.Bytes(), &resp)
-//             assert.NoError(t, err)
+    // 创建 refresh token => "LogoutRefresh_123"
+    rt := models.RefreshToken{
+        Token:     "LogoutRefresh_123",
+        UserID:    user.ID,
+        ExpiresAt: time.Now().Add(24*time.Hour),
+        Revoked:   false,
+    }
+    db.Create(&rt)
 
-//             if tc.isSuccess {
-//                 // 正常返回新的 access_token, refresh_token
-//                 _, ok1 := resp["access_token"]
-//                 _, ok2 := resp["refresh_token"]
-//                 assert.True(t, ok1 && ok2)
-//             } else if tc.expectedError != "" {
-//                 assert.Equal(t, tc.expectedError, resp["error"])
-//             }
-//         })
-//     }
-// }
+    // 再给此用户多创建几个 refresh token => 也要同时撤销
+    rtExtra := models.RefreshToken{
+        Token:     "ExtraRefresh_1",
+        UserID:    user.ID,
+        ExpiresAt: time.Now().Add(24*time.Hour),
+        Revoked:   false,
+    }
+    db.Create(&rtExtra)
 
-// func TestLogoutHandler_NoGenerateFuncNeeded(t *testing.T) {
-//     db := setupUserTestDB()
+    tests := []struct {
+        name           string
+        requestBody    interface{}
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+    }{
+        {
+            name:           "Invalid Request Body",
+            requestBody:    "not_json",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid request body",
+        },
+        {
+            name:           "Empty RefreshToken Field",
+            requestBody:    gin.H{},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid request body",
+        },
+        {
+            name:           "ValidateToken Error",
+            requestBody:    gin.H{"refresh_token": "InvalidTokenString"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Invalid refresh token",
+        },
+        {
+            name:           "Invalid Token Subject",
+            requestBody:    gin.H{"refresh_token": "BadSubjectToken"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Invalid token subject",
+        },
+        {
+            name:           "Refresh Token Not Found",
+            requestBody:    gin.H{"refresh_token": "NotInDB"},
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Refresh token not found",
+        },
+        {
+            name:           "Refresh Token Expired Or Revoked",
+            requestBody:    gin.H{"refresh_token": "LogoutRefresh_123"},
+            setupFunc: func() {
+                db.Model(&rt).Update("revoked", true)
+            },
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Refresh token is expired or revoked",
+        },
+        {
+            name:           "Failed To Revoke Current Refresh Token",
+            requestBody:    gin.H{"refresh_token": "LogoutRefresh_123"},
+            setupFunc: func() {
+                db.Model(&rt).UpdateColumns(map[string]interface{}{
+                    "revoked": false,
+                    "expires_at": time.Now().Add(24*time.Hour),
+                })
 
-//     // 定义一个简单的 mockUtils
-//     mockUtils := &MockUtils{
-//         ValidateTokenFunc: func(tokenString string) (*jwt.RegisteredClaims, error) {
-//             // 假设只要收到 "MY_MOCK_REFRESH_TOKEN" 就认为合法
-//             // 并返回 Subject = "123" => userID=123
-//             if tokenString == "MY_MOCK_REFRESH_TOKEN" {
-//                 return &jwt.RegisteredClaims{Subject: "123"}, nil
-//             }
-//             return nil, fmt.Errorf("Invalid refresh token") 
-//         },
-//     }
+                // mock db.Save(&storedRefreshToken).Error
+                db.Callback().Update().Before("gorm:update").Register("force_revoke_current_token_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "refresh_tokens" {
+                        tx.Error = fmt.Errorf("forced revoke current token error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to revoke refresh token",
+        },
+        {
+            name:           "Success Logout",
+            requestBody:    gin.H{"refresh_token": "LogoutRefresh_123"},
+            setupFunc: func() {
+                db.Callback().Update().Remove("force_revoke_all_tokens_err")
+				db.Callback().Update().Remove("force_revoke_current_token_err")
 
-//     router := setupUserRouter(db, mockUtils)
+                // 让 token 仍不过期
+                db.Model(&rt).Update("revoked", false)
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+        },
+    }
 
-//     // 先创建个User (ID=123)
-//     user := models.User{
-//         Model: gorm.Model{ID: 123},
-//         OpenID: "OpenID_LogoutTest_123",
-//         Nickname: "LogoutUser",
-//     }
-//     db.Create(&user)
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
 
-//     // 在 refresh_tokens 表插入一条记录 => token="MY_MOCK_REFRESH_TOKEN"
-//     // ExpiresAt > now, Revoked=false
-//     refToken := models.RefreshToken{
-//         Token:     "MY_MOCK_REFRESH_TOKEN",
-//         UserID:    123,
-//         ExpiresAt: time.Now().Add(24 * time.Hour), // 未过期
-//         Revoked:   false,
-//     }
-//     db.Create(&refToken)
+            bodyBytes, _ := json.Marshal(tc.requestBody)
+            req, _ := http.NewRequest("POST", "/users/logout", bytes.NewBuffer(bodyBytes))
+            req.Header.Set("Content-Type", "application/json")
 
-//     // 现在我们就有了 userID=123 的合法 RT
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
 
-//     t.Run("Success Logout", func(t *testing.T) {
-//         bodyBytes, _ := json.Marshal(gin.H{"refresh_token": "MY_MOCK_REFRESH_TOKEN"})
-//         req, _ := http.NewRequest("POST", "/users/logout", bytes.NewBuffer(bodyBytes))
-//         req.Header.Set("Content-Type", "application/json")
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
 
-//         w := httptest.NewRecorder()
-//         router.ServeHTTP(w, req)
-
-//         assert.Equal(t, http.StatusOK, w.Code)
-
-//         var resp map[string]interface{}
-//         err := json.Unmarshal(w.Body.Bytes(), &resp)
-//         assert.NoError(t, err)
-//         assert.Equal(t, "Logged out successfully", resp["message"])
-//     })
-// }
+            if tc.isSuccess {
+                assert.Equal(t, "Logged out successfully", resp["message"])
+            } else if tc.expectedError != "" {
+                assert.Equal(t, tc.expectedError, resp["error"])
+            }
+        })
+    }
+}
 
 func TestUserBasicDetails(t *testing.T) {
     db := setupUserTestDB()
