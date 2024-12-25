@@ -144,11 +144,13 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function login() {
+    console.log('url:', `${BASE_URL}/users/auth`)
     try {
       const loginRes = await new Promise((resolve, reject) => {
         uni.login({ provider: 'weixin', onlyAuthorize: true, success: resolve, fail: reject })
       })
       if (!loginRes.code) throw new Error('微信登录失败，请重试')
+
 
       const authRes = await new Promise((resolve, reject) => {
         uni.request({

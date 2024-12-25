@@ -3,6 +3,8 @@ import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
+
 function extractNumber(value) {
   if (typeof value === 'string') {
     const num = parseFloat(value.replace(/[^\d.]/g, ''))
@@ -22,7 +24,7 @@ export const useFoodListStore = defineStore('foodList', () => {
       const [resEn, resZh] = await Promise.all([
         new Promise((resolve, reject) => {
           uni.request({
-            url: 'http://122.51.231.155:8080/foods/names',
+            url: `${BASE_URL}/foods/names`,
             method: 'GET',
             data: { lang: 'en' },
             success: resolve,
@@ -31,7 +33,7 @@ export const useFoodListStore = defineStore('foodList', () => {
         }),
         new Promise((resolve, reject) => {
           uni.request({
-            url: 'http://122.51.231.155:8080/foods/names',
+            url: `${BASE_URL}/foods/names`,
             method: 'GET',
             data: { lang: 'zh' },
             success: resolve,
@@ -156,7 +158,7 @@ export const useFoodListStore = defineStore('foodList', () => {
       }
       const response = await new Promise((resolve, reject) => {
         uni.request({
-          url: 'http://122.51.231.155:8080/foods/calculate',
+          url: `${BASE_URL}/foods/calculate`,
           method: 'POST',
           data: requestData,
           header: { 'Content-Type': 'application/json' },

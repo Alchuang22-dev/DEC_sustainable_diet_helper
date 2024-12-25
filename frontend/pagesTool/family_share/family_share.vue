@@ -9,7 +9,7 @@
       >
         <view class="member-info">
           <image
-            :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+            :src="`${BASE_URL}/static/${member.avatarUrl}`"
             class="avatar"
           />
           <text class="name">{{ member.nickname }}</text>
@@ -68,6 +68,7 @@ const memberRatio = reactive({})
 const carbonEmissionData = ref(0)
 const nutritionData = reactive({})
 const mealType = ref('')
+const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
 
 /* ----------------- Computed ----------------- */
 const totalRatio = computed(() => {

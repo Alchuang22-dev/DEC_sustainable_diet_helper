@@ -76,7 +76,7 @@ const {t} = useI18n()
 const userStore = useUserStore()
 
 /* ----------------- Reactive & State ----------------- */
-const BASE_URL = ref('http://122.51.231.155:8080')
+const BASE_URL = ref('http://xcxcs.uwdjl.cn:8080')
 const articles = ref([])
 
 const uid = computed(() => userStore.user.nickName)
