@@ -27,6 +27,8 @@ type User struct {
     DislikedNews  []News `gorm:"many2many:user_dislikes_news;" json:"disliked_news"`   // 用户点踩的新闻
     ViewedNews    []News `gorm:"many2many:user_viewed_news;" json:"viewed_news"`       // 用户看过的新闻
 
+    LikedComments []Comment `gorm:"many2many:user_likes_comments;" json:"-"`
+
     FoodPreferences []FoodPreference `gorm:"foreignKey:UserID" json:"food_preferences"` // 用户的食物偏好
 
     DesiredDishes    []FamilyDish      `gorm:"foreignKey:ProposerUserID" json:"desired_dishes"` // 家庭中用户提出的想吃的菜
