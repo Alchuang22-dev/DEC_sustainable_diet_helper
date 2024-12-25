@@ -19,10 +19,6 @@ services:
       - DB_USER=root
       - DB_PASSWORD=DECpassword
       - DB_NAME=backend_db
-      - APP_ID=wx2d795bcb2c9ac1e0
-      - APP_SECRET=ccc2f1c11c63a9e5ab1a702292dbb04d
-      - BASE_UPLOAD_PATH=/app/upload
-      - WECHAT_API_URL=https://api.weixin.qq.com/sns/jscode2session
       # - GODEBUG=http2client=0
     depends_on:
       db:
