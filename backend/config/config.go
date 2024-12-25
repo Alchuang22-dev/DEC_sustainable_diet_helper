@@ -41,7 +41,7 @@ var JWTConfig = struct {
     AccessTokenExpiration  time.Duration
     RefreshTokenExpiration time.Duration
 }{
-    AccessTokenExpiration:  1 * time.Minute, // Access Token 过期时间 TODO 改回 15 min
+    AccessTokenExpiration:  30 * time.Minute, // Access Token 过期时间 TODO 改回 15 min
     // RefreshTokenExpiration: 7 * 24 * time.Hour, // Refresh Token 过期时间
-    RefreshTokenExpiration: 2 * time.Minute, // Refresh Token 过期时间
+    RefreshTokenExpiration: 7 * 24 * time.Hour, // Refresh Token 过期时间
 }

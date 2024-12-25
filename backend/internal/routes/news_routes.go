@@ -58,7 +58,13 @@ func RegisterNewsRoutes(router *gin.Engine, db *gorm.DB) {
             authGroup.DELETE("/:id/dislike", newsController.CancelDislikeNews)   // 取消点踩新闻
             // 浏览记录
             authGroup.POST("/:id/view", newsController.ViewNews) // 浏览新闻
-        }
 
+            authGroup.GET("/:id/status", newsController.GetUserNewsStatus) // 返回用户对新闻的过往交互
+
+            authGroup.POST("/:id/comment_like", newsController.LikeComment) // 点赞评论
+            authGroup.DELETE("/:id/comment_like", newsController.CancelLikeComment) // 取消点赞评论
+
+            authGroup.POST("/search", newsController.SearchNews)
+        }
     }
 }

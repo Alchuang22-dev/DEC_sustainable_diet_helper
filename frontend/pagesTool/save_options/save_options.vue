@@ -5,15 +5,15 @@
       <text class="title">{{ t('select_save_method') }}</text>
     </view>
 
-    <!-- Picker 部分 -->
+    <!-- Picker 部分：选择餐食类型 -->
     <view class="picker-container">
       <text class="picker-label">{{ t('select_meal_type') }}</text>
       <picker
-          mode="selector"
-          :range="mealTypesDisplay"
-          :value="selectedMealIndex"
-          @change="onPickerChange"
-          class="picker"
+        mode="selector"
+        :range="mealTypesDisplay"
+        :value="selectedMealIndex"
+        @change="onPickerChange"
+        class="picker"
       >
         <view class="picker-content">
           {{ mealTypesDisplay[selectedMealIndex] }}
@@ -24,95 +24,86 @@
     <!-- 按钮组 -->
     <view class="button-group">
       <view class="button primary-button" @click="saveForSelf">
-        <uni-icons type="check" size="24" color="#fff"></uni-icons>
+        <uni-icons type="check" size="24" color="#fff" />
         <text class="button-text">{{ t('save_for_self') }}</text>
       </view>
       <view class="button secondary-button" @click="saveForFamily">
-        <uni-icons type="people" size="24" color="#fff"></uni-icons>
+        <uni-icons type="people" size="24" color="#fff" />
         <text class="button-text">{{ t('save_for_family') }}</text>
       </view>
     </view>
   </view>
 </template>
 
-
 <script setup>
-import { reactive, ref, computed } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { useUserStore } from "@/stores/user.js";
-import { FamilyStatus, useFamilyStore } from "../stores/family.js";
-import { onLoad } from "@dcloudio/uni-app";
-import {formatDate} from "../../uni_modules/uni-dateformat/components/uni-dateformat/date-format";
+/* ----------------- Imports ----------------- */
+import { reactive, ref, computed } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { useI18n } from 'vue-i18n'
+import { useUserStore } from '@/stores/user.js'
+import { useFamilyStore, FamilyStatus } from '../stores/family.js'
 
-// 国际化
-const { t } = useI18n();
-const userStore = useUserStore();
-const familyStore = useFamilyStore();
-const familyStatus = computed(() => familyStore.family.status);
+/* ----------------- Setup ----------------- */
+const { t } = useI18n()
+const userStore = useUserStore()
+const familyStore = useFamilyStore()
 
-// 用户信息
-const uid = computed(() => userStore.user.uid);
-const token = computed(() => userStore.user.token);
+const familyStatus = computed(() => familyStore.family.status)
+const uid = computed(() => userStore.user.uid)
+const token = computed(() => userStore.user.token)
 
-// 餐食类型
-const mealTypesDisplay = [t('breakfast'), t('lunch'), t('dinner'), t('other')];
-const mealTypesValue = ['breakfast', 'lunch', 'dinner', 'other'];
-const selectedMealIndex = ref(0);
+/* ----------------- 数据：餐食类型 ----------------- */
+const mealTypesDisplay = [t('breakfast'), t('lunch'), t('dinner'), t('other')]
+const mealTypesValue = ['breakfast', 'lunch', 'dinner', 'other']
+const selectedMealIndex = ref(0)
 
-// Picker 选择改变处理
-const onPickerChange = (e) => {
-  selectedMealIndex.value = e.detail.value;
-};
+/* ----------------- onLoad & 页面数据 ----------------- */
+const carbonEmissionData = reactive({})
+const nutritionData = reactive({})
+const totalEmission = ref(0)
 
-// 数据处理
-const carbonEmissionData = reactive({});
-const nutritionData = reactive({});
-const totalEmission = ref(0);
-
-// 页面加载时处理传递的数据
-onLoad((options) => {
+onLoad(options => {
   if (options && options.data) {
     try {
-      const parsedData = JSON.parse(decodeURIComponent(options.data));
-      console.log('接收到的计算结果:', parsedData);
-
-      Object.assign(carbonEmissionData, parsedData.carbonEmission);
-      Object.assign(nutritionData, parsedData.nutrition.series[0].data);
-      totalEmission.value = carbonEmissionData.series[0].data.reduce((sum, item) => sum + item.value, 0);
-      console.log('Total Emission:', totalEmission.value);
+      const parsedData = JSON.parse(decodeURIComponent(options.data))
+      Object.assign(carbonEmissionData, parsedData.carbonEmission)
+      Object.assign(nutritionData, parsedData.nutrition.series[0].data)
+      totalEmission.value = carbonEmissionData.series[0].data.reduce(
+        (sum, item) => sum + item.value,
+        0
+      )
     } catch (error) {
-      console.error('解析传递的数据失败:', error);
+      console.error('解析传递的数据失败:', error)
     }
   }
-  selectedMealIndex.value = getDefaultMealType();
-});
+  selectedMealIndex.value = getDefaultMealType()
+})
 
-// 根据当前时间获取默认的餐食类型
-const getDefaultMealType = () => {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 11) return 0; // 早餐
-  if (hour >= 11 && hour < 15) return 1; // 午餐
-  if (hour >= 15 && hour < 20) return 2; // 晚餐
-  return 3; // 其他
-};
-
-function formatToISO(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-
-  // 组合成指定格式，仍然使用 Z 后缀
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+/* ----------------- Methods ----------------- */
+function onPickerChange(e) {
+  selectedMealIndex.value = e.detail.value
+}
+function getDefaultMealType() {
+  const hour = new Date().getHours()
+  if (hour >= 5 && hour < 11) return 0
+  if (hour >= 11 && hour < 15) return 1
+  if (hour >= 15 && hour < 20) return 2
+  return 3
 }
 
-// 保存为自己计算
-const saveForSelf = () => {
-  const today = new Date();
-  const isoDate = formatToISO(today);
-  console.log('当前时间:', isoDate);
+function formatToISO(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`
+}
+
+// 保存为自己
+function saveForSelf() {
+  const isoDate = formatToISO(new Date())
   const requestData = {
     date: isoDate,
     meal_type: mealTypesValue[selectedMealIndex.value],
@@ -122,111 +113,78 @@ const saveForSelf = () => {
     carbohydrates: nutritionData[3] || 0,
     sodium: nutritionData[4] || 0,
     emission: totalEmission.value || 0,
-    user_shares: [{
-      user_id: uid.value,
-      ratio: 1.0
-    }]
-  };
-
-  console.log('发送的数据:', requestData);
-
-  // 发送 POST 请求
+    user_shares: [
+      {
+        user_id: uid.value,
+        ratio: 1.0
+      }
+    ]
+  }
   uni.request({
     url: 'http://122.51.231.155:8095/nutrition-carbon/shared/nutrition-carbon',
     method: 'POST',
     data: requestData,
     header: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token.value}`
+      Authorization: `Bearer ${token.value}`
     },
-    success: (res) => {
+    success: res => {
       if (res.statusCode === 200) {
-        uni.showToast({
-          title: t('save_success'),
-          icon: 'success',
-          duration: 2000
-        });
+        uni.showToast({ title: t('save_success'), icon: 'success', duration: 2000 })
       } else {
-        const errorMsg = res.data?.error || t('save_failed');
-        uni.showToast({
-          title: errorMsg,
-          icon: 'none',
-          duration: 2000
-        });
+        const errorMsg = res.data?.error || t('save_failed')
+        uni.showToast({ title: errorMsg, icon: 'none', duration: 2000 })
       }
-      // 2秒后导航回上一层级
       setTimeout(() => {
-        uni.navigateBack({
-          delta: 1 // 返回上一层级
-        });
-      }, 2000);
+        uni.navigateBack({ delta: 1 })
+      }, 2000)
     },
     fail: () => {
-      uni.showToast({
-        title: t('save_failed'),
-        icon: 'none',
-        duration: 2000
-      });
-      // 2秒后导航回上一层级
+      uni.showToast({ title: t('save_failed'), icon: 'none', duration: 2000 })
       setTimeout(() => {
-        uni.navigateBack({
-          delta: 1 // 返回上一层级
-        });
-      }, 2000);
+        uni.navigateBack({ delta: 1 })
+      }, 2000)
     }
-  });
-};
+  })
+}
 
-// 保存为家人计算
-const saveForFamily = async () => {
+// 保存为家庭
+async function saveForFamily() {
   try {
-    // 等待获取家庭详情完成
-    await familyStore.getFamilyDetails();
-
-    console.log('家庭状态:', familyStore.family.status);
-
-    // 检查家庭状态
+    await familyStore.getFamilyDetails()
     if (familyStore.family.status !== FamilyStatus.JOINED) {
       uni.showToast({
         title: t('join_family_first'),
         icon: 'none',
         duration: 2000
-      });
-      return;
+      })
+      return
     }
-
-    // 跳转到分享页面
+    // 跳转到 family_share
     uni.navigateTo({
-      url: `/pagesTool/family_share/family_share?data=${encodeURIComponent(JSON.stringify({
-        carbonEmission: totalEmission.value,
-        nutrition: nutritionData,
-        mealType: mealTypesValue[selectedMealIndex.value]
-      }))}`
-    });
+      url: `/pagesTool/family_share/family_share?data=${encodeURIComponent(
+        JSON.stringify({
+          carbonEmission: totalEmission.value,
+          nutrition: nutritionData,
+          mealType: mealTypesValue[selectedMealIndex.value]
+        })
+      )}`
+    })
   } catch (error) {
-    console.error('获取家庭详情失败:', error);
     uni.showToast({
-      title: t('error_fetch_family_details'), // 确保在国际化文件中添加对应的键值
+      title: t('error_fetch_family_details'),
       icon: 'none',
       duration: 2000
-    });
+    })
   }
-};
-
-
-
-// 当前选择的餐食类型
-const currentMealType = computed(() => {
-  return mealTypesValue[selectedMealIndex.value];
-});
+}
 </script>
-
 
 <style scoped>
 :root {
-  --primary-color: #4CAF50;
-  --secondary-color: #8BC34A;
-  --accent-color: #FF9800;
+  --primary-color: #4caf50;
+  --secondary-color: #8bc34a;
+  --accent-color: #ff9800;
   --text-color: #333;
   --background-color: #f5f5f5;
   --border-color: #e0e0e0;
@@ -254,15 +212,6 @@ const currentMealType = computed(() => {
   font-size: 36rpx;
   font-weight: bold;
   color: var(--primary-color);
-}
-
-.picker-card {
-  width: 100%;
-  padding: 20rpx;
-  margin-bottom: 30rpx;
-  background: #ffffff;
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.1);
-  border-radius: 15rpx;
 }
 
 .picker-container {
@@ -322,7 +271,6 @@ const currentMealType = computed(() => {
 .secondary-button {
   background-color: #178d2a;
 }
-
 
 .button-text {
   margin-left: 10rpx;

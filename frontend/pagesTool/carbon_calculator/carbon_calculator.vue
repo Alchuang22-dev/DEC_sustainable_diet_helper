@@ -1,4 +1,3 @@
-<!-- pagesTool/carbon_calculator/carbon_calculator.vue -->
 <template>
   <view class="page-container" @load="handleLoad">
     <image src="../static/background_img.jpg" class="background-image"></image>
@@ -9,6 +8,7 @@
 
     <uni-section :title="t('added_foods')" type="line">
       <view class="content-wrapper">
+        <!-- 食物列表 -->
         <scroll-view scroll-y="true" class="food-list">
           <uni-collapse>
             <uni-collapse-item
@@ -25,18 +25,47 @@
                 />
                 <view class="food-info">
                   <view class="info-grid">
-                    <uni-tag :text="$t('weight') + ': ' + (food.weight + 'kg' || '1.2kg')" type="primary" size="small" />
-                    <uni-tag :text="$t('price') + ': ' + (food.price + t('yuan') || '5元')" type="success" size="small" />
-                    <uni-tag v-if="food.transportMethod" :text="$t(`transport_${food.transportMethod}`)" type="warning" size="small" />
-                    <uni-tag v-if="food.foodSource" :text="$t(`source_${food.foodSource}`)" type="info" size="small" />
+                    <uni-tag
+                      :text="t('weight') + ': ' + (food.weight + 'kg')"
+                      type="primary"
+                      size="small"
+                    />
+                    <uni-tag
+                      :text="t('price') + ': ' + (food.price + t('yuan'))"
+                      type="success"
+                      size="small"
+                    />
+                    <uni-tag
+                      v-if="food.transportMethod"
+                      :text="t(`transport_${food.transportMethod}`)"
+                      type="warning"
+                      size="small"
+                    />
+                    <uni-tag
+                      v-if="food.foodSource"
+                      :text="t(`source_${food.foodSource}`)"
+                      type="info"
+                      size="small"
+                    />
                   </view>
                   <view class="action-row">
-                    <uni-icons type="compose" size="20" color="#2979ff" @click.stop="handleEdit(index)" />
-                    <uni-icons type="trash" size="20" color="#dd524d" @click.stop="handleDelete(index)" />
+                    <uni-icons
+                      type="compose"
+                      size="20"
+                      color="#2979ff"
+                      @click.stop="handleEdit(index)"
+                    />
+                    <uni-icons
+                      type="trash"
+                      size="20"
+                      color="#dd524d"
+                      @click.stop="handleDelete(index)"
+                    />
                   </view>
                 </view>
               </view>
             </uni-collapse-item>
+
             <!-- 空列表提示 -->
             <view v-if="displayFoodList.length === 0" class="empty-state">
               <text>{{ $t('no_foods_added') }}</text>
@@ -44,6 +73,7 @@
           </uni-collapse>
         </scroll-view>
 
+        <!-- 操作按钮 -->
         <view class="action-buttons">
           <uni-row :gutter="10">
             <uni-col :span="8">
@@ -66,27 +96,30 @@
       </view>
     </uni-section>
 
+    <!-- 计算结果 -->
     <view class="result" v-if="showResult">
       <uni-section :title="t('results')" type="line">
         <view class="charts-container">
           <view class="chart-wrapper">
             <text class="chart-title">{{ $t('your_carbon_footprint') }}</text>
             <qiun-data-charts
-                :canvas2d="true"
-                type="ring"
-                :opts="ringOpts"
-                :chartData="chartEmissionData"
+              :canvas2d="true"
+              type="ring"
+              :opts="ringOpts"
+              :chartData="chartEmissionData"
             />
           </view>
+
           <view class="chart-wrapper">
             <text class="chart-title">{{ $t('your_nutrition_intake') }}</text>
             <qiun-data-charts
-                :canvas2d="true"
-                type="bar"
-                :opts="barOpts"
-                :chartData="chartNutritionData"
+              :canvas2d="true"
+              type="bar"
+              :opts="barOpts"
+              :chartData="chartNutritionData"
             />
           </view>
+
           <view class="action-button-container">
             <view class="action-button primary" @click="handleSaveOptions">
               <text>{{ $t('save') }}</text>
@@ -99,20 +132,23 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useI18n } from 'vue-i18n'; // Import useI18n
-import { useFoodListStore } from '../stores/food_list'; // 引入 Pinia Store
-import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data';
-import UniDataPickerView
-  from "../../uni_modules/uni-data-picker/components/uni-data-pickerview/uni-data-pickerview.vue"; // 引入营养碳排放store
+/**
+ * 碳排放计算器页面：展示用户添加的食品列表，并可进行碳排放/营养综合计算
+ */
 
-// 使用国际化
-const { t, locale } = useI18n();
+import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useFoodListStore } from '../stores/food_list'
+import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data'
 
-// 使用 Pinia Store
-const foodStore = useFoodListStore();
-const carbonNutritionStore = useCarbonAndNutritionStore();
+// 多语言
+const { t, locale } = useI18n()
 
+// Pinia
+const foodStore = useFoodListStore()
+const carbonNutritionStore = useCarbonAndNutritionStore()
+
+// 解构 store 的部分方法
 const {
   foodList,
   deleteFood,
@@ -121,38 +157,51 @@ const {
   loadFoodList,
   fetchAvailableFoods,
   availableFoods,
-  getFoodName,
-  getFoodImageUrl,
-  calculateNutritionAndEmission
-} = foodStore;
+  calculateNutritionAndEmission,
+  getFoodName
+} = foodStore
 
-// 将数字四舍五入到一位小数
-const roundToOneDecimal = (num) => Number(num.toFixed(1));
+// 是否显示结果图表
+const showResult = ref(false)
 
-const showResult = ref(false);
-
-// 碳排放环形图数据
+/**
+ * 碳排放环形图
+ */
 const chartEmissionData = ref({
-  series: [{
-    name: t('co2_emission'),
-    data: []
-  }]
-});
+  series: [
+    {
+      name: t('co2_emission'),
+      data: []
+    }
+  ]
+})
 
-// 营养条形图数据
+/**
+ * 营养条形图
+ */
 const chartNutritionData = ref({
-  categories: [t('energy_unit'), t('protein_unit'), t('fat_unit'), t('carbohydrates_unit'), t('sodium_unit')],
-  series: [{
-    name: t('intake_value'),
-    data: [0, 0, 0, 0, 0]
-  },
+  categories: [
+    t('energy_unit'),
+    t('protein_unit'),
+    t('fat_unit'),
+    t('carbohydrates_unit'),
+    t('sodium_unit')
+  ],
+  series: [
+    {
+      name: t('intake_value'),
+      data: [0, 0, 0, 0, 0]
+    },
     {
       name: t('target_value_today'),
       data: [0, 0, 0, 0, 0]
     }
   ]
-});
+})
 
+/**
+ * 环形图配置
+ */
 const ringOpts = ref({
   rotate: false,
   rotateLock: false,
@@ -186,11 +235,23 @@ const ringOpts = ref({
       borderColor: "#FFFFFF"
     }
   }
-});
+})
 
-// 营养条形图配置
+/**
+ * 营养条形图配置
+ */
 const barOpts = ref({
-  color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE", "#3CA272", "#FC8452", "#9A60B4", "#ea7ccc"],
+  color: [
+    "#1890FF",
+    "#91CB74",
+    "#FAC858",
+    "#EE6666",
+    "#73C0DE",
+    "#3CA272",
+    "#FC8452",
+    "#9A60B4",
+    "#ea7ccc"
+  ],
   padding: [15, 40, 0, 5],
   enableScroll: false,
   legend: {},
@@ -206,7 +267,6 @@ const barOpts = ref({
   extra: {
     bar: {
       type: "group",
-      // width: 30,
       meterBorde: 1,
       meterFillColor: "#FFFFFF",
       activeBgColor: "#000000",
@@ -217,110 +277,123 @@ const barOpts = ref({
       categoryGap: 2
     }
   }
-});
+})
 
-// 计算 displayFoodList，根据当前语言显示食物名称和图片
+/**
+ * 计算属性：显示食物列表（根据语言）
+ */
 const displayFoodList = computed(() => {
   return foodList.map(food => {
-    const availableFood = availableFoods.find(f => f.id === food.id);
+    const found = availableFoods.find(f => f.id === food.id)
+    const displayName = found
+      ? (locale.value === 'zh-Hans' ? found.name_zh : found.name_en)
+      : (food.name || t('default_food_name'))
 
-    // 确定显示名称（中/英文）
-    const displayName = availableFood
-      ? (locale.value === 'zh-Hans' ? availableFood.name_zh : availableFood.name_en)
-      : (food.name || t('default_food_name'));
-
-    // 从后端接口取到的图片链接
-    const displayImage = availableFood?.image_url || '';
+    const displayImage = found?.image_url || ''
 
     return {
       ...food,
       displayName,
       displayImage
-    };
-  });
-});
+    }
+  })
+})
 
-// 页面加载时处理动画
-const handleLoad = () => {
+/**
+ * 动画效果：页面加载时触发
+ */
+function handleLoad() {
   foodList.forEach((food, index) => {
     setTimeout(() => {
-      food.isAnimating = true;
+      food.isAnimating = true
       setTimeout(() => {
-        food.isAnimating = false;
-      }, 500);
-    }, index * 100);
-  });
-};
+        food.isAnimating = false
+      }, 500)
+    }, index * 100)
+  })
+}
 
-// 保存数据到本地存储
-const saveData = () => {
-  saveFoodList();
+/**
+ * 保存列表到本地
+ */
+function saveData() {
+  saveFoodList()
   uni.showToast({
     title: t('save_success'),
     icon: 'success',
-    duration: 2000,
-  });
-};
+    duration: 2000
+  })
+}
 
-// 删除食物项
-const handleDelete = (index) => {
-  deleteFood(index);
+/**
+ * 删除某项食物
+ */
+function handleDelete(index) {
+  deleteFood(index)
   uni.showToast({
     title: t('delete_success'),
     icon: 'success',
-    duration: 2000,
-  });
-};
+    duration: 2000
+  })
+}
 
-// 编辑食物项
-const handleEdit = (index) => {
+/**
+ * 跳转到修改页面
+ */
+function handleEdit(index) {
   uni.navigateTo({
-    url: `/pagesTool/modify_food/modify_food?index=${index}`,
-  });
-};
+    url: `/pagesTool/modify_food/modify_food?index=${index}`
+  })
+}
 
-// 添加食物项
-const navigateToAddFood = () => {
+/**
+ * 跳转到添加食物页面
+ */
+function navigateToAddFood() {
   uni.navigateTo({
-    url: '/pagesTool/add_food/add_food',
-  });
-};
+    url: '/pagesTool/add_food/add_food'
+  })
+}
 
-// 计算碳排放和营养数据
-const calculateData = async () => {
+/**
+ * 小数处理：保留1位
+ */
+const roundToOneDecimal = (num) => Number(num.toFixed(1))
+
+/**
+ * 计算碳排放和营养信息
+ */
+async function calculateData() {
   try {
-    await calculateNutritionAndEmission();
+    await calculateNutritionAndEmission()
 
-    // 计算总碳排放量
-    let totalCO2 = 0;
+    // 计算总碳排放
+    let totalCO2 = 0
     const emissionData = foodList.map(item => {
-      totalCO2 += item.emission;
+      totalCO2 += item.emission
       return {
         name: getFoodName(item.id) || t('default_food_name'),
         value: roundToOneDecimal(item.emission)
-      };
-    });
-    chartEmissionData.value.series[0].data = emissionData;
+      }
+    })
+    chartEmissionData.value.series[0].data = emissionData
+    ringOpts.value.subtitle.name = `${roundToOneDecimal(totalCO2)} kg`
 
-    // 更新环形图中心显示的总排放量
-    ringOpts.value.subtitle.name = `${roundToOneDecimal(totalCO2)} kg`;
-
-    // 计算总营养摄入
+    // 计算总营养
     const totalNutrition = {
       calories: 0,
       protein: 0,
       fat: 0,
       carbohydrates: 0,
       sodium: 0
-    };
-
+    }
     foodList.forEach(item => {
-      totalNutrition.calories += item.calories;
-      totalNutrition.protein += item.protein;
-      totalNutrition.fat += item.fat;
-      totalNutrition.carbohydrates += item.carbohydrates;
-      totalNutrition.sodium += item.sodium;
-    });
+      totalNutrition.calories += item.calories
+      totalNutrition.protein += item.protein
+      totalNutrition.fat += item.fat
+      totalNutrition.carbohydrates += item.carbohydrates
+      totalNutrition.sodium += item.sodium
+    })
 
     chartNutritionData.value.series[0].data = [
       roundToOneDecimal(totalNutrition.calories),
@@ -328,64 +401,68 @@ const calculateData = async () => {
       roundToOneDecimal(totalNutrition.fat),
       roundToOneDecimal(totalNutrition.carbohydrates),
       roundToOneDecimal(totalNutrition.sodium)
-    ];
+    ]
 
-    // 使用今天的目标值，而不是假数据
-    const today = new Date();
-    const dateString = today.getFullYear() + '-'
-        + String(today.getMonth() + 1).padStart(2, '0') + '-'
-        + String(today.getDate()).padStart(2, '0');
-    const dateData = carbonNutritionStore.getDataByDate(dateString);
+    // 获取当日目标
+    const today = new Date()
+    const dateString = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0')
+    ].join('-')
+    const dateData = carbonNutritionStore.getDataByDate(dateString)
 
-    // dateData中包含今日的target值
     chartNutritionData.value.series[1].data = [
       roundToOneDecimal(dateData.nutrients.target.calories),
       roundToOneDecimal(dateData.nutrients.target.protein),
       roundToOneDecimal(dateData.nutrients.target.fat),
       roundToOneDecimal(dateData.nutrients.target.carbohydrates),
       roundToOneDecimal(dateData.nutrients.target.sodium)
-    ];
+    ]
 
-    showResult.value = true;
+    showResult.value = true
     uni.showToast({
       title: t('calculation_success'),
       icon: 'success',
-      duration: 2000,
-    });
+      duration: 2000
+    })
   } catch (err) {
-    console.error('计算失败:', err);
+    console.error('计算失败:', err)
     uni.showToast({
       title: t('calculation_failed'),
       icon: 'none',
-      duration: 2000,
-    });
+      duration: 2000
+    })
   }
-};
+}
 
-// 点击保存按钮后，不直接保存到后端，而是进入选择界面
-const handleSaveOptions = () => {
+/**
+ * 点击 “保存” 按钮，跳转到保存选项页面
+ */
+function handleSaveOptions() {
   const calculatedData = {
     carbonEmission: chartEmissionData.value,
     nutrition: chartNutritionData.value
-  };
+  }
 
-  // 使用 JSON 字符串传递数据
   uni.navigateTo({
     url: `/pagesTool/save_options/save_options?data=${encodeURIComponent(JSON.stringify(calculatedData))}`
-  });
-};
+  })
+}
 
+/**
+ * 页面加载后初始化
+ */
 onMounted(() => {
   if (!foodStore.loaded) {
-    loadFoodList();
+    loadFoodList()
   }
-  fetchAvailableFoods();
-  handleLoad();
-});
+  fetchAvailableFoods()
+  handleLoad()
+})
 </script>
 
 <style scoped>
-
 :root {
   --primary-color: #4CAF50;
   --secondary-color: #8BC34A;
@@ -405,7 +482,7 @@ onMounted(() => {
   position: relative;
 }
 
-/* 背景图片 */
+/* 背景图 */
 .background-image {
   position: fixed;
   top: 0;
@@ -413,8 +490,9 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: -1;
-  opacity: 0.05;
+  z-index: 0;
+  opacity: 0.08;
+  pointer-events: none;
 }
 
 /* 头部卡片 */
@@ -431,14 +509,14 @@ onMounted(() => {
   animation: slideDown 1s ease-out;
 }
 
-/* 内容区域 */
+/* 内容容器 */
 .content-wrapper {
   background-color: #ffffff;
   border-radius: 15rpx;
   padding: 10rpx;
 }
 
-/* 食物列表 */
+/* 食物列表区域 */
 .food-list {
   max-height: 600rpx;
   margin-bottom: 20rpx;
@@ -466,7 +544,6 @@ onMounted(() => {
   gap: 15rpx;
 }
 
-/* 信息网格 */
 .info-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -523,7 +600,6 @@ onMounted(() => {
   opacity: 0.9;
 }
 
-/* uni-collapse 样式优化 */
 :deep(.uni-collapse) {
   background-color: transparent;
 }
@@ -537,7 +613,7 @@ onMounted(() => {
   background-color: #ffffff;
 }
 
-/* 结果区域 */
+/* 结果展示 */
 .result {
   margin-top: 30rpx;
   animation: fadeIn 0.5s ease-in-out;
@@ -590,51 +666,44 @@ onMounted(() => {
   }
 }
 
-/* 响应式适配 */
+/* 响应式 */
 @media screen and (max-width: 375px) {
   .info-grid {
     grid-template-columns: 1fr;
   }
-
   .action-button {
     padding: 15rpx;
     font-size: 22rpx;
   }
-
   .food-image {
     width: 100rpx;
     height: 100rpx;
   }
 }
 
-/* 滚动条美化 */
 .food-list::-webkit-scrollbar {
   width: 6rpx;
   background-color: transparent;
 }
-
 .food-list::-webkit-scrollbar-thumb {
   background-color: #2979ff;
   border-radius: 3rpx;
 }
 
-/* uni-row 间距调整 */
 :deep(.uni-row) {
   margin: -5rpx;
 }
-
 :deep(.uni-col) {
   padding: 5rpx;
 }
 
-/* 空状态样式 */
+/* 空列表提示 */
 .empty-state {
   text-align: center;
   padding: 40rpx 0;
   color: #999;
 }
 
-/* 加载状态 */
 .loading {
   display: flex;
   justify-content: center;
@@ -642,7 +711,6 @@ onMounted(() => {
   padding: 20rpx 0;
 }
 
-/* uni-icons 点击区域优化 */
 :deep(.uni-icons) {
   padding: 10rpx;
 }

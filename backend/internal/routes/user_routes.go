@@ -5,12 +5,13 @@ import (
     "gorm.io/gorm"
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/controllers"
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/middleware"
+    "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/utils"
 
     "github.com/gin-gonic/gin"
 )
 
-func RegisterUserRoutes(router *gin.Engine, db *gorm.DB) {
-    userController := controllers.NewUserController(db)
+func RegisterUserRoutes(router *gin.Engine, db *gorm.DB, utils utils.UtilsInterface) {
+    userController := controllers.NewUserController(db, utils)
 
     userGroup := router.Group("/users")
     {
@@ -26,11 +27,12 @@ func RegisterUserRoutes(router *gin.Engine, db *gorm.DB) {
             authGroup.PUT("/set_nickname", userController.SetNickname) // 更新用户名
             authGroup.POST("/set_avatar", userController.SetAvatar) // 更新头像
             authGroup.GET("/basic_details", userController.UserBasicDetails) // 获取基本信息
-        }
 
-        // TODO
-        // 查询用户点赞的新闻
-        // 查询用户收藏的新闻
-        // 查询用户最近浏览的新闻
+            authGroup.GET("/liked", userController.GetMyLikedNews)
+            authGroup.GET("/favorited", userController.GetMyFavoritedNews)
+            authGroup.GET("/viewed", userController.GetMyViewedNews)
+
+            authGroup.GET("/:id/profile", userController.GetUserProfile)
+        }
     }
 }

@@ -25,6 +25,7 @@ type News struct {
     LikedByUsers     []User         `gorm:"many2many:user_likes_news;"`
     FavoritedByUsers []User         `gorm:"many2many:user_favorites_news;"`
     DislikedByUsers  []User         `gorm:"many2many:user_dislikes_news;"`
+    ViewedByUsers    []User         `gorm:"many2many:user_viewed_news;"`
 
     // 内容
     Paragraphs       []Paragraph    `gorm:"foreignKey:NewsID" json:"paragraphs"`

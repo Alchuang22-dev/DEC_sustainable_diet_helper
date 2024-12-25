@@ -1,12 +1,14 @@
 <template>
   <view class="container">
-    <image src="/static/images/index/background_img.jpg" class="background-image"></image>
+    <image
+      src="/static/images/index/background_img.jpg"
+      class="background-image"
+    ></image>
 
-    <!-- 个人信息部分 -->
+    <!-- 个人信息 -->
     <view class="profile-section">
       <view class="profile-top">
-
-        <!-- 修改后的头像按钮，透明且无边框 -->
+        <!-- 若已登录，可点击头像选择新的微信头像 -->
         <button
           v-if="isLoggedIn"
           class="avatar-button"
@@ -16,24 +18,23 @@
           <image :src="avatarSrc" class="avatar" />
         </button>
 
-        <!-- 若未登录，仍显示默认头像，但不可更换 -->
-        <image
-          v-else
-          :src="avatarSrc"
-          class="avatar"
-        />
+        <!-- 未登录时，仅显示默认头像 -->
+        <image v-else :src="avatarSrc" class="avatar" />
 
         <view class="profile-text">
-          <!-- 昵称显示/编辑 -->
+          <!-- 显示/编辑昵称 -->
           <view v-if="!isEditingNickname" class="greeting-container">
             <text
               class="greeting"
               @click="enableNicknameEdit"
             >
-              {{ isLoggedIn ? nickname : $t('profile_greeting') }}
+              {{ isLoggedIn ? nickname : t('profile_greeting') }}
             </text>
-            <!-- 仅在登录状态下显示编辑图标 -->
-            <image v-if="isLoggedIn" src="@/pages/static/editor.svg" class="edit-icon"></image>
+            <image
+              v-if="isLoggedIn"
+              src="@/pages/static/editor.svg"
+              class="edit-icon"
+            ></image>
           </view>
           <input
             v-else
@@ -42,296 +43,240 @@
             class="nickname-input-inline"
             @blur="onNicknameBlur"
             @input="onNicknameInput"
-            placeholder="请输入昵称"
-            focus
+            :placeholder="t('placeholder_nickname')"
           />
           <view>
             <text class="login-prompt">
-              {{ isLoggedIn ? $t('profile_logged_in') : $t('profile_login_prompt') }}
+              {{
+                isLoggedIn
+                  ? t('profile_logged_in')
+                  : t('profile_login_prompt')
+              }}
             </text>
           </view>
         </view>
       </view>
 
-      <!-- 未登录时的登录按钮 -->
+      <!-- 未登录时显示登录/注册按钮 -->
       <button v-if="!isLoggedIn" class="login-button" @click="handleLoginButtonClick">
-        {{ $t('profile_register_login') }}
+        {{ t('profile_register_login') }}
       </button>
     </view>
 
-    <!-- 菜单部分 -->
+    <!-- 菜单 -->
     <view class="menu-section">
-      <view
-        v-if="isLoggedIn"
-        class="menu-item"
-        @click="navigateTo('searchTools')"
-      >
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('searchTools')">
         <image src="@/pages/static/search.svg" class="icon_svg"></image>
-        <text class="menu-text">{{$t('menu_search_tools')}}</text>
+        <text class="menu-text">{{t('menu_search_tools')}}</text>
       </view>
 
-      <view
-        v-if="isLoggedIn"
-        class="menu-item"
-        @click="navigateTo('setGoals')"
-      >
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('setGoals')">
         <image src="@/pages/static/setgoals.svg" class="icon_svg"></image>
-        <text class="menu-text">{{$t('menu_set_goals')}}</text>
+        <text class="menu-text">{{t('menu_set_goals')}}</text>
       </view>
 
-      <view
-        v-if="isLoggedIn"
-        class="menu-item"
-        @click="navigateToFoddPreferences('foodPreferences')"
-      >
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateToFoodPreferences('foodPreferences')">
         <image src="@/pages/static/food.svg" class="icon_svg"></image>
-        <text class="menu-text">{{$t('menu_food_preferences')}}</text>
+        <text class="menu-text">{{t('menu_food_preferences')}}</text>
       </view>
 
-      <view
-        v-if="isLoggedIn"
-        class="menu-item"
-        @click="navigateTo('favorites')"
-      >
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('favorites')">
         <image src="@/pages/static/favorites.svg" class="icon_svg"></image>
-        <text class="menu-text">{{$t('menu_favorites')}}</text>
+        <text class="menu-text">{{t('menu_favorites')}}</text>
       </view>
 
-      <view
-        v-if="isLoggedIn"
-        class="menu-item"
-        @click="navigateTo('my_home')"
-      >
+      <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('my_home')">
         <image src="@/pages/static/mywork.svg" class="icon_svg"></image>
-        <text class="menu-text">{{$t('menu_creations')}}</text>
+        <text class="menu-text">{{t('menu_creations')}}</text>
       </view>
 
       <view class="menu-item" @click="navigateTo('appSettings')">
         <image src="@/pages/static/setting.svg" class="icon_svg"></image>
-        <text class="menu-text">{{$t('menu_app_settings')}}</text>
+        <text class="menu-text">{{t('menu_app_settings')}}</text>
       </view>
 
       <view class="menu-item" @click="navigateTo('userSettings')">
         <image src="@/pages/static/user.svg" class="icon_svg"></image>
-        <text class="menu-text">{{$t('menu_user_settings')}}</text>
+        <text class="menu-text">{{t('menu_user_settings')}}</text>
       </view>
 
-      <view
-        v-if="isLoggedIn"
-        class="menu-item"
-        @click="handleLogout"
-      >
+      <view v-if="isLoggedIn" class="menu-item" @click="handleLogout">
         <image src="@/pages/static/logout.svg" class="icon_svg"></image>
-        <text class="menu-text">{{$t('profile_logout')}}</text>
+        <text class="menu-text">{{t('profile_logout')}}</text>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
-import { onShow } from '@dcloudio/uni-app';
-
-const BASE_URL = 'http://122.51.231.155:8080';
-
-// 国际化
-const { t } = useI18n();
-// Pinia 用户存储
-const userStore = useUserStore();
-
-// 计算属性，从 Pinia store 获取用户状态
-const isLoggedIn = computed(() => userStore.user.isLoggedIn);
-
 /**
- * 用户头像
- * 若后端给出的 userStore.user.avatarUrl 是相对路径,
- * 则拼接: `${BASE_URL}/static/${userStore.user.avatarUrl}`
- * 否则使用默认背景
+ * 我的页面：展示个人信息（头像、昵称）、登录、登出、以及常见的功能入口菜单
  */
+
+import {ref, computed} from 'vue'
+import {useI18n} from 'vue-i18n'
+import {useUserStore} from '../../stores/user'
+import {onShow} from '@dcloudio/uni-app'
+
+const BASE_URL = 'http://122.51.231.155:8080'
+const {t} = useI18n()
+const userStore = useUserStore()
+
+// 是否已登录
+const isLoggedIn = computed(() => userStore.user.isLoggedIn)
+
+// 用户头像
 const avatarSrc = computed(() =>
-  userStore.user.avatarUrl
-    ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
-    : '/static/images/index/background_img.jpg'
-);
+    userStore.user.avatarUrl
+        ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
+        : '/static/images/index/background_img.jpg'
+)
+
+// 用户昵称
+const nickname = ref(userStore.user.nickName || '')
+
+// 是否正在编辑昵称
+const isEditingNickname = ref(false)
 
 /**
- * 用户昵称
- * 默认显示 store 内的 nickName
- * 也可以在 onShow 或 onMounted 时进行赋值
+ * 页面显示时，刷新用户信息
  */
-const nickname = ref(userStore.user.nickName || '');
-
-// 控制昵称编辑状态
-const isEditingNickname = ref(false);
-
-// 页面显示时的逻辑
 onShow(async () => {
-  console.log('onShow triggered');
-  console.log('token', userStore.user.token);
+  uni.setNavigationBarTitle({title: t('my_index')})
+  uni.setTabBarItem({index: 0, text: t('index')})
+  uni.setTabBarItem({index: 1, text: t('tools_index')})
+  uni.setTabBarItem({index: 2, text: t('news_index')})
+  uni.setTabBarItem({index: 3, text: t('my_index')})
 
   if (isLoggedIn.value) {
     try {
-      await userStore.fetchBasicDetails();
-      // 更新 nickname 显示
-      nickname.value = userStore.user.nickName || '';
-      console.log('用户基本信息已刷新');
+      await userStore.fetchBasicDetails()
+      nickname.value = userStore.user.nickName || ''
     } catch (error) {
-      console.error('错误详情:', error);
-      userStore.reset();
+      console.error('获取用户信息失败:', error)
+      userStore.reset()
       uni.showToast({
-        title: error.message || '刷新用户信息失败',
+        title: error.message || t('fetch_user_info_error'),
         icon: 'none',
-        duration: 2000,
-      });
+        duration: 2000
+      })
     }
   }
+})
 
-  // 设置页面标题和底部 TabBar
-  uni.setNavigationBarTitle({
-    title: t('my_index'),
-  });
-  uni.setTabBarItem({
-    index: 0,
-    text: t('index'),
-  });
-  uni.setTabBarItem({
-    index: 1,
-    text: t('tools_index'),
-  });
-  uni.setTabBarItem({
-    index: 2,
-    text: t('news_index'),
-  });
-  uni.setTabBarItem({
-    index: 3,
-    text: t('my_index'),
-  });
-});
-
-/** 导航到指定页面 */
+/**
+ * 导航到指定页面
+ */
 function navigateTo(page) {
   uni.navigateTo({
-    url: `/pagesMy/${page}/${page}`,
-  });
+    url: `/pagesMy/${page}/${page}`
+  })
 }
 
-function navigateToFoddPreferences(page) {
+/** 导航到食物偏好设置页 */
+function navigateToFoodPreferences(page) {
   uni.navigateTo({
-    url: `/pagesTool/${page}/${page}`,
-  });
+    url: `/pagesTool/${page}/${page}`
+  })
 }
 
-/** 处理登录按钮点击 */
+/** 登录按钮点击 */
 function handleLoginButtonClick() {
-  // 跳转到登录页面
-  navigateTo('login');
+  navigateTo('login')
 }
 
-/** 处理登出 */
+/** 登出 */
 async function handleLogout() {
   try {
-    await userStore.logout();
+    await userStore.logout()
     uni.showToast({
       title: t('success'),
       icon: 'success',
-      duration: 2000,
-    });
+      duration: 2000
+    })
   } catch (error) {
     uni.showToast({
       title: error.message || t('fail'),
       icon: 'none',
-      duration: 2000,
-    });
+      duration: 2000
+    })
   }
 }
 
 /**
- * 用户点击 “选择头像” 按钮（open-type="chooseAvatar"）
- * 当用户手动选择了头像后，触发该回调
- */
-async function onChooseAvatar(e) {
-  try {
-    // e.detail.avatarUrl 就是用户最终选定的头像临时路径
-    const chosenAvatarUrl = e.detail.avatarUrl;
-    console.log('用户选择的微信头像:', chosenAvatarUrl);
-
-    // 可直接将其上传到服务器
-    await userStore.setAvatar(chosenAvatarUrl);
-
-    uni.showToast({
-      title: t('success'),
-      icon: 'success',
-      duration: 2000,
-    });
-  } catch (error) {
-    console.error('选择头像/上传头像失败:', error);
-    uni.showToast({
-      title: error.message || t('fail'),
-      icon: 'none',
-      duration: 2000,
-    });
-  }
-}
-
-/**
- * 启用昵称编辑模式
+ * 当用户点击昵称时，若已登录，则允许编辑
  */
 function enableNicknameEdit() {
   if (isLoggedIn.value) {
-    isEditingNickname.value = true;
-    // 移除了 querySelector 相关逻辑
+    isEditingNickname.value = true
   }
 }
 
 /**
- * 用户在 input(type="nickname") 输入时触发
- * 注意：微信小程序中，当用户点击键盘上的微信昵称，input 会直接被替换成微信昵称
+ * 当用户手动输入昵称
  */
 function onNicknameInput(e) {
-  nickname.value = e.detail.value;
+  nickname.value = e.detail.value
 }
 
 /**
- * 用户离开昵称输入框时(blur 事件)触发，向后端更新最新昵称
+ * 当用户离开昵称输入框时（blur 事件），提交更新
  */
 async function onNicknameBlur() {
-  if (!isEditingNickname.value) return;
+  if (!isEditingNickname.value) return
+
+  if (!nickname.value.trim()) {
+    uni.showToast({
+      title: t('nickname_not_empty'),
+      icon: 'none'
+    })
+    // 恢复原有昵称
+    nickname.value = userStore.user.nickName
+    isEditingNickname.value = false
+    return
+  }
 
   try {
-    if (!nickname.value.trim()) {
-      // 如果用户没有输入内容
-      uni.showToast({
-        title: '昵称不能为空',
-        icon: 'none',
-      });
-      // 恢复成原 store 中的昵称或做其他处理
-      nickname.value = userStore.user.nickName;
-      isEditingNickname.value = false;
-      return;
-    }
-
-    // 如果有内容，则更新
-    await userStore.setNickname(nickname.value.trim());
+    await userStore.setNickname(nickname.value.trim())
     uni.showToast({
       title: t('success'),
       icon: 'success',
-      duration: 2000,
-    });
-    isEditingNickname.value = false;
+      duration: 2000
+    })
+    isEditingNickname.value = false
   } catch (error) {
     uni.showToast({
       title: error.message || t('fail'),
       icon: 'none',
-      duration: 2000,
-    });
+      duration: 2000
+    })
+  }
+}
+
+/**
+ * 用户选择微信头像后，上传到后端
+ */
+async function onChooseAvatar(e) {
+  try {
+    const chosenAvatarUrl = e.detail.avatarUrl
+    await userStore.setAvatar(chosenAvatarUrl)
+    uni.showToast({
+      title: t('success'),
+      icon: 'success',
+      duration: 2000
+    })
+  } catch (error) {
+    console.error('上传头像失败:', error)
+    uni.showToast({
+      title: error.message || t('fail'),
+      icon: 'none',
+      duration: 2000
+    })
   }
 }
 </script>
 
 <style scoped>
-/* 全局样式变量 */
 :root {
   --primary-color: #4caf50;
   --background-color: #f0f4f7;
@@ -350,7 +295,7 @@ async function onNicknameBlur() {
   font-family: var(--font-family);
 }
 
-/* 全屏背景图片 */
+/* 背景图 */
 .background-image {
   position: fixed;
   top: 0;
@@ -358,11 +303,12 @@ async function onNicknameBlur() {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: -1;
+  z-index: 0;
   opacity: 0.1;
+  pointer-events: none;
 }
 
-/* 个人信息部分 */
+/* 个人信息 */
 .profile-section {
   display: flex;
   flex-direction: column;
@@ -382,7 +328,7 @@ async function onNicknameBlur() {
   margin-bottom: 30rpx;
 }
 
-/* 修改后的头像按钮，透明且无边框 */
+/* 头像按钮 */
 .avatar-button {
   background: transparent;
   padding: 0;
@@ -400,6 +346,7 @@ async function onNicknameBlur() {
   margin-right: 20rpx;
 }
 
+/* 文本区 */
 .profile-text {
   display: flex;
   flex-direction: column;
@@ -407,42 +354,33 @@ async function onNicknameBlur() {
   flex: 1;
 }
 
-/* 新增的容器样式 */
+/* 昵称与编辑图标 */
 .greeting-container {
-  position: relative; /* 设置为相对定位 */
+  position: relative;
   width: 100%;
   display: flex;
-  justify-content: center; /* 水平居中 */
-  align-items: center; /* 垂直居中 */
-  padding: 10rpx 0; /* 根据需要调整内边距 */
+  justify-content: center;
+  align-items: center;
+  padding: 10rpx 0;
 }
 
-/* 唯一的 .greeting 类定义 */
 .greeting {
   font-size: 38rpx;
   color: var(--text-color);
   cursor: pointer;
-  text-align: center; /* 确保文本居中 */
+  text-align: center;
 }
 
-/* 新增的编辑图标样式 */
 .edit-icon {
   position: absolute;
   top: 20rpx;
-  right: -40rpx; /* 向右移动10rpx */
-  width: 30rpx; /* 根据需要调整大小 */
+  right: -40rpx;
+  width: 30rpx;
   height: 30rpx;
   cursor: pointer;
 }
 
-.greeting {
-  font-size: 38rpx;
-  margin: 10rpx 0;
-  color: var(--text-color);
-  cursor: pointer;
-}
-
-/* 透明且无边框的内联昵称输入框 */
+/* 内联编辑框 */
 .nickname-input-inline {
   font-size: 38rpx;
   margin: 10rpx 0;
@@ -466,16 +404,11 @@ async function onNicknameBlur() {
   font-size: 32rpx;
   cursor: pointer;
   border-radius: 10rpx;
-  transition: background-color 0.3s;
   width: 60%;
   margin-top: 10rpx;
 }
 
-.login-button:hover {
-  background-color: #45a049;
-}
-
-/* 菜单部分 */
+/* 菜单 */
 .menu-section {
   background-color: rgba(33, 255, 6, 0.06);
   margin: 40rpx 20rpx;
@@ -501,12 +434,6 @@ async function onNicknameBlur() {
   background-color: #f9f9f9;
 }
 
-.icon {
-  font-size: 48rpx;
-  color: var(--primary-color);
-  margin-right: 30rpx;
-}
-
 .icon_svg {
   width: 50rpx;
   height: 50rpx;
@@ -525,7 +452,7 @@ async function onNicknameBlur() {
   color: var(--text-color);
 }
 
-/* 响应式调整 */
+/* 响应式 */
 @media screen and (max-width: 600px) {
   .profile-top {
     flex-direction: column;
@@ -550,7 +477,7 @@ async function onNicknameBlur() {
     padding: 20rpx;
   }
 
-  .icon {
+  .icon_svg {
     margin-right: 20rpx;
   }
 
