@@ -19,18 +19,18 @@
       </view>
       <view class="charts">
 
-        <!-- 今日碳排放环形图 -->
-        <view class="chart today">
-          <text class="chart-title">{{$t('carbon_today')}}</text>
-          <view class="today-charts">
-            <qiun-data-charts
-              :canvas2d="true"
-              type="ring"
-              :opts="ringOpts"
-              :chartData="chartTodayData"
-            />
-          </view>
+      <!-- 今日碳排放环形图 -->
+      <view class="chart today" @click="navigateToCarbonCalculator">
+        <text class="chart-title">{{$t('carbon_today')}}</text>
+        <view class="today-charts">
+          <qiun-data-charts
+            :canvas2d="true"
+            type="ring"
+            :opts="ringOpts"
+            :chartData="chartTodayData"
+          />
         </view>
+      </view>
 
         <!-- 历史碳排放曲线图 -->
         <view class="chart history">
@@ -45,8 +45,8 @@
         </view>
 
         <!-- 今日营养情况图表（柱状图） -->
-        <view class="chart nutrition">
-          <text class="chart-title">{{$t('nutrition_today')}}</text>
+        <view class="chart nutrition" @click="navigateToNutritionCalendar">
+          <text class="chart-title">{{t('nutrition_today')}}</text>
           <view class="nutrition-charts">
             <qiun-data-charts
               :canvas2d="true"
@@ -240,6 +240,20 @@ const ringOpts = computed(() => ({
 
 // 动态 subtitle，响应式
 const ringSubtitle = ref("")
+
+// 页面跳转方法：导航到 nutrition_calendar
+const navigateToNutritionCalendar = () => {
+  uni.navigateTo({
+    url: "/pagesTool/nutrition_calendar/nutrition_calendar",
+  });
+};
+
+// 页面跳转方法：导航到 carbon_calculator
+const navigateToCarbonCalculator = () => {
+  uni.navigateTo({
+    url: "/pagesTool/carbon_calculator/carbon_calculator",
+  });
+};
 
 // 根据日期从 store 数据中计算每日数据
 const getDataByDate = (dateString) => {
