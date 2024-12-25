@@ -379,7 +379,7 @@ const submitDishProposal = async () => {
     foodNameInput.value = '';
 
     uni.showToast({
-      title: t('submit_success'),
+      title: t('success'),
       icon: 'success'
     });
   } catch (error) {
@@ -390,7 +390,7 @@ const submitDishProposal = async () => {
       });
     } else {
       uni.showToast({
-        title: t('submit_failed'),
+        title: t('failed'),
         icon: 'error'
       });
     }
@@ -438,10 +438,7 @@ const joinFamily = async () => {
     await familyStore.joinFamily(searchResult.id);
     joinFamilyId.value = '';
     showJoinFamilyModal.value = false;
-    startStatusCheck();
     uni.showToast({ title: t('join_request_sent'), icon: 'success' });
-    // 获取菜品提议列表
-    await familyStore.getDesiredDishes();
   } catch (error) {
     uni.showToast({ title: t('join_family_failed'), icon: 'error' });
   }
@@ -451,9 +448,9 @@ const joinFamily = async () => {
 const handleCancelJoin = async () => {
   try {
     await familyStore.cancelJoinRequest();
-    uni.showToast({ title: t('cancel_success'), icon: 'success' });
+    uni.showToast({ title: t('success'), icon: 'success' });
   } catch (error) {
-    uni.showToast({ title: t('cancel_failed'), icon: 'error' });
+    uni.showToast({ title: t('failed'), icon: 'error' });
   }
 };
 
@@ -466,9 +463,9 @@ const goToMyFamily = () => {
 const handleLeaveFamily = async () => {
   try {
     await familyStore.leaveFamily();
-    uni.showToast({ title: t('leave_family_success'), icon: 'success' });
+    uni.showToast({ title: t('success'), icon: 'success' });
   } catch (error) {
-    uni.showToast({ title: t('leave_family_failed'), icon: 'error' });
+    uni.showToast({ title: t('failed'), icon: 'error' });
   }
 };
 
@@ -635,9 +632,6 @@ onShow(async () => {
       // 获取想吃的菜品列表
       await familyStore.getDesiredDishes();
     }
-    if (family.value.status === FamilyStatusEnum.PENDING_APPROVAL) {
-      startStatusCheck();
-    }
   } catch (error) {
     uni.showToast({ title: t('fetch_family_failed'), icon: 'none' });
   }
@@ -655,10 +649,6 @@ watch(locale, () => {
   // 语言切换后的处理逻辑（可选）
 });
 
-// 如果有需求，可以加一个轮询或类似功能
-const startStatusCheck = () => {
-  // 具体实现根据项目需求
-};
 </script>
 
 <style scoped>
@@ -913,7 +903,6 @@ const startStatusCheck = () => {
 
 /* 输入框 */
 .input {
-  width: 100%;
   padding: 10rpx;
   border: 1rpx solid #ccc;
   border-radius: 5rpx;
