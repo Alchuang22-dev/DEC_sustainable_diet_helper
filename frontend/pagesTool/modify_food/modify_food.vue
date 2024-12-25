@@ -3,54 +3,48 @@
     <view class="form-container">
       <!-- 食物名称 -->
       <view class="form-group">
-        <text class="label">{{ $t('name') }}</text>
+        <text class="label">{{ t('name') }}</text>
         <uni-combox
-          :placeholder="$t('please_enter_food_name')"
+          :placeholder="t('please_enter_food_name')"
           v-model="foodNameInput"
           :candidates="filteredFoods.map(item => displayName(item))"
           @input="onComboxInput"
-        ></uni-combox>
+        />
       </view>
 
       <!-- 重量 -->
       <view class="form-group">
-        <text class="label">{{ $t('total_weight') }}</text>
+        <text class="label">{{ t('total_weight') }}</text>
         <input
           class="input"
           type="digit"
           v-model="food.weight"
-          :placeholder="$t('please_enter_food_weight')"
+          :placeholder="t('please_enter_food_weight')"
           :error="weightError"
         />
-        <text
-          v-if="weightError"
-          class="error-message"
-        >
-          {{ $t('weight_must_be_positive_integer') }}
+        <text v-if="weightError" class="error-message">
+          {{ t('weight_must_be_positive_integer') }}
         </text>
       </view>
 
       <!-- 价格 -->
       <view class="form-group">
-        <text class="label">{{ $t('total_price') }}</text>
+        <text class="label">{{ t('total_price') }}</text>
         <input
           class="input"
           type="digit"
           v-model="food.price"
-          :placeholder="$t('please_enter_food_price')"
+          :placeholder="t('please_enter_food_price')"
           :error="priceError"
         />
-        <text
-          v-if="priceError"
-          class="error-message"
-        >
-          {{ $t('price_must_be_positive_integer') }}
+        <text v-if="priceError" class="error-message">
+          {{ t('price_must_be_positive_integer') }}
         </text>
       </view>
 
       <!-- 运输方式 -->
       <view class="form-group">
-        <text class="label">{{ $t('select_transport_method') }}</text>
+        <text class="label">{{ t('select_transport_method') }}</text>
         <picker
           mode="selector"
           :range="transportMethods"
@@ -65,7 +59,7 @@
 
       <!-- 食品来源 -->
       <view class="form-group">
-        <text class="label">{{ $t('select_food_source') }}</text>
+        <text class="label">{{ t('select_food_source') }}</text>
         <picker
           mode="selector"
           :range="foodSources"
@@ -80,25 +74,22 @@
 
       <!-- 提交 -->
       <button class="submit-button" @click="submitFoodDetails">
-        {{ $t('submit') }}
+        {{ t('submit') }}
       </button>
     </view>
   </view>
 </template>
 
 <script setup>
-/**
- * 修改食物页面：与 add_food 类似，但用于编辑已有的食物项
- */
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+/* ----------------- Imports ----------------- */
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFoodListStore } from '../stores/food_list'
 import { onLoad } from '@dcloudio/uni-app'
 
+/* ----------------- Setup ----------------- */
 const { t, locale } = useI18n()
 const foodStore = useFoodListStore()
-
-// 解构
 const {
   availableFoods,
   fetchAvailableFoods,
@@ -106,7 +97,7 @@ const {
   getFoodName
 } = foodStore
 
-// 路由参数
+/* ----------------- Reactive & State ----------------- */
 const options = ref({})
 const foodIndex = ref(null)
 const existingFood = ref(null)
@@ -120,15 +111,27 @@ const food = reactive({
   foodSource: 'local'
 })
 
-// 食物名称
 const foodNameInput = ref('')
-
-// 下拉列表可见性
 const showFoodList = ref(false)
 
-// 可选食物过滤
+const weightError = ref(false)
+const priceError = ref(false)
+
+const transportMethods = [
+  t('transport_land'),
+  t('transport_sea'),
+  t('transport_air')
+]
+const foodSources = [
+  t('source_local'),
+  t('source_imported')
+]
+const transportIndex = ref(0)
+const sourceIndex = ref(0)
+
+/* ----------------- Computed ----------------- */
 const filteredFoods = computed(() => {
-  if (foodNameInput.value === '') {
+  if (!foodNameInput.value) {
     return availableFoods
   } else {
     if (locale.value === 'zh-Hans') {
@@ -141,118 +144,18 @@ const filteredFoods = computed(() => {
   }
 })
 
-// 显示名称
-function displayName(item) {
-  return locale.value === 'zh-Hans' ? item.name_zh : item.name_en
-}
-
-// combox输入
-function onComboxInput(value) {
-  foodNameInput.value = value
-}
-
-// 验证错误
-const weightError = ref(false)
-const priceError = ref(false)
-
-// 运输方式、食品来源
-const transportMethods = [
-  t('transport_land'),
-  t('transport_sea'),
-  t('transport_air')
-]
-const foodSources = [
-  t('source_local'),
-  t('source_imported')
-]
-
-// 当前索引
-const transportIndex = ref(0)
-const sourceIndex = ref(0)
-
-// 运输方式
-function onTransportChange(e) {
-  transportIndex.value = e.detail.value
-  food.transportMethod = e.detail.value === 0 ? 'land' : e.detail.value === 1 ? 'sea' : 'air'
-}
-
-// 食品来源
-function onSourceChange(e) {
-  sourceIndex.value = e.detail.value
-  food.foodSource = e.detail.value === 0 ? 'local' : 'imported'
-}
-
-/**
- * 提交修改
- */
-function submitFoodDetails() {
-  const matchedFood = availableFoods.find(f => displayName(f) === foodNameInput.value)
-  if (!matchedFood) {
-    uni.showToast({
-      title: t('no_matching_food'),
-      icon: 'none',
-      duration: 2000
-    })
-    return
+/* ----------------- Lifecycle ----------------- */
+onMounted(() => {
+  if (availableFoods.length === 0) {
+    fetchAvailableFoods()
   }
-  food.name = matchedFood.name_en
-  food.id = matchedFood.id
+})
 
-  weightError.value = false
-  priceError.value = false
-
-  let valid = true
-  if (!/^\d+(\.\d+)?$/.test(food.weight) || parseFloat(food.weight) <= 0) {
-    weightError.value = true
-    valid = false
-  }
-  if (!/^\d+(\.\d+)?$/.test(food.price) || parseFloat(food.price) <= 0) {
-    priceError.value = true
-    valid = false
-  }
-  if (
-    !food.name ||
-    !food.weight ||
-    !food.price ||
-    !food.transportMethod ||
-    !food.foodSource
-  ) {
-    uni.showToast({
-      title: t('please_fill_all_fields'),
-      icon: 'none'
-    })
-    valid = false
-  }
-  if (!valid) return
-
-  const updatedFood = {
-    name: food.name,
-    id: food.id,
-    weight: parseFloat(food.weight),
-    price: parseFloat(food.price),
-    transportMethod: food.transportMethod,
-    foodSource: food.foodSource
-  }
-  updateFood(foodIndex.value, updatedFood)
-
-  uni.showToast({
-    title: t('modify_success'),
-    icon: 'success',
-    duration: 2000
-  })
-
-  setTimeout(() => {
-    uni.navigateBack()
-  }, 2000)
-}
-
-// 接收路由参数
 onLoad((loadedOptions) => {
   options.value = loadedOptions
   foodIndex.value = parseInt(options.value.index)
   existingFood.value = foodStore.foodList[foodIndex.value]
 
-  // 索引无效
   if (isNaN(foodIndex.value) || !existingFood.value) {
     uni.showToast({
       title: t('invalid_food_item'),
@@ -278,12 +181,91 @@ onLoad((loadedOptions) => {
   sourceIndex.value = ['local', 'imported'].indexOf(food.foodSource)
 })
 
-// 若后端数据为空，则获取
-onMounted(() => {
-  if (availableFoods.length === 0) {
-    fetchAvailableFoods()
+/* ----------------- Methods ----------------- */
+function displayName(item) {
+  return locale.value === 'zh-Hans' ? item.name_zh : item.name_en
+}
+
+function onComboxInput(value) {
+  foodNameInput.value = value
+}
+
+/**
+ * 选择运输方式
+ */
+function onTransportChange(e) {
+  transportIndex.value = e.detail.value
+  food.transportMethod = e.detail.value === 0 ? 'land' : e.detail.value === 1 ? 'sea' : 'air'
+}
+
+/**
+ * 选择食品来源
+ */
+function onSourceChange(e) {
+  sourceIndex.value = e.detail.value
+  food.foodSource = e.detail.value === 0 ? 'local' : 'imported'
+}
+
+/**
+ * 提交修改
+ */
+function submitFoodDetails() {
+  const matchedFood = availableFoods.find(f => displayName(f) === foodNameInput.value)
+  if (!matchedFood) {
+    uni.showToast({
+      title: t('no_matching_food'),
+      icon: 'none',
+      duration: 2000
+    })
+    return
   }
-})
+
+  food.name = matchedFood.name_en
+  food.id = matchedFood.id
+
+  weightError.value = false
+  priceError.value = false
+
+  let valid = true
+  if (!/^\d+(\.\d+)?$/.test(food.weight) || parseFloat(food.weight) <= 0) {
+    weightError.value = true
+    valid = false
+  }
+  if (!/^\d+(\.\d+)?$/.test(food.price) || parseFloat(food.price) <= 0) {
+    priceError.value = true
+    valid = false
+  }
+  if (!food.name || !food.weight || !food.price || !food.transportMethod || !food.foodSource) {
+    uni.showToast({
+      title: t('please_fill_all_fields'),
+      icon: 'none'
+    })
+    valid = false
+  }
+
+  if (!valid) return
+
+  const updatedFood = {
+    name: food.name,
+    id: food.id,
+    weight: parseFloat(food.weight),
+    price: parseFloat(food.price),
+    transportMethod: food.transportMethod,
+    foodSource: food.foodSource
+  }
+
+  updateFood(foodIndex.value, updatedFood)
+
+  uni.showToast({
+    title: t('modify_success'),
+    icon: 'success',
+    duration: 2000
+  })
+
+  setTimeout(() => {
+    uni.navigateBack()
+  }, 2000)
+}
 </script>
 
 <style scoped>

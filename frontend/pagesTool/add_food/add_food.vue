@@ -3,61 +3,55 @@
     <view class="form-container">
       <!-- 食物名称 -->
       <view class="form-group">
-        <text class="label">{{ $t('name') }}</text>
+        <text class="label">{{ t('name') }}</text>
         <uni-combox
-          :placeholder="$t('please_enter_food_name')"
+          :placeholder="t('please_enter_food_name')"
           v-model="foodNameInput"
           :candidates="filteredFoods.map(item => displayName(item))"
           @input="onComboxInput"
+          class="combox"
         ></uni-combox>
       </view>
 
       <!-- 重量 -->
       <view class="form-group">
-        <text class="label">{{ $t('total_weight') }}</text>
+        <text class="label">{{ t('total_weight') }}</text>
         <input
           class="input"
           type="digit"
           v-model="food.weight"
-          :placeholder="$t('please_enter_food_weight')"
-          :error="weightError"
+          :placeholder="t('please_enter_food_weight')"
         />
-        <text
-          v-if="weightError"
-          class="error-message"
-        >
-          {{ $t('weight_must_be_positive_integer') }}
+        <text v-if="weightError" class="error-message">
+          {{ t('weight_must_be_positive_number') }}
         </text>
       </view>
 
       <!-- 价格 -->
       <view class="form-group">
-        <text class="label">{{ $t('total_price') }}</text>
+        <text class="label">{{ t('total_price') }}</text>
         <input
           class="input"
           type="digit"
           v-model="food.price"
-          :placeholder="$t('please_enter_food_price')"
-          :error="priceError"
+          :placeholder="t('please_enter_food_price')"
         />
-        <text
-          v-if="priceError"
-          class="error-message"
-        >
-          {{ $t('price_must_be_positive_integer') }}
+        <text v-if="priceError" class="error-message">
+          {{ t('price_must_be_positive_number') }}
         </text>
       </view>
 
       <!-- 运输方式 -->
       <view class="form-group">
-        <text class="label">{{ $t('select_transport_method') }}</text>
+        <text class="label">{{ t('select_transport_method') }}</text>
         <picker
           mode="selector"
           :range="transportMethods"
           :value="transportIndex"
           @change="onTransportChange"
+          class="picker"
         >
-          <view class="picker">
+          <view class="picker-content">
             {{ transportMethods[transportIndex] }}
           </view>
         </picker>
@@ -65,47 +59,54 @@
 
       <!-- 食品来源 -->
       <view class="form-group">
-        <text class="label">{{ $t('select_food_source') }}</text>
+        <text class="label">{{ t('select_food_source') }}</text>
         <picker
           mode="selector"
           :range="foodSources"
           :value="sourceIndex"
           @change="onSourceChange"
+          class="picker"
         >
-          <view class="picker">
+          <view class="picker-content">
             {{ foodSources[sourceIndex] }}
           </view>
         </picker>
       </view>
 
-      <!-- 提交 -->
+      <!-- 提交按钮 -->
       <button class="submit-button" @click="submitFoodDetails">
-        {{ $t('submit') }}
+        {{ t('submit') }}
       </button>
     </view>
   </view>
 </template>
 
 <script setup>
-/**
- * 新增食物页面：选择已有食物项，并填写重量/价格/运输方式/来源，最终添加到本地列表
- */
-
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+/* ----------------- Imports ----------------- */
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFoodListStore } from '../stores/food_list'
 
+/* ----------------- Setup ----------------- */
 const { t, locale } = useI18n()
 const foodStore = useFoodListStore()
+const { availableFoods, fetchAvailableFoods, addFood } = foodStore
 
-// 解构 store
-const {
-  availableFoods,
-  fetchAvailableFoods,
-  addFood
-} = foodStore
+/* ----------------- transportMethods & foodSources ----------------- */
+const transportMethods = [
+  t('transport_land'),
+  t('transport_sea'),
+  t('transport_air')
+]
+const foodSources = [
+  t('source_local'),
+  t('source_imported')
+]
 
-// 表单数据
+const transportIndex = ref(0)
+const sourceIndex = ref(0)
+
+/* ----------------- Reactive & State ----------------- */
 const food = reactive({
   name: '',
   id: null,
@@ -115,18 +116,16 @@ const food = reactive({
   foodSource: 'local'
 })
 
-// 输入框
 const foodNameInput = ref('')
-const showFoodList = ref(false)
+const weightError = ref(false)
+const priceError = ref(false)
 
-// 检索过滤：根据语言模糊匹配
+/* ----------------- Computed ----------------- */
 const filteredFoods = computed(() => {
   if (foodNameInput.value === '') {
-    if (locale.value === 'zh-Hans') {
-      return availableFoods.filter(f => f.name_zh)
-    } else {
-      return availableFoods.filter(f => f.name_en)
-    }
+    return locale.value === 'zh-Hans'
+      ? availableFoods.filter(f => f.name_zh)
+      : availableFoods.filter(f => f.name_en)
   } else {
     if (locale.value === 'zh-Hans') {
       return availableFoods.filter(f => f.name_zh.includes(foodNameInput.value))
@@ -138,43 +137,40 @@ const filteredFoods = computed(() => {
   }
 })
 
-// 显示名称
 function displayName(item) {
   return locale.value === 'zh-Hans' ? item.name_zh : item.name_en
 }
 
-// combox输入
+/* ----------------- Lifecycle ----------------- */
+onMounted(() => {
+  if (availableFoods.length === 0) {
+    fetchAvailableFoods()
+  }
+})
+
+/* ----------------- Methods ----------------- */
 function onComboxInput(value) {
   foodNameInput.value = value
 }
 
-// 验证错误状态
-const weightError = ref(false)
-const priceError = ref(false)
-
-// 下拉选项
-const transportMethods = [t('transport_land'), t('transport_sea'), t('transport_air')]
-const foodSources = [t('source_local'), t('source_imported')]
-
-// 下标
-const transportIndex = ref(0)
-const sourceIndex = ref(0)
-
-// 运输方式选中
 function onTransportChange(e) {
+  // e.detail.value 是选中的下标
   transportIndex.value = e.detail.value
-  food.transportMethod = e.detail.value === 0 ? 'land' : e.detail.value === 1 ? 'sea' : 'air'
+  // 根据下标赋值
+  if (transportIndex.value === 0) {
+    food.transportMethod = 'land'
+  } else if (transportIndex.value === 1) {
+    food.transportMethod = 'sea'
+  } else if (transportIndex.value === 2) {
+    food.transportMethod = 'air'
+  }
 }
 
-// 食品来源选中
 function onSourceChange(e) {
   sourceIndex.value = e.detail.value
-  food.foodSource = e.detail.value === 0 ? 'local' : 'imported'
+  food.foodSource = sourceIndex.value === 0 ? 'local' : 'imported'
 }
 
-/**
- * 提交：匹配 availableFoods 获取 id
- */
 function submitFoodDetails() {
   const matchedFood = availableFoods.find(f => displayName(f) === foodNameInput.value)
   if (!matchedFood) {
@@ -239,13 +235,6 @@ function submitFoodDetails() {
     uni.navigateBack()
   }, 2000)
 }
-
-// 页面初始化
-onMounted(() => {
-  if (availableFoods.length === 0) {
-    fetchAvailableFoods()
-  }
-})
 </script>
 
 <style scoped>
@@ -300,6 +289,14 @@ onMounted(() => {
   border-radius: 10rpx;
   font-size: 28rpx;
   color: #666666;
+}
+
+.picker-content {
+  padding: 20rpx;
+}
+
+.combox {
+  width: 100%;
 }
 
 .submit-button {
