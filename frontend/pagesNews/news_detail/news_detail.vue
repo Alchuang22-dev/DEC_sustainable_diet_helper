@@ -102,7 +102,7 @@
 
     <!-- 评论区域 -->
     <view class="comments-section">
-      <view class="comments-header">评论</view>
+      <view class="comments-header">注释与说明</view>
       <view id="comments-container">
         <view
           v-for="(comment, index) in limitedComments"
@@ -139,7 +139,7 @@
 					<text class="count-text">{{ formatCount(comment.likecount) }}</text>
 			</button>
             <button @click="replyToComment(index)">
-              💬 回复
+              💬 解决
             </button>
           </view>
 
@@ -174,9 +174,9 @@
 			    @click="toggleReplies(comment)"
 			  >
 			    <text v-if="!comment.showAllReplies" class="comment-time">
-			      还有 {{ comment.replies.length - 3 }} 条回复
+			      还有 {{ comment.replies.length - 3 }} 条附加说明
 			    </text>
-			    <text v-else class="comment-time">收起回复</text>
+			    <text v-else class="comment-time">收起附加说明</text>
 			</view>
 			
           </view>
@@ -184,23 +184,23 @@
         </view>
 		<!-- 折叠/展开 按钮 -->
 		<view v-if="comments.length > 5" class="show-more-comments" @click="toggleComments">
-			<text v-if="!showAllComments" class="comment-time">还有 {{ comments.length - 5 }} 条评论</text>
-			<text v-else class="comment-time">收起评论</text>
+			<text v-if="!showAllComments" class="comment-time">还有 {{ comments.length - 5 }} 条注释</text>
+			<text v-else class="comment-time">收起注释</text>
 		</view>
       </view>
 	  
 	  
 	  
-      <!-- 发表评论 -->
+      <!-- 为备忘录添加注释 -->
       <view class="add-comment">
           <!-- 评论输入框 -->
           <input
             type="text"
             v-model="newComment"
             @input="handleCommentInput"
-            placeholder="发表评论..."
+            placeholder="在此处添加说明"
           />
-          <button @click="addComment">评论</button>
+          <button @click="addComment">注释</button>
       
           <!-- 当检测到输入框中包含 '@' 时，弹出 popup  -->
           <uni-popup ref="mentionPopup" type="bottom" :mask="false" class="mention-popup">
@@ -376,7 +376,6 @@ const showAllComments = ref(false);
 
 // 计算属性：根据 showAllComments 状态返回前5条或全部
 const limitedComments = computed(() => {
-	console.log('获取少量评论:',comments)
   if (showAllComments.value) {
     return comments;
   } else {
@@ -444,7 +443,6 @@ const toggleInteraction = (type) => {
   // 处理操作
   if (type === "like") {
     if (ifLike.value === false) {
-      console.log('点赞新闻');
       uni.request({
         url: `http://122.51.231.155:8080/news/${PageId.value}/like`,
         method: "POST",
@@ -473,7 +471,6 @@ const toggleInteraction = (type) => {
                 },
       });
     } else {
-      console.log('取消点赞新闻');
       uni.request({
         url: `http://122.51.231.155:8080/news/${PageId.value}/like`,
         method: "DELETE",
@@ -671,7 +668,7 @@ const addReply = (index) => {
         } else {
           console.error("Unexpected response:", res);
           uni.showToast({
-            title: '回复失败',
+            title: '解决说明失败',
             icon: 'none',
             duration: 2000,
           });
@@ -680,7 +677,7 @@ const addReply = (index) => {
       fail: (err) => {
         console.error("Error adding reply:", err);
         uni.showToast({
-          title: '回复失败',
+          title: '结局说明失败',
           icon: 'none',
           duration: 2000,
         });
@@ -726,7 +723,7 @@ const addComment = () => {
         } else {
           console.error("Unexpected response:", res);
           uni.showToast({
-            title: '发表评论失败',
+            title: '添加说明失败',
             icon: 'none',
             duration: 2000,
           });
@@ -735,7 +732,7 @@ const addComment = () => {
       fail: (err) => {
         console.error("Error adding comment:", err);
         uni.showToast({
-          title: '发表评论失败',
+          title: '添加说明失败',
           icon: 'none',
           duration: 2000,
         });
@@ -802,7 +799,6 @@ onLoad(async (options) => {
     }
   }
 
-  console.log('更新后的组件内容:', post.value.components);
 
   // 将 post 中的组件内容添加到 items 中
   // 处理评论
@@ -904,8 +900,6 @@ const getArticleDetails = async (id, isDraft = false) => {
         'Authorization': `Bearer ${jwtToken.value}`
       }
     });
-    console.log('获取详细信息');
-    console.log(res.data);
     return res.data;
   } catch (error) {
     console.error('Error fetching article details', error);
