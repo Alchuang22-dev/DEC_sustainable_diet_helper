@@ -11,7 +11,7 @@
     <image
       src="/static/images/index/background_img.jpg"
       class="background-image"
-    ></image>
+    />
 
     <!-- 头部 -->
     <view class="dec_header">
@@ -20,13 +20,13 @@
         :alt="t('dec_logo_alt')"
         class="dec_logo"
         mode="aspectFit"
-      ></image>
-      <text class="title">{{t('welcome_title')}}</text>
+      />
+      <text class="title">{{ t('welcome_title') }}</text>
     </view>
 
     <!-- 实用工具列表 -->
     <view class="useful-tools">
-      <text class="tools-title">{{t('tools_title')}}</text>
+      <text class="tools-title">{{ t('tools_title') }}</text>
       <view class="tools-list">
         <view
           class="tool"
@@ -40,8 +40,8 @@
             mode="aspectFill"
           />
           <view class="tool-description">
-            <text class="tool-name">{{t('tool_carbon_calculator')}}</text>
-            <text class="tool-info">{{t('tool_carbon_calculator_info')}}</text>
+            <text class="tool-name">{{ t('tool_carbon_calculator') }}</text>
+            <text class="tool-info">{{ t('tool_carbon_calculator_info') }}</text>
           </view>
         </view>
 
@@ -58,8 +58,8 @@
             mode="aspectFill"
           />
           <view class="tool-description">
-            <text class="tool-name">{{t('tool_diet_recommendation')}}</text>
-            <text class="tool-info">{{t('tool_diet_recommendation_info')}}</text>
+            <text class="tool-name">{{ t('tool_diet_recommendation') }}</text>
+            <text class="tool-info">{{ t('tool_diet_recommendation_info') }}</text>
           </view>
         </view>
 
@@ -76,8 +76,8 @@
             mode="aspectFill"
           />
           <view class="tool-description">
-            <text class="tool-name">{{t('tool_nutrition_calculator')}}</text>
-            <text class="tool-info">{{t('tool_nutrition_calculator_info')}}</text>
+            <text class="tool-name">{{ t('tool_nutrition_calculator') }}</text>
+            <text class="tool-info">{{ t('tool_nutrition_calculator_info') }}</text>
           </view>
         </view>
 
@@ -94,8 +94,8 @@
             mode="aspectFill"
           />
           <view class="tool-description">
-            <text class="tool-name">{{t('tool_family_recipe')}}</text>
-            <text class="tool-info">{{t('tool_family_recipe_info')}}</text>
+            <text class="tool-name">{{ t('tool_family_recipe') }}</text>
+            <text class="tool-info">{{ t('tool_family_recipe_info') }}</text>
           </view>
         </view>
       </view>
@@ -104,17 +104,15 @@
 </template>
 
 <script setup>
-/**
- * 工具页示例：展示可用的功能入口按钮，并可跳转到具体工具页面
- */
-
+/* ----------------- Imports ----------------- */
 import { useI18n } from 'vue-i18n'
 import { onShow } from '@dcloudio/uni-app'
 
+/* ----------------- Setup ----------------- */
 const { t } = useI18n()
 
+/* ----------------- Lifecycle ----------------- */
 onShow(() => {
-  // 设置导航与底部Tab
   uni.setNavigationBarTitle({ title: t('tools_index') })
   uni.setTabBarItem({ index: 0, text: t('index') })
   uni.setTabBarItem({ index: 1, text: t('tools_index') })
@@ -122,11 +120,8 @@ onShow(() => {
   uni.setTabBarItem({ index: 3, text: t('my_index') })
 })
 
-/**
- * 点击跳转方法
- * @param {string} page 目标页标识
- */
-const navigateTo = (page) => {
+/* ----------------- Methods ----------------- */
+function navigateTo(page) {
   if (page === 'recommend') {
     uni.navigateTo({ url: "/pagesTool/food_recommend/food_recommend" })
   } else if (page === 'nutrition') {
@@ -134,14 +129,13 @@ const navigateTo = (page) => {
   } else if (page === 'family') {
     uni.navigateTo({ url: "/pagesTool/home_servant/home_servant" })
   } else {
-    // 默认跳转到 carbon_calculator
+    // 默认跳转
     uni.navigateTo({ url: "/pagesTool/carbon_calculator/carbon_calculator" })
   }
 }
 </script>
 
 <style scoped>
-/* 通用变量 */
 :root {
   --primary-color: #4CAF50;
   --secondary-color: #2fc25b;
@@ -161,7 +155,6 @@ const navigateTo = (page) => {
   font-family: var(--font-family);
 }
 
-/* 容器 */
 .container {
   display: flex;
   flex-direction: column;
@@ -172,7 +165,6 @@ const navigateTo = (page) => {
   overflow: hidden;
 }
 
-/* 全屏背景图片 */
 .background-image {
   position: fixed;
   top: 0;
@@ -184,7 +176,6 @@ const navigateTo = (page) => {
   opacity: 0.3;
 }
 
-/* 头部 */
 .dec_header {
   display: flex;
   align-items: center;
@@ -207,7 +198,6 @@ const navigateTo = (page) => {
   margin-left: 20rpx;
 }
 
-/* 实用工具 */
 .useful-tools {
   background-color: rgba(33, 255, 6, 0.15);
   border-radius: 10rpx;
@@ -288,7 +278,6 @@ const navigateTo = (page) => {
   box-shadow: 0 2rpx 8rpx var(--shadow-color);
 }
 
-/* 动画效果 */
 @keyframes fadeInDown {
   from {
     opacity: 0;
@@ -311,7 +300,6 @@ const navigateTo = (page) => {
   }
 }
 
-/* 响应式 */
 @media (min-width: 600rpx) {
   .tool {
     flex-direction: row;
