@@ -35,44 +35,69 @@
 	"subPackages": [{
 			"root": "pagesMy",
 			"pages": [{
-				"path": "my_home/my_home"
+				"path": "my_home/my_home",
+				"style": {
+					"navigationBarTitleText": "个人主页"
+				}
 			}, {
-				"path": "login/login"
-			}, {
-				"path": "login_old/login_old"
-			}, {
-				"path": "stranger/stranger"
-			}, {
-				"path": "appSettings/appSettings"
-			}, {
-				"path": "favorites/favorites"
-			}, {
-				"path": "historyData/historyData"
+				"path": "login/login",
+				"style": {
+					"navigationBarTitleText": "登录"
+				}
 			},{
+				"path": "stranger/stranger",
+				"style": {
+					"navigationBarTitleText": "他人主页"
+				}
+			}, {
+				"path": "appSettings/appSettings",
+				"style": {
+					"navigationBarTitleText": "软件设置"
+				}
+			}, {
+				"path": "favorites/favorites",
+				"style": {
+					"navigationBarTitleText": "我的收藏"
+				}
+			}, {
 				"path": "searchTools/searchTools",
 				"style": {
 					"navigationBarTitleText": "搜索工具"
 				}
 			}, {
-				"path": "setGoals/setGoals"
+				"path": "setGoals/setGoals",
+				"style": {
+					"navigationBarTitleText": "设置目标"
+				}
 			}, {
-				"path": "userSettings/userSettings"
+				"path": "userSettings/userSettings",
+				"style": {
+					"navigationBarTitleText": "用户设置"
+				}
 			}]
 		},
 		{
 			"root": "pagesNews",
 			"pages": [{
-				"path": "news_detail/news_detail"
+				"path": "news_detail/news_detail",
+				"style": {
+					"navigationBarTitleText": "详情页"				
+				}
 			}, {
-				"path": "video_detail/video_detail"
+				"path": "create_news/create_news",
+				"style": {
+					"navigationBarTitleText": "创作"				
+				}
 			}, {
-				"path": "web_detail/web_detail"
+				"path": "edit_draft/edit_draft",
+				"style": {
+					"navigationBarTitleText": "编辑草稿"				
+				}
 			}, {
-				"path": "create_news/create_news"
-			}, {
-				"path": "edit_draft/edit_draft"
-			}, {
-				"path": "preview_draft/preview_draft"
+				"path": "preview_draft/preview_draft",
+				"style": {
+					"navigationBarTitleText": "预览"				
+				}
 			}]
 		},
 		{

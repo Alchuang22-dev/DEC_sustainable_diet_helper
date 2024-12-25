@@ -18,9 +18,6 @@
         <text>{{$t('lang.zh-hans')}}</text>
         <text class="arrow">></text>
       </view>
-      <view class="list-item centered red-text" @click="resetLocale">
-        <text>{{$t('resetSystemLanguage')}}</text>
-      </view>
     </view>
   </view>
 </template>
