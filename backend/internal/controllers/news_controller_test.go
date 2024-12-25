@@ -1334,7 +1334,7 @@ func TestPreviewNews(t *testing.T) {
             // 处理响应
             if tc.isSuccess {
                 // 成功时返回 200 + 预览列表
-                var resp map[string]interface{}
+                var resp DraftDetailResponse
                 err := json.Unmarshal(w.Body.Bytes(), &resp)
                 assert.NoError(t, err)
             } else {
@@ -1449,7 +1449,7 @@ func TestPreviewDrafts(t *testing.T) {
             assert.Equal(t, tc.expectedStatus, w.Code)
 
             if tc.isSuccess {
-                var resp map[string]interface{}
+                var resp DraftDetailResponse
                 err := json.Unmarshal(w.Body.Bytes(), &resp)
                 assert.NoError(t, err)
             } else {
@@ -1576,9 +1576,148 @@ func TestGetNewsDetails(t *testing.T) {
             assert.Equal(t, tc.expectedStatus, w.Code)
 
             if tc.isSuccess {
+                var resp DraftDetailResponse
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                assert.Equal(t, newsItem.ID, resp.ID)
+            } else {
                 var resp map[string]interface{}
                 err := json.Unmarshal(w.Body.Bytes(), &resp)
                 assert.NoError(t, err)
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
+
+func TestGetDraftDetails(t *testing.T) {
+    db := setupNewsTestDB()
+    db.AutoMigrate(&models.Draft{}, &models.DraftParagraph{}, &models.DraftImage{}, &models.User{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.GET("/details/draft/:id", newsController.GetDraftDetails)
+    }
+
+    // 创建用户 => draftAuthor, otherUser
+    draftAuthor := models.User{
+        OpenID:   "OpenID_GetDraftDetails_Author",
+        Nickname: "DraftAuthor",
+    }
+    db.Create(&draftAuthor)
+
+    otherUser := models.User{
+        OpenID:   "OpenID_GetDraftDetails_Other",
+        Nickname: "OtherDraftUser",
+    }
+    db.Create(&otherUser)
+
+    // 创建草稿 => draft
+    draft := models.Draft{
+        Title:    "DraftDetailsTitle",
+        AuthorID: draftAuthor.ID,
+        CreatedAt: time.Now().Add(-2 * time.Hour),
+        UpdatedAt: time.Now().Add(-1 * time.Hour),
+    }
+    db.Create(&draft)
+    // 段落、图片
+    db.Create(&models.DraftParagraph{DraftID: draft.ID, Text: "DraftPara1"})
+    db.Create(&models.DraftImage{DraftID: draft.ID, URL: "draft_img1.jpg", Description: "desc_draft_img1"})
+
+    tests := []struct {
+        name           string
+        userID         uint
+        draftID        string
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            draftID:        fmt.Sprintf("%d", draft.ID),
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid Draft ID",
+            userID:         draftAuthor.ID,
+            draftID:        "abc",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid draft ID",
+        },
+        {
+            name:           "Draft Not Found",
+            userID:         draftAuthor.ID,
+            draftID:        "99999",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "Draft not found",
+        },
+        {
+            name:           "Not Author => Not Found",
+            userID:         otherUser.ID,
+            draftID:        fmt.Sprintf("%d", draft.ID),
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "Draft not found",
+        },
+        {
+            name:           "Failed To Fetch Draft (simulate DB error)",
+            userID:         draftAuthor.ID,
+            draftID:        fmt.Sprintf("%d", draft.ID),
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_get_draft_detail_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "drafts" {
+                        tx.Error = fmt.Errorf("forced get draft detail error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to fetch draft details",
+        },
+        {
+            name:           "Success Get Draft Detail",
+            userID:         draftAuthor.ID,
+            draftID:        fmt.Sprintf("%d", draft.ID),
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_get_draft_detail_err")
+            },
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            url := "/news/details/draft/" + tc.draftID
+            req, _ := http.NewRequest("GET", url, nil)
+
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            if tc.isSuccess {
+                var resp DraftDetailResponse
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                assert.Equal(t, draft.ID, resp.ID)
+                assert.Equal(t, draft.Title, resp.Title)
             } else {
                 var resp map[string]interface{}
                 err := json.Unmarshal(w.Body.Bytes(), &resp)
