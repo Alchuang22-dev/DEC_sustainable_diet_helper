@@ -1100,8 +1100,13 @@ func (nc *NewsController) AddComment(c *gin.Context) {
         return
     }
 
-    if !commentRequest.IsReply || *commentRequest.ParentID == 0 {
+    if !commentRequest.IsReply || commentRequest.ParentID == nil || *commentRequest.ParentID == 0 {
         commentRequest.ParentID = nil
+    }
+
+    if commentRequest.IsReply && commentRequest.ParentID == nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "ParentID is required for a reply"})
+        return
     }
 
     // 检查新闻是否存在

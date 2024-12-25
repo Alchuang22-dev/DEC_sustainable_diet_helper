@@ -2075,3 +2075,187 @@ func TestGetNewsByUploadTime(t *testing.T) {
         })
     }
 }
+
+func TestAddComment(t *testing.T) {
+    db := setupNewsTestDB()
+    db.AutoMigrate(&models.News{}, &models.Comment{}, &models.User{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.POST("/comments", newsController.AddComment)
+    }
+
+    // 创建用户
+    user := models.User{
+        OpenID:   "OpenID_AddComment_User",
+        Nickname: "CommentUser",
+    }
+    db.Create(&user)
+
+    // 创建新闻
+    newsItem := models.News{Title: "CommentableNews"}
+    db.Create(&newsItem)
+
+    // 创建一个父评论
+    parentComment := models.Comment{
+        NewsID:    newsItem.ID,
+        Content:   "Parent comment",
+        UserID:    9999,
+        IsReply:   false,
+    }
+    db.Create(&parentComment)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        requestBody    interface{}
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            requestBody: gin.H{
+                "news_id":  newsItem.ID,
+                "content":  "Some comment",
+                "is_reply": false,
+            },
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "Invalid Request Body",
+            userID:         user.ID,
+            requestBody:    "not_json",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid request body",
+        },
+        {
+            name:           "Invalid News ID",
+            userID:         user.ID,
+            requestBody: gin.H{
+                "news_id":  99999,  // 不存在
+                "content":  "Some comment",
+                "is_reply": false,
+            },
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Invalid news ID",
+        },
+        {
+            name:           "Reply Without ParentID",
+            userID:         user.ID,
+            requestBody: gin.H{
+                "news_id":  newsItem.ID,
+                "content":  "Reply content",
+                "is_reply": true,
+            },
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "ParentID is required for a reply",
+        },
+        {
+            name:           "Parent Comment Not Found",
+            userID:         user.ID,
+            requestBody: gin.H{
+                "news_id":   newsItem.ID,
+                "content":   "Reply content",
+                "is_reply":  true,
+                "parent_id": 88888, // 不存在
+            },
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Parent comment not found",
+        },
+        {
+            name:           "Parent Comment Not Same News",
+            userID:         user.ID,
+            requestBody: gin.H{
+                "news_id":   newsItem.ID,
+                "content":   "Reply content",
+                "is_reply":  true,
+                "parent_id": parentComment.ID,
+            },
+            setupFunc: func() {
+                // 将 parentComment 指向不同 news
+                db.Model(&parentComment).Update("news_id", 99999)
+            },
+            expectedStatus: http.StatusBadRequest,
+            expectedError:  "Parent comment does not belong to the specified news",
+        },
+        {
+            name:           "DB Error (simulate)",
+            userID:         user.ID,
+            requestBody: gin.H{
+                "news_id":  newsItem.ID,
+                "content":  "New comment",
+                "is_reply": false,
+            },
+            setupFunc: func() {
+                db.Callback().Create().Before("gorm:create").Register("force_add_comment_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "comments" {
+                        tx.Error = fmt.Errorf("forced add comment error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedError:  "Failed to add comment",
+        },
+        {
+            name:           "Success Add Comment",
+            userID:         user.ID,
+            requestBody: gin.H{
+                "news_id":  newsItem.ID,
+                "content":  "A top-level comment",
+                "is_reply": false,
+            },
+            setupFunc: func() {
+                db.Callback().Create().Remove("force_add_comment_err")
+            },
+            expectedStatus: http.StatusCreated,
+            isSuccess:      true,
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            bodyBytes, _ := json.Marshal(tc.requestBody)
+            req, _ := http.NewRequest("POST", "/news/comments", bytes.NewBuffer(bodyBytes))
+            req.Header.Set("Content-Type", "application/json")
+
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            if tc.isSuccess {
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                assert.Equal(t, "Comment added successfully", resp["message"])
+                // 可以进一步校验 comment 字段内容
+            } else {
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
