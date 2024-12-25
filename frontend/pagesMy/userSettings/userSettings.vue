@@ -14,23 +14,6 @@
         <text class="arrow">></text>
       </view>
       <view class="divider"></view>
-      <view class="list-item" @click="navigateTo('newsSetting')">
-        <text>{{ $t('settings_message_settings') }}</text>
-        <text class="arrow">></text>
-      </view>
-      <view class="list-item" @click="navigateTo('recoSetting')">
-        <text>{{ $t('settings_personalized_recommendations') }}</text>
-        <text class="arrow">></text>
-      </view>
-      <view class="divider"></view>
-      <view class="list-item" @click="navigateTo('InfoShared')">
-        <text>{{ $t('settings_communication_permissions') }}</text>
-        <text class="arrow">></text>
-      </view>
-      <view class="list-item" @click="navigateTo('Authorizations')">
-        <text>{{ $t('settings_personal_info_permissions') }}</text>
-        <text class="arrow">></text>
-      </view>
       <view class="list-item" @click="navigateTo('Permissions')">
         <text>{{ $t('settings_personal_info_collection') }}</text>
         <text class="arrow">></text>

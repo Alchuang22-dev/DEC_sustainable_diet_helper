@@ -126,6 +126,7 @@ const showModal = ref(false) // 控制发布确认弹窗的显示与否
 const showfunctions = ref(true)
 const hidefunctions = ref(false)
 const PageId = ref(0)//草稿编号
+const isPublished = ref(false); // 是否已发布
 
 // 添加文字
 const addText = () => {
@@ -165,7 +166,7 @@ const confirmPublish = async () => {
     const pageId = await saveDraft(); // 等待 saveDraft 完成并获取 pageId
     console.log('草稿保存编号:', pageId);
 
-    const pageIdInt = parseInt(pageId, 10); // 转换为整数
+    const pageIdInt = parseInt(pageId, 10);
     if (isNaN(pageIdInt)) {
       uni.showToast({
         title: 'Invalid PageId',
@@ -177,22 +178,23 @@ const confirmPublish = async () => {
 
     // 调用 API 将草稿转换为新闻
     uni.request({
-      url: `${BASE_URL}/news/convert_draft`, // 转换草稿的 API 路径
+      url: `${BASE_URL}/news/convert_draft`,
       method: 'POST',
       header: {
-        'Authorization': `Bearer ${token.value}`, // 使用当前 token
+        'Authorization': `Bearer ${token.value}`,
         'Content-Type': 'application/json',
       },
       data: {
-        draft_id: pageIdInt, // 使用转换后的整数 PageId
+        draft_id: pageIdInt,
       },
       success: (res) => {
         if (res.data.message === 'Draft converted to news successfully.') {
           uni.showToast({
-            title: '草稿已发布为新闻',
+            title: '已发布',
             icon: 'success',
             duration: 2000,
           });
+          isPublished.value = true; // 发布成功后标记为已发布
           showModal.value = false; // 关闭弹窗
         } else {
           uni.showToast({
@@ -212,7 +214,6 @@ const confirmPublish = async () => {
         console.error('请求失败', err);
       }
     });
-    showModal.value = false;
   } catch (error) {
     uni.showToast({
       title: '保存草稿失败，请重试',
@@ -390,12 +391,16 @@ const handleImageChange = (index) => {
 };
 
 onUnload(() => {
-  console.log('页面即将卸载，自动保存草稿');
-  try {
-    const pageId = saveDraft();
-    console.log('自动保存草稿成功，草稿编号:', pageId);
-  } catch (error) {
-    console.error('自动保存草稿失败:', error);
+  if (!isPublished.value) {
+    console.log('页面即将卸载，自动保存草稿');
+    try {
+      const pageId = saveDraft();
+      console.log('自动保存草稿成功，草稿编号:', pageId);
+    } catch (error) {
+      console.error('自动保存草稿失败:', error);
+    }
+  } else {
+    console.log('页面已发布，无需自动保存草稿');
   }
 });
 </script>

@@ -99,10 +99,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed} from 'vue';
-import { useI18n } from 'vue-i18n'
+import { ref, computed} from 'vue';
+import { onUnload } from '@dcloudio/uni-app';
+import { useI18n } from 'vue-i18n';
 import { useDraftStore } from '../stores/draft';
-import { useUserStore } from '../../stores/user'; // 引入 Pinia 用户存储
+import { useUserStore } from '@/stores/user'; // 引入 Pinia 用户存储
 import { onLoad } from "@dcloudio/uni-app";
 const draftStore = useDraftStore();
 const userStore = useUserStore();
@@ -118,7 +119,7 @@ const authorAvatar = computed(() =>
         : '/static/images/index/background_img.jpg'
 );
 const token = computed(() => userStore.user.token);
-const jwtToken = computed(() => userStore.user.token);; // Replace with actual token
+const jwtToken = computed(() => userStore.user.token); // Replace with actual token
 const { t } = useI18n()
 
 const title = ref('') // 文章标题
@@ -128,6 +129,16 @@ const showModal = ref(false) // 控制发布确认弹窗的显示与否
 const showfunctions = ref(true)
 const hidefunctions = ref(false)
 const post = ref({ components: []})
+const isPublished = ref(false); // 标记是否已发布
+
+onUnload(() => {
+  if (!isPublished.value) {
+    console.log('页面未发布，保存草稿');
+    saveDraft();
+  } else {
+    console.log('页面已发布，无需保存草稿');
+  }
+});
 
 // 添加文字
 const addText = () => {
@@ -162,9 +173,7 @@ const publish = () => {
 
 // 确认发布
 const confirmPublish = () => {
-  // 确保 PageId 是整数格式
   const pageIdInt = parseInt(PageId.value, 10); // 转换为整数
-  console.log('转换后的草稿Id:',pageIdInt);
   if (isNaN(pageIdInt)) {
     uni.showToast({
       title: 'Invalid PageId',
@@ -174,30 +183,27 @@ const confirmPublish = () => {
     return;
   }
 
-  // 确认发布前输出信息（可用于调试）
-  console.log('文章标题:', title.value)
-  console.log('文章简介:', description.value)
-  console.log('发布内容:', items.value)
-
-  // 调用 API 将草稿转换为新闻
   uni.request({
-    url: `${BASE_URL}/news/convert_draft`, // 转换草稿的 API 路径
+    url: `${BASE_URL}/news/convert_draft`,
     method: 'POST',
     header: {
-      'Authorization': `Bearer ${token.value}`, // 使用当前 token
+      'Authorization': `Bearer ${token.value}`,
       'Content-Type': 'application/json',
     },
     data: {
-      draft_id: pageIdInt, // 使用转换后的整数 PageId
+      draft_id: pageIdInt,
     },
     success: (res) => {
       if (res.data.message === 'Draft converted to news successfully.') {
         uni.showToast({
-          title: '草稿已发布为新闻',
+          title: '已发布',
           icon: 'success',
           duration: 2000,
         });
-        showModal.value = false; // 关闭弹窗
+        isPublished.value = true; // 设置为已发布
+        setTimeout(() => {
+          uni.navigateBack(); // 返回上一页
+        }, 2000);
       } else {
         uni.showToast({
           title: '发布失败',
@@ -214,10 +220,9 @@ const confirmPublish = () => {
         duration: 2000,
       });
       console.error('请求失败', err);
-    }
+    },
   });
-}
-
+};
 
 // 取消发布
 const cancelPublish = () => {
@@ -268,11 +273,11 @@ const saveDraft = async () => {
       if (item.type === 'text') {
         return { id: index + 1, content: item.content, style: 'text' };
       } else if (item.type === 'image') {
-        return { 
-          id: index + 1, 
-          content: item.content, 
-          style: 'image', 
-          description: item.imageDescription || '' 
+        return {
+          id: index + 1,
+          content: item.content,
+          style: 'image',
+          description: item.imageDescription || ''
         };
       }
     })
