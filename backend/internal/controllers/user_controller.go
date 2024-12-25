@@ -269,6 +269,8 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
         wechatAPIURL = "https://api.weixin.qq.com/sns/jscode2session"
     }
 
+    fmt.Println(wechatAPIURL)
+
     // 构建请求 URL
     wxAPI := fmt.Sprintf(
         "%s?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",

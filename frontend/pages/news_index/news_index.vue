@@ -3,7 +3,7 @@
     <image
       src="/static/images/index/background_img.jpg"
       class="background-image"
-    ></image>
+    />
 
     <view class="header">
       <!-- 抽屉触发按钮 -->
@@ -47,7 +47,7 @@
         :title="item.title"
         :extra="item.info"
         :thumbnail="item.image"
-        @click="navigateTo(item.id, item.title)"
+        @click="navigateTo(item.id)"
         :class="['news-card', { active: activeIndex === index }]"
         @touchstart="pressFeedback(index)"
         @touchend="releaseFeedback"
@@ -67,8 +67,8 @@
       <view class="drawer-content">
         <uni-list>
           <uni-list-item
-            v-for="(sort, index) in sortOptions"
-            :key="index"
+            v-for="(sort, idx) in sortOptions"
+            :key="idx"
             :title="t(sort.text)"
             :showArrow="true"
             clickable
@@ -82,6 +82,7 @@
 </template>
 
 <script setup>
+/* ----------------- Imports ----------------- */
 import { ref, computed } from 'vue'
 import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { useI18n } from 'vue-i18n'
@@ -89,32 +90,57 @@ import { storeToRefs } from 'pinia'
 import { useNewsStore } from '@/stores/news_list'
 import { useUserStore } from '../../stores/user'
 
+/* ----------------- Setup ----------------- */
 const newsStore = useNewsStore()
 const userStore = useUserStore()
 const { filteredNewsItems, isRefreshing } = storeToRefs(newsStore)
 const { refreshNews, fetchNews } = newsStore
 const { t } = useI18n()
 
+/* ----------------- Reactive & State ----------------- */
 const isLoggedIn = computed(() => userStore.user.isLoggedIn)
 const drawer = ref(null)
 const searchText = ref('')
 const currentSort = ref('top-views')
 const activeIndex = ref(null)
 
-// 加载更多文字配置
+/* ----------------- Computed ----------------- */
+// 加载更多文字
 const loadMoreText = {
   contentdown: t('pull_down_text'),
   contentrefresh: t('loading_text'),
   contentnomore: t('no_more_data')
 }
 
-// 排序选项配置
+// 排序选项
 const sortOptions = [
   { text: 'sort_by_time', value: 'latest' },
   { text: 'sort_by_views', value: 'top-views' },
   { text: 'sort_by_likes', value: 'top-likes' }
 ]
 
+/* ----------------- Lifecycle ----------------- */
+onShow(() => {
+  uni.setNavigationBarTitle({ title: t('news_index') })
+  uni.setTabBarItem({ index: 0, text: t('index') })
+  uni.setTabBarItem({ index: 1, text: t('tools_index') })
+  uni.setTabBarItem({ index: 2, text: t('news_index') })
+  uni.setTabBarItem({ index: 3, text: t('my_index') })
+
+  fetchNews()
+})
+
+onPullDownRefresh(async () => {
+  try {
+    await refreshNews()
+    uni.stopPullDownRefresh()
+  } catch (error) {
+    console.error('Error during refresh:', error)
+    uni.stopPullDownRefresh()
+  }
+})
+
+/* ----------------- Methods ----------------- */
 function toggleDrawer() {
   if (drawer.value) {
     drawer.value.open()
@@ -133,9 +159,19 @@ function handleSort(sortType) {
   handleDrawerClose()
 }
 
-function navigateTo(link, name) {
+function onSearch() {
+  fetchNews(1, 'search', searchText.value)
+}
+
+function createNews() {
   uni.navigateTo({
-    url: `/pagesNews/news_detail/news_detail?id=${link}`
+    url: "/pagesNews/create_news/create_news"
+  })
+}
+
+function navigateTo(id) {
+  uni.navigateTo({
+    url: `/pagesNews/news_detail/news_detail?id=${id}`
   })
 }
 
@@ -146,37 +182,6 @@ function pressFeedback(index) {
 function releaseFeedback() {
   activeIndex.value = null
 }
-
-function createNews() {
-  uni.navigateTo({
-    url: "/pagesNews/create_news/create_news"
-  })
-}
-
-function onSearch() {
-  fetchNews(1, 'search', searchText.value)
-}
-
-async function handlePullDownRefresh() {
-  try {
-    await refreshNews()
-    uni.stopPullDownRefresh()
-  } catch (error) {
-    console.error('Error during refresh:', error)
-    uni.stopPullDownRefresh()
-  }
-}
-
-onPullDownRefresh(handlePullDownRefresh)
-
-onShow(() => {
-  uni.setNavigationBarTitle({ title: t('news_index') })
-  uni.setTabBarItem({ index: 0, text: t('index') })
-  uni.setTabBarItem({ index: 1, text: t('tools_index') })
-  uni.setTabBarItem({ index: 2, text: t('news_index') })
-  uni.setTabBarItem({ index: 3, text: t('my_index') })
-  fetchNews()
-})
 </script>
 
 <style scoped>
@@ -282,5 +287,4 @@ onShow(() => {
 :deep(.uni-card__header-content-title) {
   font-weight: bold !important;
 }
-
 </style>

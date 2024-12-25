@@ -24,17 +24,14 @@
         <view class="profile-text">
           <!-- 显示/编辑昵称 -->
           <view v-if="!isEditingNickname" class="greeting-container">
-            <text
-              class="greeting"
-              @click="enableNicknameEdit"
-            >
+            <text class="greeting" @click="enableNicknameEdit">
               {{ isLoggedIn ? nickname : t('profile_greeting') }}
             </text>
             <image
               v-if="isLoggedIn"
               src="@/pages/static/editor.svg"
               class="edit-icon"
-            ></image>
+            />
           </view>
           <input
             v-else
@@ -47,11 +44,7 @@
           />
           <view>
             <text class="login-prompt">
-              {{
-                isLoggedIn
-                  ? t('profile_logged_in')
-                  : t('profile_login_prompt')
-              }}
+              {{ isLoggedIn ? t('profile_logged_in') : t('profile_login_prompt') }}
             </text>
           </view>
         </view>
@@ -66,87 +59,78 @@
     <!-- 菜单 -->
     <view class="menu-section">
       <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('searchTools')">
-        <image src="@/pages/static/search.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_search_tools')}}</text>
+        <image src="@/pages/static/search.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_search_tools') }}</text>
       </view>
 
       <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('setGoals')">
-        <image src="@/pages/static/setgoals.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_set_goals')}}</text>
+        <image src="@/pages/static/setgoals.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_set_goals') }}</text>
       </view>
 
       <view v-if="isLoggedIn" class="menu-item" @click="navigateToFoodPreferences('foodPreferences')">
-        <image src="@/pages/static/food.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_food_preferences')}}</text>
+        <image src="@/pages/static/food.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_food_preferences') }}</text>
       </view>
 
       <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('favorites')">
-        <image src="@/pages/static/favorites.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_favorites')}}</text>
+        <image src="@/pages/static/favorites.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_favorites') }}</text>
       </view>
 
       <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('my_home')">
-        <image src="@/pages/static/mywork.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_creations')}}</text>
+        <image src="@/pages/static/mywork.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_creations') }}</text>
       </view>
 
       <view class="menu-item" @click="navigateTo('appSettings')">
-        <image src="@/pages/static/setting.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_app_settings')}}</text>
+        <image src="@/pages/static/setting.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_app_settings') }}</text>
       </view>
 
       <view class="menu-item" @click="navigateTo('userSettings')">
-        <image src="@/pages/static/user.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_user_settings')}}</text>
+        <image src="@/pages/static/user.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_user_settings') }}</text>
       </view>
 
       <view v-if="isLoggedIn" class="menu-item" @click="handleLogout">
-        <image src="@/pages/static/logout.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('profile_logout')}}</text>
+        <image src="@/pages/static/logout.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('profile_logout') }}</text>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
-/**
- * 我的页面：展示个人信息（头像、昵称）、登录、登出、以及常见的功能入口菜单
- */
+/* ----------------- Imports ----------------- */
+import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useUserStore } from '@/stores/user'
+import { onShow } from '@dcloudio/uni-app'
 
-import {ref, computed} from 'vue'
-import {useI18n} from 'vue-i18n'
-import {useUserStore} from '../../stores/user'
-import {onShow} from '@dcloudio/uni-app'
-
-const BASE_URL = 'http://122.51.231.155:8080'
-const {t} = useI18n()
+/* ----------------- Setup ----------------- */
+const { t } = useI18n()
 const userStore = useUserStore()
 
-// 是否已登录
+/* ----------------- Reactive & State ----------------- */
+const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
 const isLoggedIn = computed(() => userStore.user.isLoggedIn)
-
-// 用户头像
 const avatarSrc = computed(() =>
-    userStore.user.avatarUrl
-        ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
-        : '/static/images/index/background_img.jpg'
+  userStore.user.avatarUrl
+    ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
+    : '/static/images/index/background_img.jpg'
 )
 
-// 用户昵称
 const nickname = ref(userStore.user.nickName || '')
-
-// 是否正在编辑昵称
 const isEditingNickname = ref(false)
 
-/**
- * 页面显示时，刷新用户信息
- */
+/* ----------------- Lifecycle ----------------- */
 onShow(async () => {
-  uni.setNavigationBarTitle({title: t('my_index')})
-  uni.setTabBarItem({index: 0, text: t('index')})
-  uni.setTabBarItem({index: 1, text: t('tools_index')})
-  uni.setTabBarItem({index: 2, text: t('news_index')})
-  uni.setTabBarItem({index: 3, text: t('my_index')})
+  uni.setNavigationBarTitle({ title: t('my_index') })
+  uni.setTabBarItem({ index: 0, text: t('index') })
+  uni.setTabBarItem({ index: 1, text: t('tools_index') })
+  uni.setTabBarItem({ index: 2, text: t('news_index') })
+  uni.setTabBarItem({ index: 3, text: t('my_index') })
 
   if (isLoggedIn.value) {
     try {
@@ -164,6 +148,7 @@ onShow(async () => {
   }
 })
 
+/* ----------------- Methods ----------------- */
 /**
  * 导航到指定页面
  */
@@ -180,7 +165,7 @@ function navigateToFoodPreferences(page) {
   })
 }
 
-/** 登录按钮点击 */
+/** 登录按钮 */
 function handleLoginButtonClick() {
   navigateTo('login')
 }
@@ -204,7 +189,7 @@ async function handleLogout() {
 }
 
 /**
- * 当用户点击昵称时，若已登录，则允许编辑
+ * 点击昵称 => 允许编辑
  */
 function enableNicknameEdit() {
   if (isLoggedIn.value) {
@@ -213,14 +198,14 @@ function enableNicknameEdit() {
 }
 
 /**
- * 当用户手动输入昵称
+ * 用户手动输入昵称
  */
 function onNicknameInput(e) {
   nickname.value = e.detail.value
 }
 
 /**
- * 当用户离开昵称输入框时（blur 事件），提交更新
+ * 当用户离开昵称输入框时提交更新
  */
 async function onNicknameBlur() {
   if (!isEditingNickname.value) return
@@ -286,7 +271,6 @@ async function onChooseAvatar(e) {
   --font-family: 'Arial', sans-serif;
 }
 
-/* 容器 */
 .container {
   display: flex;
   flex-direction: column;
@@ -295,7 +279,6 @@ async function onChooseAvatar(e) {
   font-family: var(--font-family);
 }
 
-/* 背景图 */
 .background-image {
   position: fixed;
   top: 0;
@@ -308,7 +291,6 @@ async function onChooseAvatar(e) {
   pointer-events: none;
 }
 
-/* 个人信息 */
 .profile-section {
   display: flex;
   flex-direction: column;
@@ -328,13 +310,11 @@ async function onChooseAvatar(e) {
   margin-bottom: 30rpx;
 }
 
-/* 头像按钮 */
 .avatar-button {
   background: transparent;
   padding: 0;
   margin-bottom: -40rpx;
 }
-
 .avatar-button:after {
   border: none;
 }
@@ -346,7 +326,6 @@ async function onChooseAvatar(e) {
   margin-right: 20rpx;
 }
 
-/* 文本区 */
 .profile-text {
   display: flex;
   flex-direction: column;
@@ -354,7 +333,6 @@ async function onChooseAvatar(e) {
   flex: 1;
 }
 
-/* 昵称与编辑图标 */
 .greeting-container {
   position: relative;
   width: 100%;
@@ -380,7 +358,6 @@ async function onChooseAvatar(e) {
   cursor: pointer;
 }
 
-/* 内联编辑框 */
 .nickname-input-inline {
   font-size: 38rpx;
   margin: 10rpx 0;
@@ -402,13 +379,11 @@ async function onChooseAvatar(e) {
   background-color: var(--primary-color);
   color: #ffffff;
   font-size: 32rpx;
-  cursor: pointer;
   border-radius: 10rpx;
   width: 60%;
   margin-top: 10rpx;
 }
 
-/* 菜单 */
 .menu-section {
   background-color: rgba(33, 255, 6, 0.06);
   margin: 40rpx 20rpx;
@@ -452,7 +427,6 @@ async function onChooseAvatar(e) {
   color: var(--text-color);
 }
 
-/* 响应式 */
 @media screen and (max-width: 600px) {
   .profile-top {
     flex-direction: column;

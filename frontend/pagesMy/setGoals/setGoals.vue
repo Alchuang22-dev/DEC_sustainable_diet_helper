@@ -4,77 +4,78 @@
     <view class="input-specification">
       <text class="input-spec-text">{{ t('input_specification') }}</text>
     </view>
+
     <view class="goals-wrapper">
       <!-- 碳目标输入框 -->
       <view class="goal-section">
         <text class="label">{{ t('carbon_goal_label') }}</text>
         <input
-            class="input"
-            type="digit"
-            step="0.1"
-            v-model.trim="carbonGoalStr"
-            :maxlength="10"
+          class="input"
+          type="digit"
+          step="0.1"
+          v-model.trim="carbonGoalStr"
+          :maxlength="10"
         />
       </view>
 
       <!-- 分隔线 -->
-      <view class="divider"></view>
+      <view class="divider" />
 
-      <!-- 五个营养目标输入框 -->
+      <!-- 五大营养目标 -->
       <view class="goals-grid">
         <view class="goal-section">
           <text class="label">{{ t('calories_unit') }}</text>
           <input
-              class="input"
-              type="digit"
-              step="0.1"
-              v-model.trim="caloriesStr"
-              :maxlength="10"
+            class="input"
+            type="digit"
+            step="0.1"
+            v-model.trim="caloriesStr"
+            :maxlength="10"
           />
         </view>
         <view class="goal-section">
           <text class="label">{{ t('protein_unit') }}</text>
           <input
-              class="input"
-              type="digit"
-              step="0.1"
-              v-model.trim="proteinStr"
-              :maxlength="10"
+            class="input"
+            type="digit"
+            step="0.1"
+            v-model.trim="proteinStr"
+            :maxlength="10"
           />
         </view>
         <view class="goal-section">
           <text class="label">{{ t('fat_unit') }}</text>
           <input
-              class="input"
-              type="digit"
-              step="0.1"
-              v-model.trim="fatStr"
-              :maxlength="10"
+            class="input"
+            type="digit"
+            step="0.1"
+            v-model.trim="fatStr"
+            :maxlength="10"
           />
         </view>
         <view class="goal-section">
           <text class="label">{{ t('carbohydrates_unit') }}</text>
           <input
-              class="input"
-              type="digit"
-              step="0.1"
-              v-model.trim="carbsStr"
-              :maxlength="10"
+            class="input"
+            type="digit"
+            step="0.1"
+            v-model.trim="carbsStr"
+            :maxlength="10"
           />
         </view>
         <view class="goal-section">
           <text class="label">{{ t('sodium_unit') }}</text>
           <input
-              class="input"
-              type="digit"
-              step="0.1"
-              v-model.trim="sodiumStr"
-              :maxlength="10"
+            class="input"
+            type="digit"
+            step="0.1"
+            v-model.trim="sodiumStr"
+            :maxlength="10"
           />
         </view>
       </view>
 
-      <!-- 底部按钮 -->
+      <!-- 设置按钮 -->
       <view class="button-container">
         <button class="btn btn-today" @click="setGoalsForToday">
           {{ t('set_for_today') }}
@@ -103,107 +104,98 @@
           <text class="guideline-details">{{ t('sodium_range') }}</text>
         </view>
       </view>
-
     </view>
   </view>
 </template>
 
 <script setup>
-import {ref, onMounted, computed} from 'vue';
-import {useI18n} from 'vue-i18n';
+/* ----------------- Imports ----------------- */
+import { ref, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data'
+import { useUserStore } from '@/stores/user'
 
-import {useCarbonAndNutritionStore} from '@/stores/carbon_and_nutrition_data';
-import {useUserStore} from '@/stores/user';
+/* ----------------- Setup ----------------- */
+const { t } = useI18n()
+const carbonAndNutritionStore = useCarbonAndNutritionStore()
+const userStore = useUserStore()
 
-// 获取国际化函数
-const {t} = useI18n();
+/* ----------------- Reactive & State ----------------- */
+const token = computed(() => userStore.user.token)
+const carbonGoalStr = ref('0')
+const caloriesStr = ref('0')
+const proteinStr = ref('0')
+const fatStr = ref('0')
+const carbsStr = ref('0')
+const sodiumStr = ref('0')
 
-// 获取 Pinia 存储
-const carbonAndNutritionStore = useCarbonAndNutritionStore();
-const userStore = useUserStore();
-
-// 从 store 中获取 token（如果需要手动使用）
-const token = computed(() => userStore.user.token);
-
-// 碳目标和五大营养目标的绑定值（以字符串形式做双向绑定，提交前再转成浮点数）
-const carbonGoalStr = ref('0');
-const caloriesStr = ref('0');
-const proteinStr = ref('0');
-const fatStr = ref('0');
-const carbsStr = ref('0');
-const sodiumStr = ref('0');
-
-// 日期格式化函数（与首页相同）
-const getFormattedDate = (today) => {
-  return today.getFullYear() + '-'
-      + String(today.getMonth() + 1).padStart(2, '0') + '-'
-      + String(today.getDate()).padStart(2, '0');
-};
-
-// onMounted 时，获取当日目标并填充
+/* ----------------- Lifecycle ----------------- */
 onMounted(async () => {
   try {
     // 拉取已有的碳和营养目标
-    await carbonAndNutritionStore.getCarbonGoals();
-    await carbonAndNutritionStore.getNutritionGoals();
+    await carbonAndNutritionStore.getCarbonGoals()
+    await carbonAndNutritionStore.getNutritionGoals()
 
-    const today = new Date();
-    const dateString = getFormattedDate(today);
+    const today = new Date()
+    const dateString = getFormattedDate(today)
 
-    // 找到当天的碳目标
-    const carbonGoalObj = carbonAndNutritionStore.state.carbonGoals.find(item => {
-      return item.date.startsWith(dateString);
-    });
-    if (carbonGoalObj) {
-      carbonGoalStr.value = String(carbonGoalObj.emission ? parseFloat(carbonGoalObj.emission).toFixed(1) : 0);
-    } else {
-      carbonGoalStr.value = '0.0';
-    }
+    // 当天碳目标
+    const carbonGoalObj = carbonAndNutritionStore.state.carbonGoals.find(item =>
+      item.date.startsWith(dateString)
+    )
+    carbonGoalStr.value = carbonGoalObj
+      ? String(parseFloat(carbonGoalObj.emission).toFixed(1))
+      : '0.0'
 
-    // 找到当天的营养目标
-    const nutritionGoalObj = carbonAndNutritionStore.state.nutritionGoals.find(item => {
-      return item.date.startsWith(dateString);
-    });
+    // 当天营养目标
+    const nutritionGoalObj = carbonAndNutritionStore.state.nutritionGoals.find(item =>
+      item.date.startsWith(dateString)
+    )
     if (nutritionGoalObj) {
-      caloriesStr.value = String(nutritionGoalObj.calories ? parseFloat(nutritionGoalObj.calories).toFixed(1) : 0);
-      proteinStr.value = String(nutritionGoalObj.protein ? parseFloat(nutritionGoalObj.protein).toFixed(1) : 0);
-      fatStr.value = String(nutritionGoalObj.fat ? parseFloat(nutritionGoalObj.fat).toFixed(1) : 0);
-      carbsStr.value = String(nutritionGoalObj.carbohydrates ? parseFloat(nutritionGoalObj.carbohydrates).toFixed(1) : 0);
-      sodiumStr.value = String(nutritionGoalObj.sodium ? parseFloat(nutritionGoalObj.sodium).toFixed(1) : 0);
+      caloriesStr.value = String(parseFloat(nutritionGoalObj.calories || 0).toFixed(1))
+      proteinStr.value = String(parseFloat(nutritionGoalObj.protein || 0).toFixed(1))
+      fatStr.value = String(parseFloat(nutritionGoalObj.fat || 0).toFixed(1))
+      carbsStr.value = String(parseFloat(nutritionGoalObj.carbohydrates || 0).toFixed(1))
+      sodiumStr.value = String(parseFloat(nutritionGoalObj.sodium || 0).toFixed(1))
     } else {
-      caloriesStr.value = '0.0';
-      proteinStr.value = '0.0';
-      fatStr.value = '0.0';
-      carbsStr.value = '0.0';
-      sodiumStr.value = '0.0';
+      caloriesStr.value = '0.0'
+      proteinStr.value = '0.0'
+      fatStr.value = '0.0'
+      carbsStr.value = '0.0'
+      sodiumStr.value = '0.0'
     }
-
   } catch (err) {
-    console.error(err);
+    console.error(err)
     uni.showToast({
       title: t('fetchGoalsFail'),
       icon: 'none'
-    });
+    })
   }
-});
+})
 
-/**
- * 点击「为今天设置」
- * 1. 检验输入是否合法（都是非负数，最多1位小数）。
- * 2. 构造仅当天的 goals 数组并调用 setNutritionGoals、setCarbonGoals。
- */
-const setGoalsForToday = async () => {
-  if (!validateInputs()) return;
+/* ----------------- Methods ----------------- */
+function getFormattedDate(today) {
+  return (
+    today.getFullYear() +
+    '-' +
+    String(today.getMonth() + 1).padStart(2, '0') +
+    '-' +
+    String(today.getDate()).padStart(2, '0')
+  )
+}
 
-  const today = new Date();
-  const dateString = getFormattedDate(today);
+async function setGoalsForToday() {
+  if (!validateInputs()) return
+
+  const today = new Date()
+  const dateString = getFormattedDate(today)
 
   const carbonGoals = [
     {
       date: `${dateString}T00:00:00Z`,
-      emission: parseFloat(carbonGoalStr.value),
+      emission: parseFloat(carbonGoalStr.value)
     }
-  ];
+  ]
   const nutritionGoals = [
     {
       date: `${dateString}T00:00:00Z`,
@@ -213,44 +205,37 @@ const setGoalsForToday = async () => {
       carbohydrates: parseFloat(carbsStr.value),
       sodium: parseFloat(sodiumStr.value)
     }
-  ];
+  ]
 
   try {
-    await carbonAndNutritionStore.setCarbonGoals(carbonGoals);
-    await carbonAndNutritionStore.setNutritionGoals(nutritionGoals);
+    await carbonAndNutritionStore.setCarbonGoals(carbonGoals)
+    await carbonAndNutritionStore.setNutritionGoals(nutritionGoals)
     uni.showToast({
       title: t('success'),
       icon: 'success'
-    });
+    })
   } catch (err) {
-    console.error(err);
-    uni.showToast({title: t('setFail'), icon: 'none'});
+    console.error(err)
+    uni.showToast({ title: t('setFail'), icon: 'none' })
   }
-};
+}
 
-/**
- * 点击「为一周设置」
- * 1. 检验输入是否合法（都是非负数，最多1位小数）。
- * 2. 从今天开始，连续 7 天（今天 + 后面 6 天）都设置相同的目标。
- */
-const setGoalsForWeek = async () => {
-  if (!validateInputs()) return;
+async function setGoalsForWeek() {
+  if (!validateInputs()) return
 
-  const carbonGoals = [];
-  const nutritionGoals = [];
+  const carbonGoals = []
+  const nutritionGoals = []
 
-  const today = new Date();
-
+  const today = new Date()
   for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    const dateString = getFormattedDate(date);
-    console.log('dateString:', dateString);
+    const date = new Date(today)
+    date.setDate(today.getDate() + i)
+    const dateString = getFormattedDate(date)
 
     carbonGoals.push({
       date: `${dateString}T00:00:00Z`,
-      emission: parseFloat(carbonGoalStr.value),
-    });
+      emission: parseFloat(carbonGoalStr.value)
+    })
     nutritionGoals.push({
       date: `${dateString}T00:00:00Z`,
       calories: parseFloat(caloriesStr.value),
@@ -258,25 +243,25 @@ const setGoalsForWeek = async () => {
       fat: parseFloat(fatStr.value),
       carbohydrates: parseFloat(carbsStr.value),
       sodium: parseFloat(sodiumStr.value)
-    });
+    })
   }
 
   try {
-    await carbonAndNutritionStore.setCarbonGoals(carbonGoals);
-    await carbonAndNutritionStore.setNutritionGoals(nutritionGoals);
+    await carbonAndNutritionStore.setCarbonGoals(carbonGoals)
+    await carbonAndNutritionStore.setNutritionGoals(nutritionGoals)
     uni.showToast({
       title: t('success'),
       icon: 'success'
-    });
+    })
   } catch (err) {
-    console.error(err);
-    uni.showToast({title: t('fail'), icon: 'none'});
+    console.error(err)
+    uni.showToast({ title: t('fail'), icon: 'none' })
   }
-};
+}
 
-// 校验输入框是否都是有效数字，且最多1位小数
 function validateInputs() {
-  const regex = /^\d+(\.\d)?$/; // 正则表达式：非负数，最多1位小数
+  // 非负数、最多1位小数
+  const regex = /^\d+(\.\d)?$/
   const items = [
     carbonGoalStr.value,
     caloriesStr.value,
@@ -284,19 +269,19 @@ function validateInputs() {
     fatStr.value,
     carbsStr.value,
     sodiumStr.value
-  ];
+  ]
   for (const val of items) {
     if (
-        val === '' ||
-        isNaN(Number(val)) ||
-        Number(val) < 0 ||
-        !regex.test(val)
+      val === '' ||
+      isNaN(Number(val)) ||
+      Number(val) < 0 ||
+      !regex.test(val)
     ) {
-      uni.showToast({title: t('inputValidateFail'), icon: 'none'});
-      return false;
+      uni.showToast({ title: t('inputValidateFail'), icon: 'none' })
+      return false
     }
   }
-  return true;
+  return true
 }
 </script>
 
@@ -308,44 +293,30 @@ function validateInputs() {
   background-color: #f5f7fa;
   padding: 12px 8px;
 }
-
-.container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  background-color: #f5f7fa;
-  padding: 12px 8px;
-}
-
 .input-specification {
-  margin-bottom: 16px; /* 增加底部间距 */
+  margin-bottom: 16px;
 }
-
 .input-spec-text {
   font-size: 12px;
-  color: #6b7280; /* 略浅的颜色 */
+  color: #6b7280;
 }
-
 .goals-wrapper {
   background-color: #ffffff;
   border-radius: 8px;
   padding: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
-
 .goal-section {
   margin-bottom: 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-
 .label {
   font-size: 13px;
   color: #374151;
   font-weight: 500;
 }
-
 .input {
   padding: 6px 10px;
   border: 1px solid #e5e7eb;
@@ -354,32 +325,27 @@ function validateInputs() {
   background-color: #f9fafb;
   transition: all 0.2s ease;
 }
-
 .input:focus {
   border-color: #60a5fa;
   background-color: #ffffff;
   box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.1);
 }
-
 .divider {
   height: 1px;
   background-color: #e5e7eb;
   margin: 12px 0;
 }
-
 .goals-grid {
   display: grid;
   gap: 8px;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
-
 .button-container {
   display: flex;
   gap: 8px;
   margin-top: 16px;
   margin-bottom: 16px;
 }
-
 .btn {
   flex: 1;
   padding: 8px 12px;
@@ -393,32 +359,25 @@ function validateInputs() {
   justify-content: center;
   align-items: center;
 }
-
 .btn-today {
   background-color: #3b82f6;
   color: #ffffff;
 }
-
 .btn-today:hover {
   background-color: #2563eb;
 }
-
 .btn-week {
   background-color: #10b981;
   color: #ffffff;
 }
-
 .btn-week:hover {
   background-color: #059669;
 }
-
-/* 营养建议说明样式 */
 .nutrition-guidelines {
   margin-top: 8px;
   padding-top: 12px;
   border-top: 1px solid #e5e7eb;
 }
-
 .guidelines-title {
   font-size: 14px;
   font-weight: 600;
@@ -426,39 +385,32 @@ function validateInputs() {
   margin-bottom: 8px;
   display: block;
 }
-
 .guidelines-content {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-
 .guideline-item {
   font-size: 13px;
   color: #374151;
   font-weight: 500;
   margin-top: 8px;
 }
-
 .guideline-details {
   font-size: 12px;
   color: #6b7280;
   padding-left: 8px;
 }
-
 @media (max-width: 640px) {
   .container {
     padding: 8px 6px;
   }
-
   .goals-wrapper {
     padding: 10px 8px;
   }
-
   .button-container {
     flex-direction: column;
   }
-
   .btn {
     width: 100%;
   }

@@ -293,8 +293,8 @@
 		"food_pos": [],
 		"food_neg": ["oat","Pasta/Spaghetti","flour","Noodles","wheat","barley","Bread","crumbs/Breadcrumbs"]
 	},
-	"alcohalFree":{
-		"name_en": "alcohal free",
+	"alcoholFree":{
+		"name_en": "alcohol free",
 		"name_zh-Hans": "无酒精饮食",
 		"nutrition_pos": "",
 		"nutrition_neg": "",

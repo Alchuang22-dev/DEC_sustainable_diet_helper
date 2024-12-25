@@ -45,7 +45,7 @@
     <!-- 黑名单输入区域 -->
     <view class="add-restriction">
       <uni-combox
-        :placeholder="$t('please_enter_food_name')"
+        :placeholder="t('please_enter_food_name')"
         v-model="foodNameInput"
         :candidates="filteredFoods.map(item => displayName(item))"
         @input="onComboxInput"
@@ -109,29 +109,25 @@
 
 <script setup>
 /* ----------------- Imports ----------------- */
-import { onMounted, ref, reactive, computed, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFoodListStore } from '../stores/food_list.js'
 import { useUserStore } from '@/stores/user.js'
 
-/* ----------------- i18n ----------------- */
+/* ----------------- Setup ----------------- */
 const { t, locale } = useI18n()
-
-/* ----------------- Store ----------------- */
 const foodStore = useFoodListStore()
 const userStore = useUserStore()
-
 const { availableFoods, fetchAvailableFoods } = foodStore
-const BASE_URL = ref('http://122.51.231.155:8095')
+const BASE_URL = ref('http://xcxcs.uwdjl.cn:8080')
 
-/* ----------------- Reactive State ----------------- */
+/* ----------------- Reactive & State ----------------- */
 const foodNameInput = ref('')
-const showFoodList = ref(false)
 const preferences = ref([])
 const showModal = ref(false)
 const dietRestrictions = ref([])
 
-// 供选择的偏好列表
+/* ----------------- Preference Options ----------------- */
 const preferenceOptions = ref([
   { name: t('highProtein'), key: 'highProtein', icon: 'https://cdn.pixabay.com/photo/2023/09/22/07/23/ai-generated-8268310_1280.jpg' },
   { name: t('highEnergy'), key: 'highEnergy', icon: 'https://cdn.pixabay.com/photo/2019/06/01/05/45/dumplings-4243484_1280.jpg' },
@@ -148,33 +144,25 @@ const preferenceOptions = ref([
 /* ----------------- Computed ----------------- */
 const token = computed(() => userStore.user.token)
 
-// 根据语言显示不同食物名称
-function displayName(item) {
-  return locale.value === 'zh-Hans' ? item.name_zh : item.name_en
-}
-
-// 过滤食物（下拉联想）
 const filteredFoods = computed(() => {
   if (foodNameInput.value === '') {
-    const currentLang = locale.value
-    if (currentLang === 'zh-Hans') {
-      return availableFoods.filter(f => f.name_zh !== '')
-    } else {
-      return availableFoods.filter(f => f.name_en !== '')
-    }
+    return locale.value === 'zh-Hans'
+      ? availableFoods.filter(f => f.name_zh !== '')
+      : availableFoods.filter(f => f.name_en !== '')
   } else {
-    const currentLang = locale.value
     return availableFoods.filter(f => {
-      if (currentLang === 'zh-Hans') {
+      if (locale.value === 'zh-Hans') {
         return f.name_zh.includes(foodNameInput.value)
       } else {
-        return f.name_en
-          .toLowerCase()
-          .includes(foodNameInput.value.toLowerCase())
+        return f.name_en.toLowerCase().includes(foodNameInput.value.toLowerCase())
       }
     })
   }
 })
+
+function displayName(item) {
+  return locale.value === 'zh-Hans' ? item.name_zh : item.name_en
+}
 
 /* ----------------- Lifecycle ----------------- */
 onMounted(() => {
@@ -188,13 +176,13 @@ onMounted(() => {
   fetchPreferences()
 })
 
-/* ----------------- Watchers ----------------- */
+/* ----------------- Watch ----------------- */
 watch(foodNameInput, newValue => {
-  showFoodList.value = newValue !== ''
+  // 控制下拉列表可见性
+  // 这里略，如果需要可以加 showFoodList.value = newValue !== ''
 })
 
 /* ----------------- Methods ----------------- */
-// 获取偏好
 function fetchPreferences() {
   uni.request({
     url: `${BASE_URL.value}/preferences`,
@@ -213,9 +201,7 @@ function fetchPreferences() {
           preferences.value.push({
             name: matchedOption ? matchedOption.name : t(item.name),
             key: item.name,
-            icon: matchedOption
-              ? matchedOption.icon
-              : 'https://via.placeholder.com/50'
+            icon: matchedOption ? matchedOption.icon : 'https://via.placeholder.com/50'
           })
         })
       } else {
@@ -228,18 +214,18 @@ function fetchPreferences() {
   })
 }
 
-// 输入回调
 function onComboxInput(value) {
   foodNameInput.value = value
 }
 
-// 添加偏好
 function showPreferenceOptions() {
   showModal.value = true
 }
+
 function closeModal() {
   showModal.value = false
 }
+
 function selectPreference(option) {
   uni.request({
     url: `${BASE_URL.value}/preferences`,
@@ -269,7 +255,6 @@ function selectPreference(option) {
   })
 }
 
-// 删除偏好
 function removePreference(index) {
   const preferenceToRemove = preferences.value[index]
   uni.request({
@@ -295,14 +280,11 @@ function removePreference(index) {
   })
 }
 
-// 添加黑名单
 function addDietRestriction() {
   const matchedFood = availableFoods.find(
     f => displayName(f) === foodNameInput.value
   )
-  if (matchedFood) {
-    selectFood(matchedFood)
-  } else {
+  if (!matchedFood) {
     uni.showToast({
       title: t('no_matching_food'),
       icon: 'none',
@@ -311,36 +293,34 @@ function addDietRestriction() {
     return
   }
 
-  if (foodNameInput.value.trim()) {
-    uni.request({
-      url: `${BASE_URL.value}/disliked_preferences`,
-      method: 'POST',
-      header: {
-        Authorization: `Bearer ${token.value}`,
-        'Content-Type': 'application/json'
-      },
-      data: {
-        food_id: matchedFood.id
-      },
-      success: res => {
-        if (res.statusCode === 200) {
-          dietRestrictions.value.push({
-            name: foodNameInput.value.trim(),
-            id: matchedFood.id
-          })
-          foodNameInput.value = ''
-        } else {
-          console.error('Failed to add diet restriction:', res.data)
-        }
-      },
-      fail: err => {
-        console.error('Error adding diet restriction:', err)
+  // 发送请求
+  uni.request({
+    url: `${BASE_URL.value}/disliked_preferences`,
+    method: 'POST',
+    header: {
+      Authorization: `Bearer ${token.value}`,
+      'Content-Type': 'application/json'
+    },
+    data: {
+      food_id: matchedFood.id
+    },
+    success: res => {
+      if (res.statusCode === 200) {
+        dietRestrictions.value.push({
+          name: foodNameInput.value.trim(),
+          id: matchedFood.id
+        })
+        foodNameInput.value = ''
+      } else {
+        console.error('Failed to add diet restriction:', res.data)
       }
-    })
-  }
+    },
+    fail: err => {
+      console.error('Error adding diet restriction:', err)
+    }
+  })
 }
 
-// 删除黑名单
 function removeDietRestriction(index) {
   const restrictionToRemove = dietRestrictions.value[index]
   uni.request({
@@ -366,7 +346,6 @@ function removeDietRestriction(index) {
   })
 }
 
-// 获取黑名单
 function getDietRestriction() {
   uni.request({
     url: `${BASE_URL.value}/disliked_preferences`,
@@ -389,12 +368,6 @@ function getDietRestriction() {
       console.error('Error fetching diet restrictions:', err)
     }
   })
-}
-
-// 选中食物时写入
-function selectFood(foodItem) {
-  // 不需要额外赋值到 food，因为只存id即可
-  foodNameInput.value = displayName(foodItem)
 }
 </script>
 
@@ -522,10 +495,6 @@ function selectFood(foodItem) {
 }
 
 /* 黑名单输入 */
-.add-prestriction {
-  margin-top: 30rpx;
-}
-
 .add-restriction {
   margin-top: 30rpx;
   display: flex;

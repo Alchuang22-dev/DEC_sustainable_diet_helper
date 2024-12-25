@@ -549,6 +549,11 @@ func (nc *NewsController) DeleteNews(c *gin.Context) {
             return err
         }
 
+        // **新增**：删除与该新闻关联的所有评论
+        if err := tx.Where("news_id = ?", news.ID).Delete(&models.Comment{}).Error; err != nil {
+            return err
+        }
+
         // 删除本地图片文件
         for _, image := range news.Images {
             if err := deleteLocalFile(image.URL); err != nil {

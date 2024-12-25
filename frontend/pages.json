@@ -161,7 +161,7 @@
 				{
 					"path": "nutrition_calendar/nutrition_calendar",
 					"style": {
-						"navigationBarTitleText": "营养目标"
+						"navigationBarTitleText": "营养日历"
 					}
 				},
 				{
@@ -197,7 +197,7 @@
 				{
 					"path": "myFamily/myFamily",
 					"style": {
-						"navigationBarTitleText": "为家人计算"
+						"navigationBarTitleText": "管理成员"
 					}
 				}, 
 				{
@@ -211,7 +211,7 @@
 					"path" : "family_share/family_share",
 					"style" : 
 					{
-						"navigationBarTitleText" : "家庭共享"
+						"navigationBarTitleText" : "为家人计算"
 					}
 				}
 			]
