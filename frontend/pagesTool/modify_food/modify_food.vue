@@ -74,7 +74,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n'; // Import useI18n
-import { useFoodListStore } from '@/stores/food_list'; // 引入 Pinia Store
+import { useFoodListStore } from '../stores/food_list'; // 引入 Pinia Store
 import { onLoad } from '@dcloudio/uni-app'; // 引入 onLoad 钩子
 
 const { t, locale } = useI18n();

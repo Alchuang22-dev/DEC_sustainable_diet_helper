@@ -20,8 +20,8 @@ const storedData = uni.getStorageSync(STORAGE_KEY);
 const initialToken = storedData ? JSON.parse(storedData).token : '';
 console.log('token:', initialToken);
 
-// 定义 access_token 有效期（单位：秒），这里假设 15 分钟
-const ACCESS_TOKEN_EXPIRES_IN = 1 * 60;
+// 定义 access_token 有效期（单位：秒），这里修改为 30 分钟
+const ACCESS_TOKEN_EXPIRES_IN = 30 * 60; // 1800 秒
 
 // 定义一个全局定时器 ID
 let tokenRefreshTimer = null;
@@ -38,9 +38,17 @@ const request = (config) => {
           // 处理未授权，比如刷新token
           if (!isRefreshing) {
             isRefreshing = true;
-            // 这里可以添加刷新token的逻辑
-            // 暂时直接拒绝
-            reject(new Error('Unauthorized'));
+            // 刷新token的逻辑
+            refreshToken()
+              .then(() => {
+                isRefreshing = false;
+                // 重新发送原始请求
+                resolve(request(config));
+              })
+              .catch((err) => {
+                isRefreshing = false;
+                reject(err);
+              });
           }
         } else {
           resolve(res);
@@ -58,13 +66,28 @@ const secureStorage = {
       // 使用加密或其他安全方法存储
       // 这里假设使用简单的存储，实际项目中应使用加密
       uni.setStorageSync(SECURE_STORAGE_KEY, token);
+      // 存储 refresh_token 的获取时间，以便后续校验有效期
+      uni.setStorageSync(`${SECURE_STORAGE_KEY}_timestamp`, Date.now());
     } else {
       console.error('当前平台不支持安全存储');
     }
   },
   getRefreshToken: () => {
     if (uni.canIUse('getStorage')) {
-      return uni.getStorageSync(SECURE_STORAGE_KEY);
+      const token = uni.getStorageSync(SECURE_STORAGE_KEY);
+      const timestamp = uni.getStorageSync(`${SECURE_STORAGE_KEY}_timestamp`);
+      if (token && timestamp) {
+        const currentTime = Date.now();
+        const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+        if (currentTime - timestamp < sevenDaysInMs) {
+          return token;
+        } else {
+          // refresh_token 已过期
+          secureStorage.removeRefreshToken();
+          return null;
+        }
+      }
+      return token;
     } else {
       console.error('当前平台不支持安全存储');
       return null;
@@ -73,6 +96,7 @@ const secureStorage = {
   removeRefreshToken: () => {
     if (uni.canIUse('removeStorage')) {
       uni.removeStorageSync(SECURE_STORAGE_KEY);
+      uni.removeStorageSync(`${SECURE_STORAGE_KEY}_timestamp`);
     } else {
       console.error('当前平台不支持安全存储');
     }
@@ -288,12 +312,17 @@ export const useUserStore = defineStore('user', () => {
   // 刷新令牌
   const refreshToken = async () => {
     try {
+      const currentRefreshToken = secureStorage.getRefreshToken();
+      if (!currentRefreshToken) {
+        throw new Error('refresh_token 已过期或不存在');
+      }
+
       const response = await request(createRequestConfig({
         url: `${BASE_URL}/users/refresh`,
         method: 'POST',
         data: {
           // 从安全存储中获取 refresh_token
-          refresh_token: secureStorage.getRefreshToken()
+          refresh_token: currentRefreshToken
         },
         header: {
           'Content-Type': 'application/json'
@@ -440,7 +469,7 @@ export const useUserStore = defineStore('user', () => {
             console.error('自动刷新token失败:', err);
           });
         }, timeBeforeRefresh);
-        console.log(`将在 ${timeBeforeRefresh / 1000} 秒后刷新token`);
+        console.log(`将在 ${Math.floor(timeBeforeRefresh / 1000)} 秒后刷新token`);
       } else {
         // 如果时间已经不足，立即刷新
         refreshToken().catch(err => {

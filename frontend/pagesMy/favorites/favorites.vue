@@ -31,7 +31,7 @@
 	
 	<view class="functions">
 	  <button @click="toggleDrawer" class="add-btn">
-	  		<image src="@/pagesNews/static/plus.svg" alt=">" class="icon"></image>
+	  		<image src="@/pagesNews/static/gengduo.png" alt=">" class="icon"></image>
 	  </button>
 	</view>
 
@@ -207,13 +207,14 @@ body {
 /* 功能区固定左侧 */
 .functions {
   position: fixed;
-  top: 50%;
+  top: 5%;
   left: 0;
+  margin-left: 5px;
   transform: translateY(-50%);
-  background-color: rgba(0, 0, 0, 0.5); /* 半透明背景 */
-  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.25); /* 半透明背景 */
+  padding: 5px;
   border-radius: 8px;
-  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3); /* 增加阴影效果 */
+  box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.1); /* 增加阴影效果 */
   z-index: 10; /* 确保按钮高于其他内容 */
   display: flex;
   flex-direction: column;
@@ -236,7 +237,6 @@ body {
 }
 
 .add-btn {
-  margin-bottom: 10px;
   padding: 10px;
   background-color: #ffffff;
   color: black;

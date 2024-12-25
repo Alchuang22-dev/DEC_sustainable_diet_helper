@@ -82,7 +82,7 @@
       <view
         v-if="isLoggedIn"
         class="menu-item"
-        @click="navigateTo('foodPreferences')"
+        @click="navigateToFoddPreferences('foodPreferences')"
       >
         <image src="@/pages/static/food.svg" class="icon_svg"></image>
         <text class="menu-text">{{$t('menu_food_preferences')}}</text>
@@ -214,6 +214,12 @@ onShow(async () => {
 function navigateTo(page) {
   uni.navigateTo({
     url: `/pagesMy/${page}/${page}`,
+  });
+}
+
+function navigateToFoddPreferences(page) {
+  uni.navigateTo({
+    url: `/pagesTool/${page}/${page}`,
   });
 }
 
