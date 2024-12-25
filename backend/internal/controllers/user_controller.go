@@ -652,7 +652,15 @@ func (uc *UserController) UserBasicDetails(c *gin.Context) {
     }
 
     // 计算已注册的天数
-    registeredDays := int(time.Since(user.CreatedAt).Hours() / 24)
+    location, _ := time.LoadLocation("Local")
+
+    // 将用户创建时间和当前时间转换为服务器时区
+    createdDate := user.CreatedAt.In(location).Truncate(24 * time.Hour)
+    currentDate := time.Now().In(location).Truncate(24 * time.Hour)
+
+    // 计算天数差
+    registeredDays := int(currentDate.Sub(createdDate).Hours()/24)
+    fmt.Println(registeredDays)
 
     c.JSON(http.StatusOK, gin.H{
         "id":             user.ID,
