@@ -1,4 +1,9 @@
 <template>
+  <image
+    src="/static/images/index/background_img.jpg"
+    class="background-image"
+  />
+
   <view class="recipe-page">
     <image
       :src="imageUrl"
