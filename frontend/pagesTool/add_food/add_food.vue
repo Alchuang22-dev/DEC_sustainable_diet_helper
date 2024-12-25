@@ -41,11 +41,11 @@
       </view>
 
       <!-- 图片上传按钮 -->
-      <view class="form-group">
-        <text class="label">{{ $t('upload_food_image') }}</text>
-        <button class="upload-button" @click="uploadImage">{{ $t('take_photo_upload') }}</button>
-        <image v-if="food.imagePath" :src="food.imagePath" class="uploaded-image"></image>
-      </view>
+<!--      <view class="form-group">-->
+<!--        <text class="label">{{ $t('upload_food_image') }}</text>-->
+<!--        <button class="upload-button" @click="uploadImage">{{ $t('take_photo_upload') }}</button>-->
+<!--        <image v-if="food.imagePath" :src="food.imagePath" class="uploaded-image"></image>-->
+<!--      </view>-->
 
       <button class="submit-button" @click="submitFoodDetails">{{ $t('submit') }}</button>
     </view>
@@ -360,7 +360,6 @@ watch(locale, () => {
 }
 
 .input {
-  width: 100%;
   padding: 20rpx;
   border: 1rpx solid var(--border-color);
   border-radius: 10rpx;
@@ -368,7 +367,6 @@ watch(locale, () => {
 }
 
 .picker {
-  width: 100%;
   padding: 20rpx;
   border: 1rpx solid var(--border-color);
   border-radius: 10rpx;
