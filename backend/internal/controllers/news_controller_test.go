@@ -1114,3 +1114,114 @@ func TestGetMyNews(t *testing.T) {
         })
     }
 }
+
+func TestGetMyDrafts(t *testing.T) {
+    db := setupNewsTestDB()
+    db.AutoMigrate(&models.Draft{})
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.GET("/my_drafts", newsController.GetMyDrafts)
+    }
+
+    // 创建用户: userWithDrafts, userNoDrafts
+    userWithDrafts := models.User{
+        OpenID:   "OpenID_GetMyDrafts_Has",
+        Nickname: "UserHasDrafts",
+    }
+    db.Create(&userWithDrafts)
+
+    userNoDrafts := models.User{
+        OpenID:   "OpenID_GetMyDrafts_None",
+        Nickname: "UserNoDrafts",
+    }
+    db.Create(&userNoDrafts)
+
+    // 创建一些草稿
+    d1 := models.Draft{Title: "Draft1", AuthorID: userWithDrafts.ID, UpdatedAt: time.Now().Add(-2 * time.Hour)}
+    db.Create(&d1)
+    d2 := models.Draft{Title: "Draft2", AuthorID: userWithDrafts.ID, UpdatedAt: time.Now().Add(-1 * time.Hour)}
+    db.Create(&d2)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        setupFunc      func()
+        expectedStatus int
+        expectedIDs    []uint
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedIDs:    nil,
+        },
+        {
+            name:           "User With No Drafts",
+            userID:         userNoDrafts.ID,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusOK,
+            expectedIDs:    []uint{},
+        },
+        {
+            name:   "Failed To Fetch Drafts (simulate error)",
+            userID: userWithDrafts.ID,
+            setupFunc: func() {
+                db.Callback().Query().Before("gorm:query").Register("force_get_my_drafts_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "drafts" {
+                        tx.Error = fmt.Errorf("forced get my drafts error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedIDs:    nil,
+        },
+        {
+            name:   "Success Get My Drafts",
+            userID: userWithDrafts.ID,
+            setupFunc: func() {
+                db.Callback().Query().Remove("force_get_my_drafts_err")
+            },
+            expectedStatus: http.StatusOK,
+            // Order("updated_at DESC") => d2 比 d1 时间更新 => [d2, d1]
+            expectedIDs: []uint{d2.ID, d1.ID},
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            req, _ := http.NewRequest("GET", "/news/my_drafts", nil)
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            if w.Code == http.StatusOK {
+                var resp map[string][]uint
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                assert.Equal(t, tc.expectedIDs, resp["draft_ids"])
+            } else if w.Code == http.StatusUnauthorized {
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                assert.Equal(t, "Authorization header missing", resp["error"])
+            } else if w.Code == http.StatusInternalServerError {
+                var resp map[string]interface{}
+                err := json.Unmarshal(w.Body.Bytes(), &resp)
+                assert.NoError(t, err)
+                assert.Equal(t, "Failed to fetch drafts", resp["error"])
+            }
+        })
+    }
+}
