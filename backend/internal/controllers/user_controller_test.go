@@ -813,3 +813,134 @@ func TestSetAvatar(t *testing.T) {
 //         })
 //     }
 // }
+
+// func TestLogoutHandler_NoGenerateFuncNeeded(t *testing.T) {
+//     db := setupUserTestDB()
+
+//     // 定义一个简单的 mockUtils
+//     mockUtils := &MockUtils{
+//         ValidateTokenFunc: func(tokenString string) (*jwt.RegisteredClaims, error) {
+//             // 假设只要收到 "MY_MOCK_REFRESH_TOKEN" 就认为合法
+//             // 并返回 Subject = "123" => userID=123
+//             if tokenString == "MY_MOCK_REFRESH_TOKEN" {
+//                 return &jwt.RegisteredClaims{Subject: "123"}, nil
+//             }
+//             return nil, fmt.Errorf("Invalid refresh token") 
+//         },
+//     }
+
+//     router := setupUserRouter(db, mockUtils)
+
+//     // 先创建个User (ID=123)
+//     user := models.User{
+//         Model: gorm.Model{ID: 123},
+//         OpenID: "OpenID_LogoutTest_123",
+//         Nickname: "LogoutUser",
+//     }
+//     db.Create(&user)
+
+//     // 在 refresh_tokens 表插入一条记录 => token="MY_MOCK_REFRESH_TOKEN"
+//     // ExpiresAt > now, Revoked=false
+//     refToken := models.RefreshToken{
+//         Token:     "MY_MOCK_REFRESH_TOKEN",
+//         UserID:    123,
+//         ExpiresAt: time.Now().Add(24 * time.Hour), // 未过期
+//         Revoked:   false,
+//     }
+//     db.Create(&refToken)
+
+//     // 现在我们就有了 userID=123 的合法 RT
+
+//     t.Run("Success Logout", func(t *testing.T) {
+//         bodyBytes, _ := json.Marshal(gin.H{"refresh_token": "MY_MOCK_REFRESH_TOKEN"})
+//         req, _ := http.NewRequest("POST", "/users/logout", bytes.NewBuffer(bodyBytes))
+//         req.Header.Set("Content-Type", "application/json")
+
+//         w := httptest.NewRecorder()
+//         router.ServeHTTP(w, req)
+
+//         assert.Equal(t, http.StatusOK, w.Code)
+
+//         var resp map[string]interface{}
+//         err := json.Unmarshal(w.Body.Bytes(), &resp)
+//         assert.NoError(t, err)
+//         assert.Equal(t, "Logged out successfully", resp["message"])
+//     })
+// }
+
+func TestUserBasicDetails(t *testing.T) {
+    db := setupUserTestDB()
+    router := setupUserRouter(db, utils.UtilsImpl{})
+
+    // 创建用户
+    user := models.User{
+        OpenID:    "OpenID_BasicDetails_Test",
+        Nickname:  "BasicTester",
+        AvatarURL: "avatars/default.jpg",
+        CreatedAt: time.Now().Add(-48 * time.Hour), // 2天前创建
+    }
+    db.Create(&user)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        setupFunc      func()
+        expectedStatus int
+        expectedError  string
+        isSuccess      bool
+        expectDays     int
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedError:  "Authorization header missing",
+        },
+        {
+            name:           "User Not Found",
+            userID:         99999,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedError:  "User not found",
+        },
+        {
+            name:           "Success Basic Details",
+            userID:         user.ID,
+            setupFunc:      func() {},
+            expectedStatus: http.StatusOK,
+            isSuccess:      true,
+            expectDays:     2, // 因为CreatedAt是2天前
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            req, _ := http.NewRequest("GET", "/users/basic_details", nil)
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTUser(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.isSuccess {
+                // 检查 fields
+                _, ok := resp["id"]
+                assert.True(t, ok)
+                assert.Equal(t, float64(tc.expectDays), resp["registered_days"])
+            } else {
+                if tc.expectedError != "" {
+                    assert.Equal(t, tc.expectedError, resp["error"])
+                }
+            }
+        })
+    }
+}
