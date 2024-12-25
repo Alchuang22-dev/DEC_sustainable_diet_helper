@@ -173,7 +173,7 @@ func importRecipesData(db *gorm.DB, filename string) error {
         recipe := models.Recipe{
             URL:         record[0],
             Name:        record[3],
-            ImageURL:    fmt.Sprintf("recipes_id_%d", recipeID),
+            ImageURL:    fmt.Sprintf("https://cloud.tsinghua.edu.cn/thumbnail/2cea5a0d546d4319a1ef/1024/id_%d-1.png", recipeID+1),
             Ingredients: string(newJsonStr), // 使用转换后的小写JSON字符串
             Foods:       foods,
             Category:    record[5],
