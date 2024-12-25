@@ -23,26 +23,39 @@
         <view class="chart today">
           <text class="chart-title">{{$t('carbon_today')}}</text>
           <view class="today-charts">
-            <!-- 注意这里的 :opts="ringOpts" 若不同时更新，可以保留对 opts 的监听 -->
-            <qiun-data-charts :canvas2d="true" type="ring" :opts="ringOpts"
-                              :chartData="chartTodayData" />
+            <qiun-data-charts
+              :canvas2d="true"
+              type="ring"
+              :opts="ringOpts"
+              :chartData="chartTodayData"
+            />
           </view>
         </view>
 
         <!-- 历史碳排放曲线图 -->
         <view class="chart history">
           <text class="chart-title">{{$t('carbon_history')}}</text>
-          <qiun-data-charts :canvas2d="true" canvas-id="carbonHistoryChart" type="line" :opts="historyOpts"
-                            :chartData="chartHistoryData" />
+          <qiun-data-charts
+            :canvas2d="true"
+            canvas-id="carbonHistoryChart"
+            type="line"
+            :opts="historyOpts"
+            :chartData="chartHistoryData"
+          />
         </view>
 
         <!-- 今日营养情况图表（柱状图） -->
         <view class="chart nutrition">
           <text class="chart-title">{{$t('nutrition_today')}}</text>
           <view class="nutrition-charts">
-            <!-- 若需要同时变动 nutritionOpts 和 chartNutritionData，请参考官方文档 optsWatch=false 的做法 -->
-            <qiun-data-charts :canvas2d="true" canvas-id="xvmMWWFdeOdEnvVDPjotdobEUaWVmvav" type="column" :ontouch="true"
-                              :opts="nutritionOpts" :chartData="chartNutritionData" />
+            <qiun-data-charts
+              :canvas2d="true"
+              canvas-id="xvmMWWFdeOdEnvVDPjotdobEUaWVmvav"
+              type="column"
+              :ontouch="true"
+              :opts="nutritionOpts"
+              :chartData="chartNutritionData"
+            />
           </view>
         </view>
 
@@ -54,32 +67,46 @@
       <text class="tools-title">{{$t('tools_title')}}</text>
       <view class="tools-grid">
         <view class="tool" @click="navigateTo('calculator')" animation="fadeInUp">
-          <image src="https://cdn.pixabay.com/photo/2017/07/06/17/13/calculator-2478633_1280.png"
-                 :alt="$t('tool_carbon_calculator')" class="tool-icon" mode="aspectFill"></image>
+          <image
+            src="https://cdn.pixabay.com/photo/2017/07/06/17/13/calculator-2478633_1280.png"
+            :alt="$t('tool_carbon_calculator')"
+            class="tool-icon"
+            mode="aspectFill"
+          />
           <view class="tool-description">
             <text class="tool-name">{{$t('tool_carbon_calculator')}}</text>
             <text class="tool-info">{{$t('tool_carbon_calculator_info')}}</text>
           </view>
         </view>
         <view class="tool" @click="navigateTo('recommend')" animation="fadeInUp" animation-delay="0.2s">
-          <image src="https://cdn.pixabay.com/photo/2020/03/12/18/37/dish-4925892_1280.png"
-                 :alt="$t('tool_diet_recommendation')" class="tool-icon" mode="aspectFill"></image>
+          <image
+            src="https://cdn.pixabay.com/photo/2020/03/12/18/37/dish-4925892_1280.png"
+            :alt="$t('tool_diet_recommendation')"
+            class="tool-icon"
+            mode="aspectFill"
+          />
           <view class="tool-description">
             <text class="tool-name">{{$t('tool_diet_recommendation')}}</text>
             <text class="tool-info">{{$t('tool_diet_recommendation_info')}}</text>
           </view>
         </view>
         <view class="tool" @click="navigateTo('nutrition')" animation="fadeInUp" animation-delay="0.4s">
-          <image src="https://cdn.pixabay.com/photo/2016/11/14/15/42/calendar-1823848_1280.png"
-                 :alt="$t('tool_nutrition_calculator')" class="tool-icon"></image>
+          <image
+            src="https://cdn.pixabay.com/photo/2016/11/14/15/42/calendar-1823848_1280.png"
+            :alt="$t('tool_nutrition_calculator')"
+            class="tool-icon"
+          />
           <view class="tool-description">
             <text class="tool-name">{{$t('tool_nutrition_calculator')}}</text>
             <text class="tool-info">{{$t('tool_nutrition_calculator_info')}}</text>
           </view>
         </view>
         <view class="tool" @click="navigateTo('family')" animation="fadeInUp" animation-delay="0.6s">
-          <image src="https://cdn.pixabay.com/photo/2016/01/04/14/24/terminal-board-1120961_1280.png"
-                 :alt="$t('tool_family_recipe')" class="tool-icon"></image>
+          <image
+            src="https://cdn.pixabay.com/photo/2016/01/04/14/24/terminal-board-1120961_1280.png"
+            :alt="$t('tool_family_recipe')"
+            class="tool-icon"
+          />
           <view class="tool-description">
             <text class="tool-name">{{$t('tool_family_recipe')}}</text>
             <text class="tool-info">{{$t('tool_family_recipe_info')}}</text>
@@ -92,13 +119,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data.js'
 import { onShow } from '@dcloudio/uni-app';
 import { useUserStore } from '@/stores/user.js'; // 引入用户 store
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const showMore = ref(false)
 
 // 获取 Pinia 存储
@@ -131,29 +158,54 @@ const chartTodayData = ref({
   ]
 })
 
-// 样式设定
-const nutritionOpts = {
+// 样式设定作为 computed 属性，使其依赖于 t()
+const nutritionOpts = computed(() => ({
   color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE"],
   padding: [15, 15, 0, 15],
-  // enableScroll: true,
-  xAxis: { disableGrid: false, axisLine: true, itemCount: 4, rotateLabel: true, rotateAngle: 60},
-  yAxis: {disabled:true},
+  xAxis: {
+    disableGrid: false,
+    axisLine: true,
+    itemCount: 4,
+    rotateLabel: true,
+    rotateAngle: 60 // 保持倾斜角度不变
+  },
+  yAxis: { disabled: true },
   extra: {
     column: {
       width: 20,
       type: 'group',
       seriesGap: 5,
     }
+  },
+  legend: {
+    show: true,
+    position: "bottom",
+    lineHeight: 25
+  },
+  title: {
+    name: t('nutrition_title'), // 假设有对应的翻译键
+    fontSize: 15,
+    color: "#666666"
   }
-}
+}))
 
-const historyOpts = {
+const historyOpts = computed(() => ({
   yAxis: {
     disabled: true
+  },
+  legend: {
+    show: true,
+    position: "bottom",
+    lineHeight: 25
+  },
+  title: {
+    name: t('carbon_history'),
+    fontSize: 15,
+    color: "#666666"
   }
-}
+}))
 
-const ringOpts = {
+const ringOpts = computed(() => ({
   rotate: false,
   rotateLock: false,
   color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE", "#3CA272", "#FC8452", "#9A60B4", "#ea7ccc"],
@@ -163,12 +215,12 @@ const ringOpts = {
   enableScroll: false,
   legend: { show: true, position: "bottom", lineHeight: 25 },
   title: {
-    name: t('total'),
+    name: t('total'), // 多语言支持
     fontSize: 15,
     color: "#666666"
   },
   subtitle: {
-    name: "",
+    name: ringSubtitle.value, // 动态更新
     fontSize: 25,
     color: "#4CAF50"
   },
@@ -184,7 +236,10 @@ const ringOpts = {
       borderColor: "#FFFFFF"
     }
   }
-}
+}))
+
+// 动态 subtitle，响应式
+const ringSubtitle = ref("")
 
 // 根据日期从 store 数据中计算每日数据
 const getDataByDate = (dateString) => {
@@ -250,6 +305,107 @@ const getDataByDate = (dateString) => {
   }
 }
 
+// 用于渲染今日和历史图表
+function renderCharts() {
+  const today = new Date()
+  console.log('today', today)
+  const dateString = today.getFullYear() + '-'
+    + String(today.getMonth() + 1).padStart(2, '0') + '-'
+    + String(today.getDate()).padStart(2, '0');
+  console.log('dateString', dateString)
+  const todayData = getDataByDate(dateString)
+  console.log('todayData', todayData)
+
+  // ----------------
+  // 1. 今日环形图
+  // ----------------
+  if (todayData) {
+    const mealTypes = ['breakfast', 'lunch', 'dinner', 'other']
+    let mealData = []
+    let totalCarbonEmission = 0
+
+    mealTypes.forEach(mealType => {
+      const emission = todayData.meals[mealType].carbonEmission || 0
+      mealData.push({
+        name: t(mealType), // 切换语言时需重新翻译
+        value: emission
+      })
+      totalCarbonEmission += emission
+    })
+
+    // 更新 chartTodayData
+    chartTodayData.value = {
+      series: [
+        { data: mealData }
+      ]
+    }
+
+    // 更新 ringOpts 的 subtitle
+    ringSubtitle.value = `${totalCarbonEmission.toFixed(1)}Kg`
+  }
+
+  // ----------------
+  // 2. 今日营养柱状图
+  // ----------------
+  if (todayData) {
+    const nutrients = ['calories', 'protein', 'fat', 'carbohydrates', 'sodium']
+    const intakeData = nutrients.map(n => todayData.nutrients.actual[n] || 0)
+    const targetData = nutrients.map(n => todayData.nutrients.target[n] || 0)
+
+    chartNutritionData.value = {
+      categories: [
+        t('energy_unit'),
+        t('protein_unit'),
+        t('fat_unit'),
+        t('carbohydrates_unit'),
+        t('sodium_unit')
+      ],
+      series: [
+        { name: t('intake'), data: intakeData },
+        { name: t('target_value'), data: targetData }
+      ]
+    }
+  }
+
+  // ----------------
+  // 3. 历史碳排放曲线图
+  // ----------------
+  const categories = []
+  const targetData = []
+  const actualData = []
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    const ds = `${year}-${month}-${day}`
+    console.log('date string (ds)', ds)
+
+    categories.push(`${month}/${day}`)
+
+    const dailyData = getDataByDate(ds)
+    targetData.push(dailyData ? dailyData.carbonEmission.target : 0)
+    actualData.push(dailyData ? dailyData.carbonEmission.actual : 0)
+  }
+
+  chartHistoryData.value = {
+    categories: categories,
+    series: [
+      { name: t('target_value'), data: targetData },
+      { name: t('actual_value'), data: actualData }
+    ]
+  }
+}
+
+// 监听语言切换，当 locale 改变时重新渲染图表文本
+watch(locale, () => {
+  renderCharts()
+})
+
+// 监听页面显示，获取数据后进行首次渲染
 onShow(async () => {
   uni.setNavigationBarTitle({
     title: t('index')
@@ -270,101 +426,16 @@ onShow(async () => {
     index: 3,
     text: t('my_index')
   })
-  console.log('onMounted')
+  console.log('onShow')
+
   // 获取数据
   await carbonNutritionStore.getNutritionGoals()
   await carbonNutritionStore.getCarbonGoals()
   await carbonNutritionStore.getNutritionIntakes()
   await carbonNutritionStore.getCarbonIntakes()
 
-  // 更新今日数据
-  const today = new Date()
-  console.log('today', today)
-  const dateString = today.getFullYear() + '-'
-      + String(today.getMonth() + 1).padStart(2, '0') + '-'
-      + String(today.getDate()).padStart(2, '0');
-  console.log('dateString', dateString)
-  const todayData = getDataByDate(dateString)
-  console.log('todayData', todayData)
-
-  if (todayData) {
-    // 1. 先构造今日环形图数据的临时变量
-    const mealTypes = ['breakfast', 'lunch', 'dinner', 'other']
-    let mealData = []
-    let totalCarbonEmission = 0
-    mealTypes.forEach(mealType => {
-      const emission = todayData.meals[mealType].carbonEmission || 0
-      mealData.push({
-        name: t(mealType),
-        value: emission
-      })
-      totalCarbonEmission += emission
-    })
-
-    // 今日环形图 chartData 的最终结构
-    let tempChartTodayData = {
-      series: [
-        {data: mealData}
-      ]
-    }
-    // 深拷贝后再赋值，避免局部多次变动
-    chartTodayData.value = JSON.parse(JSON.stringify(tempChartTodayData))
-
-    // 如果需要更新 opts 中的 subtitle，同样建议复制一份
-    let tempRingOpts = JSON.parse(JSON.stringify(ringOpts))
-    tempRingOpts.subtitle.name = `${totalCarbonEmission.toFixed(1)}Kg`
-    // 这里是直接覆盖 ringOpts，若不想组件重复初始化可考虑 :optsWatch="false"
-    Object.assign(ringOpts, tempRingOpts)
-
-    // 2. 更新今日营养柱状图（同样用临时变量整体赋值）
-    const nutrients = ['calories', 'protein', 'fat', 'carbohydrates', 'sodium']
-    const intakeData = nutrients.map(n => todayData.nutrients.actual[n] || 0)
-    const targetData = nutrients.map(n => todayData.nutrients.target[n] || 0)
-    let tempNutritionData = {
-      categories: chartNutritionData.value.categories,  // 保留原先的 categories
-      series: [
-        {name: t('intake'), data: intakeData},
-        {name: t('target_value'), data: targetData}
-      ]
-    }
-    chartNutritionData.value = JSON.parse(JSON.stringify(tempNutritionData))
-  }
-
-  // 更新历史碳排放曲线
-  const categories = []
-  const targetData = []
-  const actualData = []
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-
-    // 获取日期字符串格式化为 YYYY-MM-DD
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0') // 月份是从0开始的，所以加1
-    const day = String(d.getDate()).padStart(2, '0') // 保证日期是两位数
-
-    // 构造 ds 为 YYYY-MM-DD 格式的字符串
-    const ds = `${year}-${month}-${day}`
-    console.log('date string (ds)', ds)
-
-    // 添加到categories
-    categories.push(`${month}/${day}`)
-
-    // 根据 ds 获取数据
-    const dailyData = getDataByDate(ds)
-    targetData.push(dailyData ? dailyData.carbonEmission.target : 0)
-    actualData.push(dailyData ? dailyData.carbonEmission.actual : 0)
-  }
-
-  // 用临时变量构造历史曲线图数据
-  let tempHistoryData = {
-    categories: categories,
-    series: [
-      {name: t('target_value'), data: targetData},
-      {name: t('actual_value'), data: actualData}
-    ]
-  }
-  chartHistoryData.value = JSON.parse(JSON.stringify(tempHistoryData))
+  // 调用渲染函数
+  renderCharts()
 })
 
 // 页面跳转方法
