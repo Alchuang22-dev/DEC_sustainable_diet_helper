@@ -12,7 +12,7 @@ import (
     "os"
     // "path/filepath"
     "testing"
-    // "time"
+    "time"
 
     // "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/config"
     "github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/middleware"
@@ -30,7 +30,8 @@ func setupNewsTestDB() *gorm.DB {
     if err != nil {
         panic("failed to connect database")
     }
-    if err := db.AutoMigrate(&models.User{}, &models.Draft{}, &models.DraftParagraph{}, &models.DraftImage{}); err != nil {
+    if err := db.AutoMigrate(&models.User{}, &models.Draft{}, &models.DraftParagraph{}, &models.DraftImage{},
+        &models.NewsImage{}, &models.Paragraph{}); err != nil {
         panic("failed to migrate models")
     }
     return db
@@ -501,7 +502,6 @@ func TestConvertDraftToNews(t *testing.T) {
 
 func TestUpdateDraft(t *testing.T) {
     db := setupNewsTestDB()
-    // 需要同时迁移新的模型，比如 News，如果 UpdateDraft 中无用则可不做
     router := gin.Default()
     newsController := NewNewsController(db)
 
@@ -509,12 +509,10 @@ func TestUpdateDraft(t *testing.T) {
     {
         newsGroup.Use(middleware.AuthMiddleware())
         {
-            // 假设路由为 /news/draft/:id 进行 PUT
             newsGroup.PUT("/draft/:id", newsController.UpdateDraft)
         }
     }
 
-    // 创建两个用户: draftOwner, otherUser
     draftOwner := models.User{
         OpenID:   "OpenID_UpdateDraft_Owner",
         Nickname: "DraftOwner",
@@ -725,6 +723,142 @@ func TestUpdateDraft(t *testing.T) {
                 _, ok := resp["draft_id"]
                 assert.True(t, ok)
             } else {
+                for k, v := range tc.expectedBody {
+                    assert.Equal(t, v, resp[k])
+                }
+            }
+        })
+    }
+}
+
+func TestDeleteDraft(t *testing.T) {
+    db := setupNewsTestDB()
+
+    router := gin.Default()
+    newsController := NewNewsController(db)
+
+    newsGroup := router.Group("/news")
+    newsGroup.Use(middleware.AuthMiddleware())
+    {
+        newsGroup.DELETE("/draft/:id", newsController.DeleteDraft)
+    }
+
+    // 创建用户 => draftOwner, otherUser
+    draftOwner := models.User{
+        OpenID:   "OpenID_DeleteDraft_Owner",
+        Nickname: "DraftOwner",
+    }
+    db.Create(&draftOwner)
+
+    otherUser := models.User{
+        OpenID:   "OpenID_DeleteDraft_Other",
+        Nickname: "OtherDraftUser",
+    }
+    db.Create(&otherUser)
+
+    // 创建一个草稿 => draft
+    draft := models.Draft{
+        Title:    "DraftToDelete",
+        AuthorID: draftOwner.ID,
+    }
+    db.Create(&draft)
+
+    // 给此草稿插入一些关联图片 => DraftImage
+    img1 := models.DraftImage{DraftID: draft.ID, URL: "some_local_path.jpg"}
+    db.Create(&img1)
+
+    tests := []struct {
+        name           string
+        userID         uint
+        draftID        string
+        setupFunc      func()
+        expectedStatus int
+        expectedBody   map[string]interface{}
+    }{
+        {
+            name:           "Unauthorized (no token)",
+            userID:         0,
+            draftID:        "1",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusUnauthorized,
+            expectedBody:   map[string]interface{}{"error": "Authorization header missing"},
+        },
+        {
+            name:           "Invalid Draft ID",
+            userID:         draftOwner.ID,
+            draftID:        "abc",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusBadRequest,
+            expectedBody:   map[string]interface{}{"error": "Invalid draft ID"},
+        },
+        {
+            name:           "Draft Not Found",
+            userID:         draftOwner.ID,
+            draftID:        "99999",
+            setupFunc:      func() {},
+            expectedStatus: http.StatusNotFound,
+            expectedBody:   map[string]interface{}{"error": "Draft not found"},
+        },
+        {
+            name:           "No Permission (403)",
+            userID:         otherUser.ID,
+            draftID:        fmt.Sprintf("%d", draft.ID),
+            setupFunc:      func() {},
+            expectedStatus: http.StatusForbidden,
+            expectedBody:   map[string]interface{}{"error": "You do not have permission to delete this draft"},
+        },
+        {
+            name:           "Failed to Delete Draft (simulate DB error)",
+            userID:         draftOwner.ID,
+            draftID:        fmt.Sprintf("%d", draft.ID),
+            setupFunc: func() {
+                // 在 delete(draft) 或 delete(draftParagraph) 时注入错误
+                db.Callback().Delete().Before("gorm:delete").Register("force_delete_draft_err", func(tx *gorm.DB) {
+                    if tx.Statement.Table == "drafts" {
+                        tx.Error = fmt.Errorf("forced delete draft error")
+                    }
+                })
+            },
+            expectedStatus: http.StatusInternalServerError,
+            expectedBody:   map[string]interface{}{"error": "Failed to delete draft"},
+        },
+        {
+            name:           "Success Delete Draft",
+            userID:         draftOwner.ID,
+            draftID:        fmt.Sprintf("%d", draft.ID),
+            setupFunc: func() {
+                // 移除上一个回调
+                db.Callback().Delete().Remove("force_delete_draft_err")
+                // 如果需要重复测试删除，用完后还要重新创建 Draft
+                // 这里仅示例一次删除操作
+            },
+            expectedStatus: http.StatusOK,
+            expectedBody:   map[string]interface{}{"message": "Draft deleted successfully."},
+        },
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            tc.setupFunc()
+
+            req, _ := http.NewRequest("DELETE", "/news/draft/"+tc.draftID, nil)
+            if tc.userID != 0 {
+                req.Header.Set("Authorization", "Bearer "+generateValidJWTNews(tc.userID))
+            }
+
+            w := httptest.NewRecorder()
+            router.ServeHTTP(w, req)
+
+            assert.Equal(t, tc.expectedStatus, w.Code)
+
+            var resp map[string]interface{}
+            err := json.Unmarshal(w.Body.Bytes(), &resp)
+            assert.NoError(t, err)
+
+            if tc.expectedStatus == http.StatusOK {
+                assert.Equal(t, tc.expectedBody["message"], resp["message"])
+            } else {
+                // 对错误情况进行断言
                 for k, v := range tc.expectedBody {
                     assert.Equal(t, v, resp[k])
                 }
