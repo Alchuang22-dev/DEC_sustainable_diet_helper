@@ -68,7 +68,7 @@ const memberRatio = reactive({})
 const carbonEmissionData = ref(0)
 const nutritionData = reactive({})
 const mealType = ref('')
-const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
+const BASE_URL = 'https://xcxcs.uwdjl.cn:8080'
 
 /* ----------------- Computed ----------------- */
 const totalRatio = computed(() => {
@@ -182,7 +182,7 @@ function submitData() {
   }
 
   uni.request({
-    url: 'http://122.51.231.155:8095/nutrition-carbon/shared/nutrition-carbon',
+    url: `${BASE_URL}/nutrition-carbon/shared/nutrition-carbon`,
     method: 'POST',
     data: requestData,
     header: {
