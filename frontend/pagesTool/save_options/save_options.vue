@@ -123,7 +123,8 @@ function saveForSelf() {
     ]
   }
   uni.request({
-    url: `${BASE_URL}/nutrition-carbon/shared/nutrition-carbon`,
+    url: 'https://xcxcs.uwdjl.cn/nutrition-carbon/shared/nutrition-carbon',
+
     method: 'POST',
     data: requestData,
     header: {

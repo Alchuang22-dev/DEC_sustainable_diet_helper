@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { reactive, watch } from 'vue'
 import { useUserStore } from '../../stores/user.js'
 
-const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
+const BASE_URL = 'https://xcxcs.uwdjl.cn'
 export const FamilyStatus = {
   NOT_JOINED: 'empty',
   PENDING_APPROVAL: 'waiting',

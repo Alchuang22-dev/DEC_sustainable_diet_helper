@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia'
 import { reactive, watch } from 'vue'
 
-const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
+const BASE_URL = 'https://xcxcs.uwdjl.cn'
 export const UserStatus = {
   LOGGED_OUT: 'logged_out',
   LOGGED_IN: 'logged_in'
@@ -336,6 +336,7 @@ export const useUserStore = defineStore('user', () => {
         })
       )
       if (response.statusCode === 200) {
+		  console.log('获取的用户信息：', response.data);
         const data = response.data
         user.uid = data.id
         user.nickName = data.nickname

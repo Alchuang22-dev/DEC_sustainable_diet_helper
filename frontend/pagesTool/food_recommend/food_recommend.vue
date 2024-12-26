@@ -68,7 +68,7 @@ const { t } = useI18n()
 const foodStore = useFoodListStore()
 const userStore = useUserStore()
 
-const BASE_URL = ref('http://xcxcs.uwdjl.cn:8080')
+const BASE_URL = ref('https://xcxcs.uwdjl.cn')
 const token = ref(userStore.user.token)
 
 /* ----------------- Reactive & State ----------------- */

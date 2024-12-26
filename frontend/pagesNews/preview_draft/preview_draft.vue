@@ -34,7 +34,7 @@ import { useUserStore } from '@/stores/user'
 
 /* ----------------- Setup ----------------- */
 const userStore = useUserStore()
-const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
+const BASE_URL = 'https://xcxcs.uwdjl.cn'
 const PageId = ref('')
 
 const post = ref({ components: [] })

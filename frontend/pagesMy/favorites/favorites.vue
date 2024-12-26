@@ -87,7 +87,7 @@ const maskClick = true
 const isDrawerVisible = ref(false)
 
 // 若需根据后端拼接头像，可自定义 BASE_URL；此处简化为空字符串或自行替换
-const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
+const BASE_URL = 'https://xcxcs.uwdjl.cn'
 
 /* ----------------- Computed ----------------- */
 const isLoggedIn = computed(() => userStore.user.isLoggedIn)
