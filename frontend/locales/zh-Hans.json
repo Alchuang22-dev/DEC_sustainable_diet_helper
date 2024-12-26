@@ -351,9 +351,9 @@
 	"add_image": "添加图片组件",
 	"release_but": "发布",
 	"save_draft": "保存草稿",
-	"issue_confirm": "发布确认",
-	"ano_issue": "匿名发布",
-	"confirm_issue": "确认发布",
+	"issue_confirm": "是否保存",
+	"ano_issue": "存放",
+	"confirm_issue": "保存手账",
 
 	"pork": "猪肉",
 	"chinese cabbage": "白菜",
