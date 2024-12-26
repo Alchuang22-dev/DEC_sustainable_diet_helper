@@ -126,6 +126,11 @@ export const useNewsStore = defineStore('news', {
         } else {
           const res = await request(createRequestConfig({ url, method: 'GET' }))
           const newsIds = res.data?.news_ids || []
+		  if (res.statusCode != 200){
+			  uni.navigateTo({
+			  	url: "/pagesNews/error_page/error_page",
+			  })
+		  }
           if (newsIds.length) {
             const newsDetails = await Promise.all(newsIds.map(id => this.getNewsDetails(id)))
             this.rawNewsData = newsDetails
@@ -134,6 +139,9 @@ export const useNewsStore = defineStore('news', {
         }
       } catch (error) {
         console.error('Error fetching data:', error)
+		uni.navigateTo({
+			url: "/pagesNews/error_page/error_page",
+		})
       } finally {
         this.isLoading = false
         clearTimeout(loadingTimeout)

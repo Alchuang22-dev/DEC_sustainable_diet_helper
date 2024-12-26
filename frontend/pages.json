@@ -86,7 +86,7 @@
 			}, {
 				"path": "create_news/create_news",
 				"style": {
-					"navigationBarTitleText": "创作"				
+					"navigationBarTitleText": "添加备忘录"				
 				}
 			}, {
 				"path": "edit_draft/edit_draft",
@@ -97,6 +97,11 @@
 				"path": "preview_draft/preview_draft",
 				"style": {
 					"navigationBarTitleText": "预览"				
+				}
+			},{
+				"path": "error_page/error_page",
+				"style": {
+					"navigationBarTitleText": "错误"				
 				}
 			}]
 		},

@@ -227,6 +227,7 @@ function closeModal() {
 }
 
 function selectPreference(option) {
+	console.log(option.key);
   uni.request({
     url: `${BASE_URL.value}/preferences`,
     method: 'POST',
