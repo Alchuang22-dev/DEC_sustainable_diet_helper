@@ -10,6 +10,7 @@ COPY go.mod go.sum ./
 COPY vendor/ vendor/
 ENV GOPROXY=off
 ENV GOFLAGS=-mod=vendor
+ENV TZ=Asia/Shanghai
 
 # ENV GOFLAGS=-mod=vendor
 
@@ -19,6 +20,9 @@ ENV GOFLAGS=-mod=vendor
 
 # Copy the application source code
 COPY . .
+
+RUN mkdir -p /app/upload/avatars && \
+    wget -O /app/upload/avatars/default.jpg https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
 
 # Build the Go application
 # RUN go build -o main ./cmd/main.go
