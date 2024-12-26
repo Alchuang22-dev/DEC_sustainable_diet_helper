@@ -119,7 +119,7 @@ const { t, locale } = useI18n()
 const foodStore = useFoodListStore()
 const userStore = useUserStore()
 const { availableFoods, fetchAvailableFoods } = foodStore
-const BASE_URL = ref('http://xcxcs.uwdjl.cn:8080')
+const BASE_URL = ref('https://xcxcs.uwdjl.cn')
 
 /* ----------------- Reactive & State ----------------- */
 const foodNameInput = ref('')

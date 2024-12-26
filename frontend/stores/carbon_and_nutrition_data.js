@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { reactive, watch } from 'vue'
 import { useUserStore } from './user.js'
 
-const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
+const BASE_URL = 'https://xcxcs.uwdjl.cn'
 const STORAGE_KEY = 'carbon_and_nutrition_store_data'
 
 // 递归遍历，对数值字段四舍五入到 1 位小数

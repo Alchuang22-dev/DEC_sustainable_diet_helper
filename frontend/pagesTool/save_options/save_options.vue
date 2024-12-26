@@ -121,7 +121,7 @@ function saveForSelf() {
     ]
   }
   uni.request({
-    url: 'http://122.51.231.155:8095/nutrition-carbon/shared/nutrition-carbon',
+    url: 'https://xcxcs.uwdjl.cn/nutrition-carbon/shared/nutrition-carbon',
     method: 'POST',
     data: requestData,
     header: {

@@ -400,7 +400,7 @@ const foodStore = useFoodListStore()
 const family = computed(() => familyStore.family)
 const FamilyStatusEnum = FamilyStatus
 
-const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
+const BASE_URL = 'https://xcxcs.uwdjl.cn'
 
 // 当前用户
 if (!userStore.user.isLoggedIn) {

@@ -136,7 +136,7 @@ const backgroundImageUrl = ref('/static/images/index/background_img.jpg')
 const currentTab = ref('published')
 
 // 后端地址，若无需动态可直接写死；暂示例
-const BASE_URL = ref('http://xcxcs.uwdjl.cn:8080')
+const BASE_URL = ref('https://xcxcs.uwdjl.cn')
 
 /* ----------------- Computed ----------------- */
 const user_id = computed(() => userStore.user.uid)

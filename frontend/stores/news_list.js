@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { computed } from 'vue'
 import { useUserStore } from './user.js'
 
-const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
+const BASE_URL = 'https://xcxcs.uwdjl.cn'
 
 // 统一使用与 carbon_and_nutrition_data.js 类似的请求封装
 function createRequestConfig(config) {

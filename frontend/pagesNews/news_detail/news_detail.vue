@@ -206,7 +206,7 @@ import { useUserStore } from '../../stores/user'
 
 /* ----------------- Setup ----------------- */
 const userStore = useUserStore()
-const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
+const BASE_URL = 'https://xcxcs.uwdjl.cn'
 const PageId = ref('')
 
 const post = ref({ components: [] })
@@ -226,7 +226,7 @@ const user_id = computed(() => userStore.user.uid)
 const jwtToken = computed(() => userStore.user.token)
 const avatarSrc_sh = computed(() =>
   userStore.user.avatarUrl
-    ? userStore.user.avatarUrl
+    ? `${BASE_URL}/${userStore.user.avatarUrl}`
     : '/static/images/index/background_img.jpg'
 )
 
