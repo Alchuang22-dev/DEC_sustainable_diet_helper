@@ -21,9 +21,6 @@ ENV TZ=Asia/Shanghai
 # Copy the application source code
 COPY . .
 
-RUN mkdir -p /app/upload/avatars && \
-    wget -O /app/upload/avatars/default.jpg https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
-
 # Build the Go application
 # RUN go build -o main ./cmd/main.go
 
