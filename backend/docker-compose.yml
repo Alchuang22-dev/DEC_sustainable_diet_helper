@@ -25,6 +25,8 @@ services:
       - backend
       - frontend
     restart: on-failure
+    volumes:
+      - ./upload:/app/upload
 
   db:
     image: mysql:8.0
