@@ -68,6 +68,7 @@ const memberRatio = reactive({})
 const carbonEmissionData = ref(0)
 const nutritionData = reactive({})
 const mealType = ref('')
+
 const BASE_URL = 'https://xcxcs.uwdjl.cn'
 
 /* ----------------- Computed ----------------- */
