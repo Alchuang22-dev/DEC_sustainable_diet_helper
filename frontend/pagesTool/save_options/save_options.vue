@@ -52,7 +52,7 @@ const familyStatus = computed(() => familyStore.family.status)
 const uid = computed(() => userStore.user.uid)
 const token = computed(() => userStore.user.token)
 
-const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
+const BASE_URL = 'https://xcxcs.uwdjl.cn'
 
 /* ----------------- 数据：餐食类型 ----------------- */
 const mealTypesDisplay = [t('breakfast'), t('lunch'), t('dinner'), t('other')]

@@ -10,6 +10,7 @@ COPY go.mod go.sum ./
 COPY vendor/ vendor/
 ENV GOPROXY=off
 ENV GOFLAGS=-mod=vendor
+ENV TZ=Asia/Shanghai
 
 # ENV GOFLAGS=-mod=vendor
 
