@@ -13,6 +13,56 @@
       />
       <text class="title">{{ t('welcome_title') }}</text>
     </view>
+	
+	<view class="popup_container">
+		<view v-if="isVisible" class="popup-overlay">
+	    <view class="popup-content">
+	      <view class="popup-text" ref="scrollableText">
+	        <!-- 这里是用户协议和功能介绍的文本 -->
+			<view>
+				<text>欢迎来到DEC碳计算器！</text>
+			</view>
+			<view>
+				<text>在使用我们的软件前，希望您阅读以下内容：</text>
+			</view>
+	        <view>
+				<text>【核心功能】</text>
+			</view>
+			<view>
+				<text>您可以在主页或工具页体验我们的核心功能</text>
+			</view>
+			<view>
+				<text>碳计算器：您可以在此处计算您每餐的碳排放和营养信息</text>
+			</view>
+			<view>
+				<text>食谱推荐：您可以在此处获取我们推荐的食材和食谱</text>
+			</view>
+			<view>
+				<text>营养日历：您可以在此处管理您的营养计划</text>
+			</view>
+			<view>
+				<text>家庭管理：您可以在此处管理您的家庭饮食</text>
+			</view>
+			<view>
+				<text>【星球】</text>
+			</view>
+			<view>
+				<text>星球内容的管理权属本团队及本程序所在平台管理方共有</text>
+			</view>
+			<view>
+				<text>在非测试环境下，我们不保证本功能的开放及运营</text>
+			</view>
+			<view>
+				<text>【用户】</text>
+			</view>
+			<view>
+				<text>如果您需要进行用户设置、管理权限及获取软件信息，请移至用户页</text>
+			</view>
+	      </view>
+	      <button @click="confirm">我知道了</button>
+	    </view>
+	  </view>
+	</view>
 
     <!-- 碳排放信息 -->
     <view class="carbon-info">
@@ -121,7 +171,7 @@
 
 <script setup>
 /* ----------------- Imports ----------------- */
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useI18n } from 'vue-i18n'
 import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data.js'
@@ -407,6 +457,25 @@ function renderCharts() {
     ]
   }
 }
+/* ----------------- window ------------------ */
+const isVisible = ref(true); // 控制弹窗显示
+const canConfirm = ref(false); // 确认按钮是否可点击
+const scrollableText = ref(null); // 滚动区域的引用
+
+// 检测用户是否滚动到文本底部
+const checkScrollPosition = () => {
+  const textElement = scrollableText.value;
+  if (textElement.scrollTop + textElement.clientHeight >= textElement.scrollHeight - 100) {
+    canConfirm.value = true;
+  } else {
+    canConfirm.value = false;
+  }
+};
+
+// 用户点击确认按钮
+const confirm = () => {
+  isVisible.value = false;
+};
 
 /* ----------------- Watch ----------------- */
 // 切换语言时刷新图表
@@ -431,6 +500,11 @@ onShow(async () => {
   // 渲染图表
   renderCharts()
 })
+
+// 当页面加载时，设置滚动检测
+onMounted(() => {
+  scrollableText.value.addEventListener('scroll', checkScrollPosition);
+});
 
 /* ----------------- Methods: Page Navigation ----------------- */
 function navigateToNutritionCalendar() {
@@ -670,6 +744,43 @@ function navigateTo(page) {
 .tool-info {
   font-size: 20rpx;
   color: #666;
+}
+
+.popup_container{
+	z-index: 20;
+}
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* 确保弹窗在最上层 */
+}
+
+.popup-content {
+  background: white;
+  padding: 20px;
+  width: 80%;
+  max-width: 500px;
+  max-height: 80%;
+  overflow: hidden;
+}
+
+.popup-text {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+
+button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 
 @keyframes fadeInDown {
