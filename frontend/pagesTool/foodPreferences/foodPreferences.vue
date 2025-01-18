@@ -247,6 +247,11 @@ function selectPreference(option) {
         })
         closeModal()
       } else {
+		uni.showToast({
+		  title: '已存在偏好',
+		  icon: 'fail',
+		  duration: 2000
+		})
         console.error('Failed to add preference:', res.data)
       }
     },
