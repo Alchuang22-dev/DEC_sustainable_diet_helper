@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-const BASE_URL = 'https://xcxcs.uwdjl.cn'
+const BASE_URL = 'https://dechelper.com'
 
 function extractNumber(value) {
   if (typeof value === 'string') {

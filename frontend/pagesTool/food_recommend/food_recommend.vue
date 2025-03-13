@@ -68,7 +68,7 @@ const { t } = useI18n()
 const foodStore = useFoodListStore()
 const userStore = useUserStore()
 
-const BASE_URL = ref('https://xcxcs.uwdjl.cn')
+const BASE_URL = ref('https://dechelper.com')
 const token = ref(userStore.user.token)
 
 /* ----------------- Reactive & State ----------------- */

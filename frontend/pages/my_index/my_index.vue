@@ -126,7 +126,7 @@ const {t} = useI18n()
 const userStore = useUserStore()
 
 /* ----------------- Reactive & State ----------------- */
-const BASE_URL = 'https://xcxcs.uwdjl.cn'
+const BASE_URL = 'https://dechelper.com'
 const isLoggedIn = computed(() => userStore.user.isLoggedIn)
 const avatarSrc = computed(() =>
     userStore.user.avatarUrl && userStore.user.avatarUrl !== 'avatars/default.jpg'

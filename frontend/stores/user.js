@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia'
 import { reactive, watch } from 'vue'
 
-const BASE_URL = 'https://xcxcs.uwdjl.cn'
+const BASE_URL = 'https://dechelper.com'
 export const UserStatus = {
   LOGGED_OUT: 'logged_out',
   LOGGED_IN: 'logged_in'
