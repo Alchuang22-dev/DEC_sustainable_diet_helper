@@ -683,9 +683,10 @@ func (nc *NutritionCarbonController) SetSharedNutritionCarbonIntake(c *gin.Conte
         if share.Ratio == 0 {
             continue
         }
+        adjustedDate := req.Date.Add(-8 * time.Hour)
         nutritionIntake := models.NutritionIntake{
             UserID:        share.UserID,
-            Date:         req.Date,
+            Date:         adjustedDate,
             MealType:     req.MealType,
             Calories:     req.Calories * share.Ratio,
             Protein:      req.Protein * share.Ratio,
@@ -696,7 +697,7 @@ func (nc *NutritionCarbonController) SetSharedNutritionCarbonIntake(c *gin.Conte
         log.Printf("创建营养摄入记录成功")
         carbonIntake := models.CarbonIntake{
             UserID: share.UserID,
-            Date: req.Date,
+            Date: adjustedDate,
             MealType: req.MealType,
             Emission: req.Emission * share.Ratio,
         }
