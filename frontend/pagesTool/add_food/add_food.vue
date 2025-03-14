@@ -102,7 +102,6 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFoodListStore } from '../stores/food_list'
 import { useUserStore } from '@/stores/user'
-const OpenAI = require("openai")
 
 
 /* ----------------- Setup ----------------- */
@@ -166,10 +165,7 @@ function displayName(item) {
 }
 
 /* ----------------- Client -----------------*/
-client = new OpenAI({
-    apiKey: "sk-AHRadCFIs0kKzq78Z3m0Np4n9YhXreq0JIxN6sWsxWtJi0NJ", 
-    baseURL: "https://api.moonshot.cn/v1",
-})
+
 
 /* ----------------- Lifecycle ----------------- */
 onMounted(() => {
@@ -277,7 +273,45 @@ function chooseFoodPhoto() {
  */
 
 function callLLMApi(imagePath) {
-//todo:网络请求
+	//console.log("正在使用AI进行搜寻:",imagePath)
+	uni.request({
+		url: `${BASE_URL}/ai/analyze-image`,
+		method: 'POST',
+		header: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.value}`
+        },
+        data: {
+			image_url: imagePath
+        },
+		success: (res) => {
+		  //console.log(res.data.text)
+		  const rawName = extractName(res.data.text)
+		  foodNameInput.value = t(`${rawName}`) || rawName
+		},
+		fail: (err) => {
+		  console.error('Error fetching ai', err)
+		  uni.showToast({
+		    title: '识别失败',
+		    icon: 'none',
+		    duration: 2000
+		  })
+		}
+	})
+}
+
+function extractName(str) {
+  try {
+    const obj = JSON.parse(str)
+    // 检查是否存在 obj.name 并且是字符串
+    if (obj && typeof obj.name === 'string') {
+      return obj.name
+    }
+    return ''
+  } catch (err) {
+    // 如果 JSON.parse 出错，则返回空字符串
+    return ''
+  }
 }
 
 
