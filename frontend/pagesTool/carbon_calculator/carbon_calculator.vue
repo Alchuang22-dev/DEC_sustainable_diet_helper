@@ -3,7 +3,7 @@
     <image src="../static/background_img.jpg" class="background-image"></image>
 
     <view class="header-card">
-      <text class="header-title">{{ $t('carbon_calculator') }}</text>
+      <text class="header-title">{{ t('carbon_calculator') }}</text>
     </view>
 
     <uni-section :title="t('added_foods')" type="line">
@@ -14,52 +14,52 @@
             <uni-collapse-item
               v-for="(food, index) in displayFoodList"
               :key="food.id"
-              :title="food.displayName || $t('default_food_name')"
+              :title="food.displayName || t('default_food_name')"
               :thumb="food.displayImage || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
             >
               <view class="food-details">
                 <image
-                  :src="food.displayImage || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
-                  class="food-image"
-                  mode="aspectFill"
+                    :src="food.displayImage || 'https://cdn.pixabay.com/photo/2015/05/16/15/03/tomatoes-769999_1280.jpg'"
+                    class="food-image"
+                    mode="aspectFill"
                 />
                 <view class="food-info">
                   <view class="info-grid">
                     <uni-tag
-                      :text="t('weight') + ': ' + (food.weight + 'kg')"
-                      type="primary"
-                      size="small"
+                        :text="t('weight') + ': ' + (food.weight + 'kg')"
+                        type="primary"
+                        size="small"
                     />
                     <uni-tag
-                      :text="t('price') + ': ' + (food.price + t('yuan'))"
-                      type="success"
-                      size="small"
+                        :text="t('price') + ': ' + (food.price + t('yuan'))"
+                        type="success"
+                        size="small"
                     />
                     <uni-tag
-                      v-if="food.transportMethod"
-                      :text="t(`transport_${food.transportMethod}`)"
-                      type="warning"
-                      size="small"
+                        v-if="food.transportMethod"
+                        :text="t(`transport_${food.transportMethod}`)"
+                        type="warning"
+                        size="small"
                     />
                     <uni-tag
-                      v-if="food.foodSource"
-                      :text="t(`source_${food.foodSource}`)"
-                      type="info"
-                      size="small"
+                        v-if="food.foodSource"
+                        :text="t(`source_${food.foodSource}`)"
+                        type="info"
+                        size="small"
                     />
                   </view>
                   <view class="action-row">
                     <uni-icons
-                      type="compose"
-                      size="20"
-                      color="#2979ff"
-                      @click.stop="handleEdit(index)"
+                        type="compose"
+                        size="20"
+                        color="#2979ff"
+                        @click.stop="handleEdit(index)"
                     />
                     <uni-icons
-                      type="trash"
-                      size="20"
-                      color="#dd524d"
-                      @click.stop="handleDelete(index)"
+                        type="trash"
+                        size="20"
+                        color="#dd524d"
+                        @click.stop="handleDelete(index)"
                     />
                   </view>
                 </view>
@@ -68,7 +68,7 @@
 
             <!-- 空列表提示 -->
             <view v-if="displayFoodList.length === 0" class="empty-state">
-              <text>{{ $t('no_foods_added') }}</text>
+              <text>{{ t('no_foods_added') }}</text>
             </view>
           </uni-collapse>
         </scroll-view>
@@ -78,17 +78,17 @@
           <uni-row :gutter="10">
             <uni-col :span="8">
               <view class="action-button primary" @click="navigateToAddFood">
-                <text>{{ $t('add_food') }}</text>
+                <text>{{ t('add_food') }}</text>
               </view>
             </uni-col>
             <uni-col :span="8">
               <view class="action-button success" @click="saveData">
-                <text>{{ $t('save_additions') }}</text>
+                <text>{{ t('save_additions') }}</text>
               </view>
             </uni-col>
             <uni-col :span="8">
               <view class="action-button warning" @click="calculateData">
-                <text>{{ $t('start_calculation') }}</text>
+                <text>{{ t('start_calculation') }}</text>
               </view>
             </uni-col>
           </uni-row>
@@ -101,28 +101,28 @@
       <uni-section :title="t('results')" type="line">
         <view class="charts-container">
           <view class="chart-wrapper">
-            <text class="chart-title">{{ $t('your_carbon_footprint') }}</text>
+            <text class="chart-title">{{ t('your_carbon_footprint') }}</text>
             <qiun-data-charts
-              :canvas2d="true"
-              type="ring"
-              :opts="ringOpts"
-              :chartData="chartEmissionData"
+                :canvas2d="true"
+                type="ring"
+                :opts="ringOpts"
+                :chartData="chartEmissionData"
             />
           </view>
 
           <view class="chart-wrapper">
-            <text class="chart-title">{{ $t('your_nutrition_intake') }}</text>
+            <text class="chart-title">{{ t('your_nutrition_intake') }}</text>
             <qiun-data-charts
-              :canvas2d="true"
-              type="bar"
-              :opts="barOpts"
-              :chartData="chartNutritionData"
+                :canvas2d="true"
+                type="bar"
+                :opts="barOpts"
+                :chartData="chartNutritionData"
             />
           </view>
 
           <view class="action-button-container">
             <view class="action-button primary" @click="handleSaveOptions">
-              <text>{{ $t('save') }}</text>
+              <text>{{ t('save') }}</text>
             </view>
           </view>
         </view>
@@ -132,27 +132,20 @@
 </template>
 
 <script setup>
-/**
- * 碳排放计算器页面：展示用户添加的食品列表，并可进行碳排放/营养综合计算
- */
+/* ----------------- Imports ----------------- */
+import {ref, computed, onMounted} from 'vue'
+import {useI18n} from 'vue-i18n'
+import {useFoodListStore} from '../stores/food_list'
+import {useCarbonAndNutritionStore} from '@/stores/carbon_and_nutrition_data'
 
-import { ref, computed, onMounted } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { useFoodListStore } from '../stores/food_list'
-import { useCarbonAndNutritionStore } from '@/stores/carbon_and_nutrition_data'
-
-// 多语言
-const { t, locale } = useI18n()
-
-// Pinia
+/* ----------------- Setup ----------------- */
+const {t, locale} = useI18n()
 const foodStore = useFoodListStore()
 const carbonNutritionStore = useCarbonAndNutritionStore()
 
-// 解构 store 的部分方法
 const {
   foodList,
   deleteFood,
-  updateFood,
   saveFoodList,
   loadFoodList,
   fetchAvailableFoods,
@@ -161,11 +154,11 @@ const {
   getFoodName
 } = foodStore
 
-// 是否显示结果图表
+/* ----------------- Reactive & State ----------------- */
 const showResult = ref(false)
 
 /**
- * 碳排放环形图
+ * 碳排放环形图数据
  */
 const chartEmissionData = ref({
   series: [
@@ -177,7 +170,7 @@ const chartEmissionData = ref({
 })
 
 /**
- * 营养条形图
+ * 营养条形图数据
  */
 const chartNutritionData = ref({
   categories: [
@@ -279,6 +272,7 @@ const barOpts = ref({
   }
 })
 
+/* ----------------- Computed ----------------- */
 /**
  * 计算属性：显示食物列表（根据语言）
  */
@@ -286,11 +280,10 @@ const displayFoodList = computed(() => {
   return foodList.map(food => {
     const found = availableFoods.find(f => f.id === food.id)
     const displayName = found
-      ? (locale.value === 'zh-Hans' ? found.name_zh : found.name_en)
-      : (food.name || t('default_food_name'))
+        ? (locale.value === 'zh-Hans' ? found.name_zh : found.name_en)
+        : (food.name || t('default_food_name'))
 
     const displayImage = found?.image_url || ''
-
     return {
       ...food,
       displayName,
@@ -299,9 +292,16 @@ const displayFoodList = computed(() => {
   })
 })
 
-/**
- * 动画效果：页面加载时触发
- */
+/* ----------------- Lifecycle ----------------- */
+onMounted(() => {
+  if (!foodStore.loaded) {
+    loadFoodList()
+  }
+  fetchAvailableFoods()
+  handleLoad()
+})
+
+/* ----------------- Methods ----------------- */
 function handleLoad() {
   foodList.forEach((food, index) => {
     setTimeout(() => {
@@ -313,9 +313,6 @@ function handleLoad() {
   })
 }
 
-/**
- * 保存列表到本地
- */
 function saveData() {
   saveFoodList()
   uni.showToast({
@@ -325,9 +322,6 @@ function saveData() {
   })
 }
 
-/**
- * 删除某项食物
- */
 function handleDelete(index) {
   deleteFood(index)
   uni.showToast({
@@ -337,32 +331,20 @@ function handleDelete(index) {
   })
 }
 
-/**
- * 跳转到修改页面
- */
 function handleEdit(index) {
   uni.navigateTo({
     url: `/pagesTool/modify_food/modify_food?index=${index}`
   })
 }
 
-/**
- * 跳转到添加食物页面
- */
 function navigateToAddFood() {
   uni.navigateTo({
     url: '/pagesTool/add_food/add_food'
   })
 }
 
-/**
- * 小数处理：保留1位
- */
 const roundToOneDecimal = (num) => Number(num.toFixed(1))
 
-/**
- * 计算碳排放和营养信息
- */
 async function calculateData() {
   try {
     await calculateNutritionAndEmission()
@@ -436,30 +418,15 @@ async function calculateData() {
   }
 }
 
-/**
- * 点击 “保存” 按钮，跳转到保存选项页面
- */
 function handleSaveOptions() {
   const calculatedData = {
     carbonEmission: chartEmissionData.value,
     nutrition: chartNutritionData.value
   }
-
   uni.navigateTo({
     url: `/pagesTool/save_options/save_options?data=${encodeURIComponent(JSON.stringify(calculatedData))}`
   })
 }
-
-/**
- * 页面加载后初始化
- */
-onMounted(() => {
-  if (!foodStore.loaded) {
-    loadFoodList()
-  }
-  fetchAvailableFoods()
-  handleLoad()
-})
 </script>
 
 <style scoped>
@@ -671,10 +638,12 @@ onMounted(() => {
   .info-grid {
     grid-template-columns: 1fr;
   }
+
   .action-button {
     padding: 15rpx;
     font-size: 22rpx;
   }
+
   .food-image {
     width: 100rpx;
     height: 100rpx;
@@ -685,6 +654,7 @@ onMounted(() => {
   width: 6rpx;
   background-color: transparent;
 }
+
 .food-list::-webkit-scrollbar-thumb {
   background-color: #2979ff;
   border-radius: 3rpx;
@@ -693,6 +663,7 @@ onMounted(() => {
 :deep(.uni-row) {
   margin: -5rpx;
 }
+
 :deep(.uni-col) {
   padding: 5rpx;
 }

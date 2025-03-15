@@ -12,7 +12,7 @@
         <view class="member-wrapper">
           <view class="member-info">
             <image
-              :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+              :src="`${BASE_URL}/static/${member.avatarUrl}`"
               mode="aspectFill"
               class="avatar"
             />
@@ -31,13 +31,13 @@
               class="action-btn promote-btn"
               @click="setAsAdmin(member.id)"
             >
-              {{ $t('set_as_admin') }}
+              {{ t('set_as_admin') }}
             </text>
             <text
               class="action-btn remove-btn"
               @click="removeMember(member.id)"
             >
-              {{ $t('remove_member') }}
+              {{ t('remove_member') }}
             </text>
           </view>
         </view>
@@ -61,7 +61,7 @@
           <view class="member-wrapper">
             <view class="member-info">
               <image
-                :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+                :src="`${BASE_URL}/static/${member.avatarUrl}`"
                 mode="aspectFill"
                 class="avatar"
               />
@@ -78,13 +78,13 @@
                 class="action-btn approve-btn"
                 @click="admitMember(member.id)"
               >
-                {{ $t('admit') }}
+                {{ t('admit') }}
               </text>
               <text
                 class="action-btn reject-btn"
                 @click="rejectMember(member.id)"
               >
-                {{ $t('reject') }}
+                {{ t('reject') }}
               </text>
             </view>
           </view>
@@ -108,6 +108,7 @@ const familyStore = useFamilyStore()
 const family = computed(() => familyStore.family)
 const userStore = useUserStore()
 const currentUserId = computed(() => userStore.user.uid)
+const BASE_URL = 'https://dechelper.com:8080'
 
 /* ----------------- Computed ----------------- */
 const isCurrentUserAdmin = computed(() => familyStore.isAdmin(currentUserId.value))

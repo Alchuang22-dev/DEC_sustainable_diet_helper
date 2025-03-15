@@ -52,6 +52,8 @@ const familyStatus = computed(() => familyStore.family.status)
 const uid = computed(() => userStore.user.uid)
 const token = computed(() => userStore.user.token)
 
+const BASE_URL = 'https://dechelper.com'
+
 /* ----------------- 数据：餐食类型 ----------------- */
 const mealTypesDisplay = [t('breakfast'), t('lunch'), t('dinner'), t('other')]
 const mealTypesValue = ['breakfast', 'lunch', 'dinner', 'other']
@@ -121,7 +123,8 @@ function saveForSelf() {
     ]
   }
   uni.request({
-    url: 'http://122.51.231.155:8095/nutrition-carbon/shared/nutrition-carbon',
+    url: 'https://xcxcs.uwdjl.cn/nutrition-carbon/shared/nutrition-carbon',
+
     method: 'POST',
     data: requestData,
     header: {

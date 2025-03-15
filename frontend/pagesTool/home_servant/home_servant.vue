@@ -203,7 +203,7 @@
           class="nutrition-over-row"
         >
           <image
-            :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+            :src="`${BASE_URL}/static/${member.avatarUrl}`"
             class="member-avatar"
           />
           <text class="member-name">
@@ -238,7 +238,7 @@
             class="member"
           >
             <image
-              :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+              :src="`${BASE_URL}/static/${member.avatarUrl}`"
               class="member-avatar"
             />
             <text class="member-name">
@@ -399,6 +399,8 @@ const foodStore = useFoodListStore()
 // 解构 family
 const family = computed(() => familyStore.family)
 const FamilyStatusEnum = FamilyStatus
+
+const BASE_URL = 'https://dechelper.com'
 
 // 当前用户
 if (!userStore.user.isLoggedIn) {

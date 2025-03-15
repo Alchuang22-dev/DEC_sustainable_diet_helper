@@ -9,7 +9,7 @@
       >
         <view class="member-info">
           <image
-            :src="`http://122.51.231.155:8080/static/${member.avatarUrl}`"
+            :src="`${BASE_URL}/static/${member.avatarUrl}`"
             class="avatar"
           />
           <text class="name">{{ member.nickname }}</text>
@@ -56,35 +56,28 @@ import { useI18n } from 'vue-i18n'
 import { useFamilyStore } from '../stores/family.js'
 import { useUserStore } from '@/stores/user.js'
 
-/* ----------------- i18n ----------------- */
+/* ----------------- Setup ----------------- */
 const { t } = useI18n()
-
-/* ----------------- Stores ----------------- */
 const userStore = useUserStore()
 const familyStore = useFamilyStore()
 
-/* ----------------- Data & Reactive State ----------------- */
-// 全部家庭成员
+/* ----------------- Reactive & State ----------------- */
 const allFamilyMembers = computed(() => familyStore.family.allMembers)
-
-// 成员比例
 const memberRatio = reactive({})
 
-// 接收页面传递的数据
 const carbonEmissionData = ref(0)
 const nutritionData = reactive({})
 const mealType = ref('')
 
-/* ----------------- Computed & Watchers ----------------- */
-// 计算总比例
+const BASE_URL = 'https://xcxcs.uwdjl.cn'
+
+/* ----------------- Computed ----------------- */
 const totalRatio = computed(() => {
   return Object.values(memberRatio).reduce(
     (sum, val) => sum + (parseFloat(val) || 0),
     0
   )
 })
-
-// 验证总比例 & 每个成员比例
 const isValid = computed(() => {
   return (
     totalRatio.value <= 1 &&
@@ -92,7 +85,7 @@ const isValid = computed(() => {
   )
 })
 
-// 深度监听 memberRatio 变化
+/* ----------------- Watch ----------------- */
 watch(
   memberRatio,
   () => {
@@ -101,8 +94,7 @@ watch(
   { deep: true }
 )
 
-/* ----------------- Lifecycle Hooks ----------------- */
-// 页面显示时初始化
+/* ----------------- Lifecycle ----------------- */
 onShow(() => {
   familyStore.getFamilyDetails()
   for (let member of allFamilyMembers.value) {
@@ -110,7 +102,6 @@ onShow(() => {
   }
 })
 
-// onLoad 时解析传入数据
 onLoad(options => {
   if (options && options.data) {
     try {
@@ -125,8 +116,7 @@ onLoad(options => {
 })
 
 /* ----------------- Methods ----------------- */
-// 校验成员比例
-const validateRatio = () => {
+function validateRatio() {
   let sum = 0
   for (let id in memberRatio) {
     let val = parseFloat(memberRatio[id]) || 0
@@ -146,7 +136,6 @@ const validateRatio = () => {
   }
 }
 
-// 格式化日期到 ISO
 function formatToISO(date) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -157,8 +146,7 @@ function formatToISO(date) {
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`
 }
 
-// 提交数据
-const submitData = () => {
+function submitData() {
   if (totalRatio.value > 1) {
     uni.showToast({
       title: t('total_ratio_cannot_exceed_one'),
@@ -195,7 +183,7 @@ const submitData = () => {
   }
 
   uni.request({
-    url: 'http://122.51.231.155:8095/nutrition-carbon/shared/nutrition-carbon',
+    url: `${BASE_URL}/nutrition-carbon/shared/nutrition-carbon`,
     method: 'POST',
     data: requestData,
     header: {

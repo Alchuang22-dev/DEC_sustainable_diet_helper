@@ -8,11 +8,12 @@
     <!-- 个人信息 -->
     <view class="profile-section">
       <view class="profile-top">
-        <!-- 若已登录，可点击头像选择新的微信头像 -->
+        <!-- 若已登录，可点击头像选择新的微信头像；加上 @click="onAvatarClick" 事件 -->
         <button
           v-if="isLoggedIn"
           class="avatar-button"
-          open-type="chooseAvatar"
+          :open-type="hasPermission ? 'chooseAvatar' : ''"
+          @click="onAvatarClick"
           @chooseavatar="onChooseAvatar"
         >
           <image :src="avatarSrc" class="avatar" />
@@ -22,19 +23,16 @@
         <image v-else :src="avatarSrc" class="avatar" />
 
         <view class="profile-text">
-          <!-- 显示/编辑昵称 -->
+          <!-- 显示/编辑昵称；加上 @click="onNicknameClick" 事件 -->
           <view v-if="!isEditingNickname" class="greeting-container">
-            <text
-              class="greeting"
-              @click="enableNicknameEdit"
-            >
+            <text class="greeting" @click="onNicknameClick">
               {{ isLoggedIn ? nickname : t('profile_greeting') }}
             </text>
             <image
               v-if="isLoggedIn"
               src="@/pages/static/editor.svg"
               class="edit-icon"
-            ></image>
+            />
           </view>
           <input
             v-else
@@ -47,11 +45,7 @@
           />
           <view>
             <text class="login-prompt">
-              {{
-                isLoggedIn
-                  ? t('profile_logged_in')
-                  : t('profile_login_prompt')
-              }}
+              {{ isLoggedIn ? t('profile_logged_in') : t('profile_login_prompt') }}
             </text>
           </view>
         </view>
@@ -66,87 +60,103 @@
     <!-- 菜单 -->
     <view class="menu-section">
       <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('searchTools')">
-        <image src="@/pages/static/search.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_search_tools')}}</text>
+        <image src="@/pages/static/search.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_search_tools') }}</text>
       </view>
 
       <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('setGoals')">
-        <image src="@/pages/static/setgoals.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_set_goals')}}</text>
+        <image src="@/pages/static/setgoals.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_set_goals') }}</text>
       </view>
 
       <view v-if="isLoggedIn" class="menu-item" @click="navigateToFoodPreferences('foodPreferences')">
-        <image src="@/pages/static/food.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_food_preferences')}}</text>
+        <image src="@/pages/static/food.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_food_preferences') }}</text>
       </view>
 
       <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('favorites')">
-        <image src="@/pages/static/favorites.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_favorites')}}</text>
+        <image src="@/pages/static/favorites.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_favorites') }}</text>
       </view>
 
       <view v-if="isLoggedIn" class="menu-item" @click="navigateTo('my_home')">
-        <image src="@/pages/static/mywork.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_creations')}}</text>
+        <image src="@/pages/static/mywork.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_creations') }}</text>
       </view>
 
       <view class="menu-item" @click="navigateTo('appSettings')">
-        <image src="@/pages/static/setting.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_app_settings')}}</text>
+        <image src="@/pages/static/setting.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_app_settings') }}</text>
       </view>
 
       <view class="menu-item" @click="navigateTo('userSettings')">
-        <image src="@/pages/static/user.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('menu_user_settings')}}</text>
+        <image src="@/pages/static/user.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('menu_user_settings') }}</text>
       </view>
 
       <view v-if="isLoggedIn" class="menu-item" @click="handleLogout">
-        <image src="@/pages/static/logout.svg" class="icon_svg"></image>
-        <text class="menu-text">{{t('profile_logout')}}</text>
+        <image src="@/pages/static/logout.svg" class="icon_svg" />
+        <text class="menu-text">{{ t('profile_logout') }}</text>
+      </view>
+    </view>
+
+    <!-- 如果需要弹窗提示用户是否同意权限 -->
+    <view v-if="showPermissionModal" class="permission-modal">
+      <view class="permission-content">
+        <text>需要获取您的头像和昵称，是否同意？</text>
+        <view class="btn-row">
+          <button class="btn-agree" @click="acceptPermission">同意</button>
+          <button class="btn-reject" @click="rejectPermission">拒绝</button>
+        </view>
       </view>
     </view>
   </view>
 </template>
 
 <script setup>
-/**
- * 我的页面：展示个人信息（头像、昵称）、登录、登出、以及常见的功能入口菜单
- */
-
-import {ref, computed} from 'vue'
+/* ----------------- Imports ----------------- */
+import {ref, computed, onMounted} from 'vue'
 import {useI18n} from 'vue-i18n'
-import {useUserStore} from '../../stores/user'
+import {useUserStore} from '@/stores/user'
 import {onShow} from '@dcloudio/uni-app'
+import Login from "@/pagesMy/login/login.vue";
 
-const BASE_URL = 'http://122.51.231.155:8080'
+/* ----------------- Setup ----------------- */
 const {t} = useI18n()
 const userStore = useUserStore()
 
-// 是否已登录
+/* ----------------- Reactive & State ----------------- */
+const BASE_URL = 'https://dechelper.com'
 const isLoggedIn = computed(() => userStore.user.isLoggedIn)
-
-// 用户头像
 const avatarSrc = computed(() =>
-    userStore.user.avatarUrl
+    userStore.user.avatarUrl && userStore.user.avatarUrl !== 'avatars/default.jpg'
         ? `${BASE_URL}/static/${userStore.user.avatarUrl}`
-        : '/static/images/index/background_img.jpg'
+        : '../static/default.jpg'
 )
 
-// 用户昵称
+// 昵称编辑相关
 const nickname = ref(userStore.user.nickName || '')
-
-// 是否正在编辑昵称
 const isEditingNickname = ref(false)
 
-/**
- * 页面显示时，刷新用户信息
- */
+// 是否已同意使用头像与昵称的权限
+const hasPermission = ref(false)
+
+// 控制是否展示自定义弹窗
+const showPermissionModal = ref(false)
+
+/* ----------------- Lifecycle ----------------- */
 onShow(async () => {
   uni.setNavigationBarTitle({title: t('my_index')})
   uni.setTabBarItem({index: 0, text: t('index')})
   uni.setTabBarItem({index: 1, text: t('tools_index')})
   uni.setTabBarItem({index: 2, text: t('news_index')})
   uni.setTabBarItem({index: 3, text: t('my_index')})
+
+  // 从 localStorage 中读取用户是否已经同意权限
+  const storedPermission = uni.getStorageSync('hasPermission')
+  if (storedPermission === 'true') {
+    hasPermission.value = true
+  }
 
   if (isLoggedIn.value) {
     try {
@@ -164,6 +174,7 @@ onShow(async () => {
   }
 })
 
+/* ----------------- Methods ----------------- */
 /**
  * 导航到指定页面
  */
@@ -180,7 +191,7 @@ function navigateToFoodPreferences(page) {
   })
 }
 
-/** 登录按钮点击 */
+/** 登录按钮 */
 function handleLoginButtonClick() {
   navigateTo('login')
 }
@@ -204,23 +215,41 @@ async function handleLogout() {
 }
 
 /**
- * 当用户点击昵称时，若已登录，则允许编辑
+ * 处理点击头像
+ * 如果没权限，先显示弹窗；如果有权限，就执行上传逻辑
  */
-function enableNicknameEdit() {
+function onAvatarClick(e) {
+  if (!hasPermission.value) {
+    showPermissionModal.value = true
+    // 不执行任何头像上传逻辑
+    return
+  }
+  // 已经同意权限则正常执行（在 button 上通过 @chooseavatar 绑定了 onChooseAvatar）
+  // 这里不用再次调用 onChooseAvatar(e) 因为它会自动被触发
+}
+
+/**
+ * 点击昵称 => 如果没权限则弹窗，否则允许编辑
+ */
+function onNicknameClick() {
+  if (!hasPermission.value) {
+    showPermissionModal.value = true
+    return
+  }
   if (isLoggedIn.value) {
     isEditingNickname.value = true
   }
 }
 
 /**
- * 当用户手动输入昵称
+ * 用户手动输入昵称
  */
 function onNicknameInput(e) {
   nickname.value = e.detail.value
 }
 
 /**
- * 当用户离开昵称输入框时（blur 事件），提交更新
+ * 当用户离开昵称输入框时提交更新
  */
 async function onNicknameBlur() {
   if (!isEditingNickname.value) return
@@ -274,6 +303,22 @@ async function onChooseAvatar(e) {
     })
   }
 }
+
+/**
+ * 弹窗中用户点击“同意”
+ */
+function acceptPermission() {
+  hasPermission.value = true
+  uni.setStorageSync('hasPermission', 'true')
+  showPermissionModal.value = false
+}
+
+/**
+ * 弹窗中用户点击“拒绝”
+ */
+function rejectPermission() {
+  showPermissionModal.value = false
+}
 </script>
 
 <style scoped>
@@ -286,7 +331,6 @@ async function onChooseAvatar(e) {
   --font-family: 'Arial', sans-serif;
 }
 
-/* 容器 */
 .container {
   display: flex;
   flex-direction: column;
@@ -295,7 +339,6 @@ async function onChooseAvatar(e) {
   font-family: var(--font-family);
 }
 
-/* 背景图 */
 .background-image {
   position: fixed;
   top: 0;
@@ -308,7 +351,6 @@ async function onChooseAvatar(e) {
   pointer-events: none;
 }
 
-/* 个人信息 */
 .profile-section {
   display: flex;
   flex-direction: column;
@@ -328,7 +370,6 @@ async function onChooseAvatar(e) {
   margin-bottom: 30rpx;
 }
 
-/* 头像按钮 */
 .avatar-button {
   background: transparent;
   padding: 0;
@@ -346,7 +387,6 @@ async function onChooseAvatar(e) {
   margin-right: 20rpx;
 }
 
-/* 文本区 */
 .profile-text {
   display: flex;
   flex-direction: column;
@@ -354,7 +394,6 @@ async function onChooseAvatar(e) {
   flex: 1;
 }
 
-/* 昵称与编辑图标 */
 .greeting-container {
   position: relative;
   width: 100%;
@@ -380,7 +419,6 @@ async function onChooseAvatar(e) {
   cursor: pointer;
 }
 
-/* 内联编辑框 */
 .nickname-input-inline {
   font-size: 38rpx;
   margin: 10rpx 0;
@@ -402,13 +440,11 @@ async function onChooseAvatar(e) {
   background-color: var(--primary-color);
   color: #ffffff;
   font-size: 32rpx;
-  cursor: pointer;
   border-radius: 10rpx;
   width: 60%;
   margin-top: 10rpx;
 }
 
-/* 菜单 */
 .menu-section {
   background-color: rgba(33, 255, 6, 0.06);
   margin: 40rpx 20rpx;
@@ -452,7 +488,53 @@ async function onChooseAvatar(e) {
   color: var(--text-color);
 }
 
-/* 响应式 */
+/* 自定义弹窗示例 */
+.permission-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.permission-content {
+  background-color: #fff;
+  padding: 40rpx;
+  border-radius: 20rpx;
+  width: 80%;
+  max-width: 600rpx;
+  text-align: center;
+}
+
+.btn-row {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 40rpx;
+}
+
+.btn-agree {
+  background-color: var(--primary-color);
+  color: #fff;
+  padding: 20rpx 40rpx;
+  border-radius: 10rpx;
+  font-size: 28rpx;
+  border: none;
+}
+
+.btn-reject {
+  background-color: #ccc;
+  color: #333;
+  padding: 20rpx 40rpx;
+  border-radius: 10rpx;
+  font-size: 28rpx;
+  border: none;
+}
+
 @media screen and (max-width: 600px) {
   .profile-top {
     flex-direction: column;

@@ -21,7 +21,7 @@
     <view class="image-section">
       <view class="images-container">
         <view v-for="(image, index) in images" :key="index" class="image-item">
-          <image :src="image" class="uploaded-image"></image>
+          <image :src="image" class="uploaded-image" />
           <button class="remove-image-button" @click="removeImage(index)">x</button>
         </view>
       </view>
@@ -36,35 +36,31 @@
 </template>
 
 <script setup>
+/* ----------------- Imports ----------------- */
 import { ref } from 'vue'
 
+/* ----------------- Setup ----------------- */
 const feedbackText = ref('')
 const maxLength = 500
 const images = ref([])
 
-// 添加图片的方法
-const addImage = () => {
+/* ----------------- Methods ----------------- */
+function addImage() {
   uni.chooseImage({
-    count: 9 - images.value.length, // 限制最多上传9张图片
-    sizeType: ['original', 'compressed'], // 可以选择原图或压缩图
-    sourceType: ['album', 'camera'], // 可以选择相册或拍照
+    count: 9 - images.value.length,
+    sizeType: ['original', 'compressed'],
+    sourceType: ['album', 'camera'],
     success: (res) => {
-      // 将选择的图片路径添加到images数组中
       images.value = images.value.concat(res.tempFilePaths)
-    },
-    fail: (err) => {
-      console.error('选择图片失败:', err)
     }
   })
 }
 
-// 删除图片的方法
-const removeImage = (index) => {
+function removeImage(index) {
   images.value.splice(index, 1)
 }
 
-// 提交反馈的方法框架
-const submitFeedback = () => {
+function submitFeedback() {
   if (!feedbackText.value.trim()) {
     uni.showToast({
       title: '请输入反馈内容',
@@ -73,7 +69,6 @@ const submitFeedback = () => {
     return
   }
 
-  // TODO: 实现提交反馈的逻辑，例如发送到服务器
   console.log('提交的反馈内容:', feedbackText.value)
   console.log('上传的图片:', images.value)
 
@@ -82,7 +77,6 @@ const submitFeedback = () => {
     icon: 'success'
   })
 
-  // 清空表单
   feedbackText.value = ''
   images.value = []
 }
@@ -134,11 +128,6 @@ const submitFeedback = () => {
   margin-bottom: 20px;
 }
 
-.section-title {
-  font-size: 16px;
-  margin-bottom: 10px;
-}
-
 .images-container {
   display: flex;
   flex-wrap: wrap;
@@ -180,7 +169,7 @@ const submitFeedback = () => {
 .submit-button {
   width: 100%;
   padding: 15px;
-  background-color: #007AFF;
+  background-color: #007aff;
   color: #ffffff;
   border: none;
   border-radius: 5px;

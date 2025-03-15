@@ -30,6 +30,8 @@
 	"tool_nutrition_calculator_info": "查看您的营养计划",
 	"tool_family_recipe": "家庭管理",
 	"tool_family_recipe_info": "规划家人饮食",
+	"choose_food_photo": "选择照片",
+	"food_photo": "AI识图",
 
 	"profile_greeting": "Hello!",
 	"profile_logged_in": "已登录",
@@ -351,9 +353,9 @@
 	"add_image": "添加图片组件",
 	"release_but": "发布",
 	"save_draft": "保存草稿",
-	"issue_confirm": "发布确认",
-	"ano_issue": "匿名发布",
-	"confirm_issue": "确认发布",
+	"issue_confirm": "是否保存",
+	"ano_issue": "存放",
+	"confirm_issue": "保存手账",
 
 	"pork": "猪肉",
 	"chinese cabbage": "白菜",
@@ -603,5 +605,9 @@
     "Recipe Details": "食谱详情",
     "Calculate for Family": "为家人计算",
     "Save Results": "保存结果",
-    "Family Sharing": "家庭共享"
+    "Family Sharing": "家庭共享",
+	"weight_must_be_positive_number": "重量必须是正数",
+	"price_must_be_positive_number": "价格必须是正数",
+	"fetch_user_info_error": "获取用户信息失败"
+
 }
