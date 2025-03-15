@@ -108,7 +108,7 @@ const familyStore = useFamilyStore()
 const family = computed(() => familyStore.family)
 const userStore = useUserStore()
 const currentUserId = computed(() => userStore.user.uid)
-const BASE_URL = 'http://xcxcs.uwdjl.cn:8080'
+const BASE_URL = 'https://dechelper.com:8080'
 
 /* ----------------- Computed ----------------- */
 const isCurrentUserAdmin = computed(() => familyStore.isAdmin(currentUserId.value))

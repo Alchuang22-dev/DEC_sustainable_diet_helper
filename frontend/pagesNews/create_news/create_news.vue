@@ -106,7 +106,7 @@ import { useUserStore } from '@/stores/user'
 const userStore = useUserStore()
 const { t } = useI18n()
 
-const BASE_URL = 'https://xcxcs.uwdjl.cn'
+const BASE_URL = 'https://dechelper.com'
 
 const authorNickname = computed(() => userStore.user.nickName)
 const authorAvatar = computed(() =>

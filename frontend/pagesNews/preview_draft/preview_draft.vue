@@ -34,7 +34,7 @@ import { useUserStore } from '@/stores/user'
 
 /* ----------------- Setup ----------------- */
 const userStore = useUserStore()
-const BASE_URL = 'https://xcxcs.uwdjl.cn'
+const BASE_URL = 'https://dechelper.com'
 const PageId = ref('')
 
 const post = ref({ components: [] })
