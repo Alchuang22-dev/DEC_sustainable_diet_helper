@@ -22,6 +22,11 @@ func RegisterAIRoutes(router *gin.Engine, db *gorm.DB) {
         {
             // 分析图像
             authGroup.POST("/analyze-image", aiController.AnalyzeImage)
+            // 同名食材推荐
+            authGroup.POST("/recommend-similar-ingredients", aiController.RecommendSimilarIngredients)
+
+            // 介绍食材
+            authGroup.POST("/introduce-ingredient", aiController.IntroduceIngredient)
         }
     }
 }

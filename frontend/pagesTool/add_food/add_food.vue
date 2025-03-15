@@ -182,6 +182,7 @@ function onComboxInput(value) {
 
 // 更改运输方式
 function onTransportChange(e) {
+  // e.detail.value 是选中的下标
   transportIndex.value = e.detail.value
   if (transportIndex.value === 0) {
     food.transportMethod = 'land'

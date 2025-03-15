@@ -679,6 +679,7 @@ func (nc *NutritionCarbonController) SetSharedNutritionCarbonIntake(c *gin.Conte
     }
     log.Printf("开启事务成功")
     // 为每个用户创建营养和碳摄入记录
+    // _, _ := time.LoadLocation("Asia/Shanghai")
     for _, share := range req.UserShares {
         if share.Ratio == 0 {
             continue
