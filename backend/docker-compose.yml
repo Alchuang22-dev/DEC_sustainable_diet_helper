@@ -54,10 +54,6 @@ services:
       - app
     networks:
       - frontend
-    # 不再暴露 80/443 到宿主机，因为 Caddy 对外提供
-    # 如果你想本地调试 Nginx，可加端口映射:
-    # ports:
-    #   - "8081:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
 

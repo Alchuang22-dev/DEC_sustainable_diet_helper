@@ -3,7 +3,7 @@
 	# debug  # 如果想看更详细日志，可启用
 }
 
-xcxcs.uwdjl.cn {
+dechelper.com {
 	# 将所有请求反向代理给 nginx:80
 	reverse_proxy nginx:80
 }

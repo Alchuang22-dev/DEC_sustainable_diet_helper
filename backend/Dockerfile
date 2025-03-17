@@ -23,6 +23,8 @@ COPY . .
 
 # Build the Go application
 # RUN go build -o main ./cmd/main.go
+RUN mkdir -p /app/upload/avatars && \
+    wget -O /app/upload/avatars/default.jpg https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
 
 # Expose the application port
 EXPOSE 8080

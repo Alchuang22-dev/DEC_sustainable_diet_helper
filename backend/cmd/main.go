@@ -105,6 +105,8 @@ func main() {
     // 注册营养和碳排放路由
     routes.RegisterNutritionCarbonRoutes(router, db)
 
+    routes.RegisterAIRoutes(router, db)
+
     // 启动服务器
     BaseSSLPath := os.Getenv("BASE_SSL_PATH")
     if BaseSSLPath == "" {
