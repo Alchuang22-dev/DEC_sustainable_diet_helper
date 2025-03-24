@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
     "strconv"
-    "path/filepath"
+    // "path/filepath"
     "errors"
 
 	"github.com/Alchuang22-dev/DEC_sustainable_diet_helper/internal/models"
@@ -343,13 +343,13 @@ func (uc *UserController) WeChatAuth(c *gin.Context) {
 
         // 使用默认头像
         relativePath := "avatars/default.jpg"
-        defaultAvatarPath := filepath.Join(BaseUploadPath, "avatars", "default.jpg")
-        newAvatarPath := filepath.Join(BaseUploadPath, relativePath)
-        if err := uc.Utils.CopyFile(defaultAvatarPath, newAvatarPath); err != nil {
-            log.Printf("复制默认头像失败: %v\n", err)
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default avatar"})
-            return
-        }
+        // defaultAvatarPath := filepath.Join(BaseUploadPath, "avatars", "default.jpg")
+        // newAvatarPath := filepath.Join(BaseUploadPath, relativePath)
+        // if err := uc.Utils.CopyFile(defaultAvatarPath, newAvatarPath); err != nil {
+        //     log.Printf("复制默认头像失败: %v\n", err)
+        //     c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set default avatar"})
+        //     return
+        // }
 
         user.AvatarURL = relativePath
 
