@@ -11,6 +11,7 @@ SimpleTorch/
 ├── requirements.txt   # 项目依赖
 ├── main.py           # 主训练脚本
 ├── model.py          # CNN 模型定义
+├── model-v2.py       # ResNet 微调模型定义
 ├── configs/          # 配置文件
 │   ├── __init__.py
 │   └── config.py     # 配置类
@@ -45,11 +46,14 @@ pip install -r requirements.txt
 
 ## 模型架构
 
-CNN 模型结构：
+### CNN 模型结构（model.py）：
 - 输入：3x32x32 RGB 图像
 - 卷积层1：3->16 通道，3x3 卷积核
 - 卷积层2：16->32 通道，3x3 卷积核
 - 全连接层：32*8*8 -> 101 个类别
+
+### ResNet 模型结构（model-v2.py）
+- 正在调试
 
 ## 配置系统
 
