@@ -239,20 +239,3 @@ torch.save({
     'class_names': class_names
 }, 'food101_model_complete.pth')
 
-# 加载模型（用于推理）
-def load_model_for_inference(model_path, model_name='resnet50'):
-    # 创建模型架构
-    model = create_model(model_name, pretrained=False, freeze_backbone=False)
-    
-    # 加载保存的模型权重
-    checkpoint = torch.load(model_path)
-    model.load_state_dict(checkpoint['model_state_dict'])
-    class_names = checkpoint['class_names']
-    
-    model = model.to(device)
-    model.eval()  # 设置为评估模式
-    
-    return model, class_names
-
-# 示例：加载模型并进行预测
-loaded_model, class_names = load_model_for_inference('best_model_food101.pth', 'resnet50')

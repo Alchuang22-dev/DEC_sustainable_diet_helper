@@ -12,6 +12,8 @@ SimpleTorch/
 ├── main.py           # 主训练脚本
 ├── model.py          # CNN 模型定义
 ├── model-v2.py       # ResNet 微调模型定义
+├── test.py           # CNN 测试脚本
+├── test-v2.py        # ResNet 测试脚本
 ├── configs/          # 配置文件
 │   ├── __init__.py
 │   └── config.py     # 配置类
@@ -121,8 +123,13 @@ python main.py
 - matplotlib
 
 ## 测试
+测试CNN模型
 ```bash
 python test.py
+```
+测试ResNet模型（使用单张图片测试）
+```bash
+python test_v2.py
 ```
 
 
