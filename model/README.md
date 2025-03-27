@@ -12,6 +12,7 @@ SimpleTorch/
 ├── main.py           # 主训练脚本
 ├── model.py          # CNN 模型定义
 ├── model-v2.py       # ResNet 微调模型定义
+├── model-v3.py       # ResNet 微调模型定义
 ├── test.py           # CNN 测试脚本
 ├── test-v2.py        # ResNet 测试脚本
 ├── configs/          # 配置文件
@@ -105,6 +106,17 @@ python main.py
    - 显示训练进度
    - 保存模型检查点
    - 生成训练可视化
+
+3. 完整训练过程（正在开发中）
+- 第一层训练
+```bash
+python model-v2.py
+```
+- 第二层训练（需要自行在data\中配置ChineseFoodNet数据集，在https://sites.google.com/view/chinesefoodnet/）
+```bash
+python model-v3.py
+```
+- 注意：现在的模型训练脚本不会合并数据库！
 
 ## 可视化工具
 
