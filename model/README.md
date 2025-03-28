@@ -11,8 +11,9 @@ SimpleTorch/
 ├── requirements.txt   # 项目依赖
 ├── main.py           # 主训练脚本
 ├── model.py          # CNN 模型定义
-├── model-v2.py       # ResNet 微调模型定义
-├── model-v3.py       # ResNet 微调模型定义
+├── model_v2.py       # ResNet 微调模型（Food101）
+├── model_v3.py       # ResNet 微调模型定义（ChineseFoodNet）
+├── model_classified.py       # ResNet 微调模型定义（粗分类）
 ├── test.py           # CNN 测试脚本
 ├── test-v2.py        # ResNet 测试脚本
 ├── configs/          # 配置文件
@@ -95,7 +96,7 @@ python show_dataset.py
 
 ## 训练
 
-1. 运行训练：
+1. 运行测试训练：
 ```bash
 python main.py
 ```
@@ -116,7 +117,10 @@ python model-v2.py
 ```bash
 python model-v3.py
 ```
-- 注意：现在的模型训练脚本不会合并数据库！
+- 分类模型：对图片进行初步判别，选择使用哪个子模型进行细分类
+```bash
+python model_classified.py
+```
 
 ## 可视化工具
 
