@@ -414,7 +414,7 @@ def main():
             running_corrects += torch.sum(preds == labels.data)
             total += labels.size(0)
     
-    test_acc = running_corrects.double() / total
+    test_acc = running_corrects / total
     print(f'最终测试集准确率: {test_acc:.4f}')
 
 if __name__ == "__main__":
