@@ -170,7 +170,7 @@ if __name__ == "__main__":
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     # 模型路径（模型路径在model-v2/-v3/classified中已经设计好了）
-    binary_model_path = 'efficient_binary_classifier.pth'
+    binary_model_path = 'efficient_binary_classifier.pth' # 此处需要根据model_classified.py的训练策略调整
     food101_model_path = 'food101_model_complete.pth'
     custom_model_path = 'custom_food_model_complete.pth'
     
