@@ -7,6 +7,10 @@ from PIL import Image
 import time
 import copy
 import numpy as np
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+import itertools
+from sklearn.model_selection import ParameterGrid
+import json
 
 # 为Food-101数据集创建自定义数据集类
 class Food101Dataset(Dataset):
@@ -232,10 +236,178 @@ class BinaryClassifier(nn.Module):
         output = self.classifier(combined_features)
         
         return output
+    
+def grid_search_hyperparameters():
+    """使用网格搜索寻找最佳超参数组合"""
+    
+    # 定义超参数搜索空间
+    param_grid = {
+        'base_model': ['resnet50'],  # 可以添加'resnet18', 'resnet101'等
+        'dropout_rate': [0.3, 0.5, 0.7],
+        'hidden_size': [256, 512, 1024],
+        'optimizer_type': ['adam', 'adamw'],
+        'learning_rate': [0.001, 0.0005, 0.0001],
+        'weight_decay': [1e-4, 1e-5],
+        'scheduler_type': ['step', 'plateau', 'cosine'],
+        'batch_size': [16, 32, 64],
+        'stage1_epochs': [3, 5],
+        'stage2_epochs': [3, 5],
+        'data_augment_level': ['standard', 'strong']
+    }
+    
+    # 为了减少搜索空间，这里只选择一部分组合
+    # 实际使用时，可以根据需要进行修改
+    selected_params = [
+        {'base_model': 'resnet50', 'optimizer_type': 'adam', 'scheduler_type': 'step'},
+        {'base_model': 'resnet50', 'optimizer_type': 'adamw', 'scheduler_type': 'cosine'},
+        {'base_model': 'resnet50', 'optimizer_type': 'adam', 'scheduler_type': 'plateau'}
+    ]
+    
+    # 从参数网格中生成配置
+    configs = []
+    for base_config in selected_params:
+        grid = {k: v for k, v in param_grid.items() if k not in base_config}
+        for params in ParameterGrid(grid):
+            full_config = base_config.copy()
+            full_config.update(params)
+            configs.append(full_config)
+    
+    # 保存所有配置
+    with open('hyperparam_configs.json', 'w') as f:
+        json.dump(configs, f, indent=2)
+    
+    print(f"将搜索 {len(configs)} 种超参数组合")
+    
+    # 搜索最佳超参数
+    best_config = None
+    best_score = 0
+    results = []
+    
+    for i, config in enumerate(configs):
+        print(f"\n搜索超参数组合 {i+1}/{len(configs)}")
+        print(f"配置: {config}")
+        
+        try:
+            # 训练和评估模型
+            metrics = main_efficient_binary_classifier(config)
+            score = metrics['f1']  # 使用F1分数作为评价指标
+            
+            # 记录结果
+            result = {
+                'config': config,
+                'accuracy': metrics['accuracy'],
+                'precision': metrics['precision'],
+                'recall': metrics['recall'],
+                'f1': metrics['f1']
+            }
+            results.append(result)
+            
+            # 更新最佳配置
+            if score > best_score:
+                best_score = score
+                best_config = config
+                print(f"找到新的最佳配置，F1分数: {best_score:.4f}")
+            
+            # 保存中间结果
+            with open('hyperparam_results.json', 'w') as f:
+                json.dump(results, f, indent=2)
+        
+        except Exception as e:
+            print(f"配置 {config} 训练失败: {e}")
+    
+    print("\n网格搜索完成!")
+    print(f"最佳配置: {best_config}")
+    print(f"最佳F1分数: {best_score:.4f}")
+    
+    return best_config, results
+
+def analyze_parameter_sensitivity(param_name, param_values):
+    """分析特定超参数的敏感性"""
+    import matplotlib.pyplot as plt
+    
+    # 基础配置
+    base_config = {
+        'base_model': 'resnet50',
+        'dropout_rate': 0.5,
+        'hidden_size': 512,
+        'optimizer_type': 'adam',
+        'learning_rate': 0.001,
+        'weight_decay': 1e-4,
+        'scheduler_type': 'step',
+        'batch_size': 32,
+        'stage1_epochs': 5,
+        'stage2_epochs': 5,
+        'data_augment_level': 'standard'
+    }
+    
+    results = []
+    
+    for value in param_values:
+        # 创建新配置
+        config = base_config.copy()
+        config[param_name] = value
+        
+        print(f"\n测试 {param_name} = {value}")
+        
+        # 训练和评估模型
+        metrics = main_efficient_binary_classifier(config)
+        results.append(metrics['accuracy'])
+    
+    # 绘制验证曲线
+    plt.figure(figsize=(10, 6))
+    plt.plot(param_values, results, 'o-', label='测试准确率')
+    plt.xlabel(param_name)
+    plt.ylabel('准确率')
+    plt.title(f'{param_name} 的验证曲线')
+    plt.grid(True)
+    plt.legend()
+    plt.savefig(f'validation_curve_{param_name}.png')
+    plt.show()
+    
+    return results
 
 # 准备数据集
-def prepare_binary_datasets(food101_dir, local_data_dir):
+def prepare_binary_datasets(food101_dir, local_data_dir, batch_size=32, augment_level='standard'):
     """准备二分类数据集"""
+    """准备二分类数据集，支持不同级别的数据增强"""
+    # 标准数据增强
+    if augment_level == 'standard':
+        train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])
+    # 强数据增强
+    elif augment_level == 'strong':
+        train_transform = transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(p=0.1),
+            transforms.RandomRotation(15),
+            transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1),
+            transforms.RandomGrayscale(p=0.1),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            transforms.RandomErasing(p=0.1)
+        ])
+    
+    # 测试和验证转换保持不变
+    test_transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])
+    
+    # 数据转换字典
+    data_transforms = {
+        'train': train_transform,
+        'val': test_transform,
+        'test': test_transform
+    }
+    
     # 定义数据转换
     data_transforms = {
         'train': transforms.Compose([
@@ -328,7 +500,7 @@ def prepare_binary_datasets(food101_dir, local_data_dir):
     test_dataset = ConcatDataset([food101_test, local_test])
     
     # 创建数据加载器
-    batch_size = 32
+    # 使用设置的batch_size创建DataLoader
     dataloaders = {
         'train': DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4),
         'val': DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4),
@@ -423,14 +595,15 @@ def train_binary_classifier(model, dataloaders, dataset_sizes, criterion, optimi
     model.load_state_dict(best_model_wts)
     return model
 
-# 更高效的二分类器
 class EfficientBinaryClassifier(nn.Module):
-    def __init__(self, base_model_name='resnet50'):
+    def __init__(self, base_model_name='resnet50', dropout_rate=0.5, hidden_size=512):
         """
         使用单一骨干网络的二分类器
         
         参数:
             base_model_name: 基础模型架构
+            dropout_rate: Dropout比率
+            hidden_size: 隐藏层大小
         """
         super(EfficientBinaryClassifier, self).__init__()
         
@@ -441,6 +614,9 @@ class EfficientBinaryClassifier(nn.Module):
         elif base_model_name == 'resnet50':
             base_model = models.resnet50(weights='IMAGENET1K_V1')
             num_features = base_model.fc.in_features
+        elif base_model_name == 'resnet101':
+            base_model = models.resnet101(weights='IMAGENET1K_V1')
+            num_features = base_model.fc.in_features
         else:
             raise ValueError(f"不支持的模型: {base_model_name}")
         
@@ -450,10 +626,10 @@ class EfficientBinaryClassifier(nn.Module):
         # 二分类器
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(num_features, 512),
+            nn.Linear(num_features, hidden_size),
             nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(512, 2)
+            nn.Dropout(dropout_rate),
+            nn.Linear(hidden_size, 2)
         )
     
     def forward(self, x):
@@ -466,8 +642,34 @@ class EfficientBinaryClassifier(nn.Module):
         
         return output
 
-# 训练二分类器的改进版本（使用更高效的模型）
-def main_efficient_binary_classifier():
+def main_efficient_binary_classifier(config=None):
+    """
+    带有超参数配置的二分类器训练函数
+    
+    参数:
+        config: 超参数配置字典
+    """
+    # 默认配置
+    default_config = {
+        'base_model': 'resnet50',
+        'dropout_rate': 0.5,
+        'hidden_size': 512,
+        'optimizer_type': 'adam',
+        'learning_rate': 0.001,
+        'weight_decay': 1e-4,
+        'scheduler_type': 'step',
+        'batch_size': 32,
+        'stage1_epochs': 5,
+        'stage2_epochs': 5,
+        'data_augment_level': 'standard'  # 'standard' or 'strong'
+    }
+    
+    # 更新配置
+    if config is not None:
+        default_config.update(config)
+    
+    config = default_config
+    
     # 设置随机种子
     torch.manual_seed(42)
     np.random.seed(42)
@@ -477,25 +679,65 @@ def main_efficient_binary_classifier():
     print(f"使用设备: {device}")
     
     # 数据集路径
-    food101_dir = 'data/food-101'  # 需要修改为真实的Food-101数据集路径
-    local_data_dir = 'data/dataset_release/release_data'  # 需要修改为真实的本地数据集路径（此模型用的是ChineseFoodNet）
+    food101_dir = 'data/food-101'  # Food-101数据集路径
+    local_data_dir = 'data/dataset_release/release_data'  # 本地数据集路径
     
     # 准备数据集
-    dataloaders, dataset_sizes = prepare_binary_datasets(food101_dir, local_data_dir)
+    dataloaders, dataset_sizes = prepare_binary_datasets(
+        food101_dir, 
+        local_data_dir,
+        batch_size=config['batch_size'],
+        augment_level=config['data_augment_level']
+    )
     print(f"数据集大小: 训练={dataset_sizes['train']}, 验证={dataset_sizes['val']}, 测试={dataset_sizes['test']}")
     
     # 创建二分类模型
-    model = EfficientBinaryClassifier(base_model_name='resnet50')
+    model = EfficientBinaryClassifier(
+        base_model_name=config['base_model'],
+        dropout_rate=config['dropout_rate'],
+        hidden_size=config['hidden_size']
+    )
     model = model.to(device)
     
     # 冻结特征提取部分的参数
     for param in model.features.parameters():
         param.requires_grad = False
     
-    # 仅训练分类器部分
-    optimizer = torch.optim.Adam(model.classifier.parameters(), lr=0.001)
+    # 选择优化器
+    if config['optimizer_type'].lower() == 'adam':
+        optimizer = torch.optim.Adam(
+            model.classifier.parameters(), 
+            lr=config['learning_rate'],
+            weight_decay=config['weight_decay']
+        )
+    elif config['optimizer_type'].lower() == 'sgd':
+        optimizer = torch.optim.SGD(
+            model.classifier.parameters(), 
+            lr=config['learning_rate'],
+            momentum=0.9,
+            weight_decay=config['weight_decay']
+        )
+    elif config['optimizer_type'].lower() == 'adamw':
+        optimizer = torch.optim.AdamW(
+            model.classifier.parameters(), 
+            lr=config['learning_rate'],
+            weight_decay=config['weight_decay']
+        )
+    
+    # 损失函数
     criterion = nn.CrossEntropyLoss()
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
+    
+    # 学习率调度器
+    if config['scheduler_type'].lower() == 'step':
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
+    elif config['scheduler_type'].lower() == 'plateau':
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode='min', factor=0.1, patience=2, verbose=True
+        )
+    elif config['scheduler_type'].lower() == 'cosine':
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=config['stage1_epochs']
+        )
     
     # 训练模型的第一阶段（只训练分类器）
     print("训练第一阶段（只训练分类器）...")
@@ -506,7 +748,7 @@ def main_efficient_binary_classifier():
         criterion=criterion,
         optimizer=optimizer,
         scheduler=scheduler,
-        num_epochs=5,
+        num_epochs=config['stage1_epochs'],
         device=device
     )
     
@@ -516,11 +758,33 @@ def main_efficient_binary_classifier():
         param.requires_grad = True
     
     # 使用较小的学习率训练整个模型
-    optimizer = torch.optim.Adam([
-        {'params': model.classifier.parameters(), 'lr': 0.0001},
-        {'params': model.features[-1].parameters(), 'lr': 0.00001}
-    ])
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
+    if config['optimizer_type'].lower() == 'adam':
+        optimizer = torch.optim.Adam([
+            {'params': model.classifier.parameters(), 'lr': config['learning_rate'] * 0.1},
+            {'params': model.features[-1].parameters(), 'lr': config['learning_rate'] * 0.01}
+        ], weight_decay=config['weight_decay'])
+    elif config['optimizer_type'].lower() == 'sgd':
+        optimizer = torch.optim.SGD([
+            {'params': model.classifier.parameters(), 'lr': config['learning_rate'] * 0.1},
+            {'params': model.features[-1].parameters(), 'lr': config['learning_rate'] * 0.01}
+        ], momentum=0.9, weight_decay=config['weight_decay'])
+    elif config['optimizer_type'].lower() == 'adamw':
+        optimizer = torch.optim.AdamW([
+            {'params': model.classifier.parameters(), 'lr': config['learning_rate'] * 0.1},
+            {'params': model.features[-1].parameters(), 'lr': config['learning_rate'] * 0.01}
+        ], weight_decay=config['weight_decay'])
+    
+    # 学习率调度器
+    if config['scheduler_type'].lower() == 'step':
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
+    elif config['scheduler_type'].lower() == 'plateau':
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode='min', factor=0.1, patience=2, verbose=True
+        )
+    elif config['scheduler_type'].lower() == 'cosine':
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=config['stage2_epochs']
+        )
     
     # 训练模型的第二阶段
     model = train_binary_classifier(
@@ -530,44 +794,85 @@ def main_efficient_binary_classifier():
         criterion=criterion,
         optimizer=optimizer,
         scheduler=scheduler,
-        num_epochs=5,
+        num_epochs=config['stage2_epochs'],
         device=device
     )
     
     # 保存完整模型
+    model_save_path = f"binary_classifier_{config['base_model']}_{config['optimizer_type']}.pth"
     torch.save({
-        'model_state_dict': model.state_dict()
-    }, 'efficient_binary_classifier.pth')
-    print("完整模型已保存为 'efficient_binary_classifier.pth'")
+        'model_state_dict': model.state_dict(),
+        'config': config
+    }, model_save_path)
+    print(f"完整模型已保存为 '{model_save_path}'")
     
     # 评估最终模型
     model.eval()
-    running_corrects = 0
-    class_correct = [0, 0]
-    class_total = [0, 0]
+    test_metrics = evaluate_model(model, dataloaders['test'], device=device)
+    print(f"测试准确率: {test_metrics['accuracy']:.4f}")
+    print(f"F1分数: {test_metrics['f1']:.4f}")
+    
+    # 返回评估指标
+    return test_metrics
+
+# 评估函数
+def evaluate_model(model, dataloader, device='cpu'):
+    """评估模型性能并返回多个指标"""
+    
+    model.eval()
+    all_labels = []
+    all_preds = []
     
     with torch.no_grad():
-        for inputs, labels in dataloaders['test']:
+        for inputs, labels in dataloader:
             inputs = inputs.to(device)
             labels = labels.to(device)
             
             outputs = model(inputs)
             _, preds = torch.max(outputs, 1)
             
-            running_corrects += torch.sum(preds == labels)
-            
-            for i in range(len(labels)):
-                label = labels[i].item()
-                class_correct[label] += (preds[i] == label).item()
-                class_total[label] += 1
-    # todo: 测试集
-    # test_acc = running_corrects / dataset_sizes['test']
-    # print(f'测试准确率: {test_acc:.4f}')
+            all_labels.extend(labels.cpu().numpy())
+            all_preds.extend(preds.cpu().numpy())
     
-    for i in range(2):
-        class_name = "Food-101" if i == 0 else "本地数据库"
-        if class_total[i] > 0:
-            print(f'{class_name} 准确率: {class_correct[i] / class_total[i]:.4f} ({class_correct[i]}/{class_total[i]})')
+    # 计算指标
+    accuracy = accuracy_score(all_labels, all_preds)
+    precision = precision_score(all_labels, all_preds, average='weighted')
+    recall = recall_score(all_labels, all_preds, average='weighted')
+    f1 = f1_score(all_labels, all_preds, average='weighted')
+        
+    return {
+        'accuracy': accuracy,
+        'precision': precision,
+        'recall': recall,
+        'f1': f1
+    }
             
 if __name__ == "__main__":
-    main_efficient_binary_classifier()
+    # # 分析学习率敏感性
+    # learning_rates = [0.0001, 0.0005, 0.001, 0.005, 0.01]
+    # lr_results = analyze_parameter_sensitivity('learning_rate', learning_rates)
+    
+    # # 分析Dropout率敏感性
+    # dropout_rates = [0.1, 0.3, 0.5, 0.7, 0.9]
+    # dropout_results = analyze_parameter_sensitivity('dropout_rate', dropout_rates)
+
+    # # 分析批量大小敏感性
+    # batch_sizes = [8, 16, 32, 64, 128]
+    # batch_results = analyze_parameter_sensitivity('batch_size', batch_sizes)
+    
+    # # 基于之前的敏感性分析调整搜索空间
+    # param_grid = {
+    #     'learning_rate': [最佳lr * 0.5, 最佳lr, 最佳lr * 2],
+    #     'dropout_rate': [最佳dropout * 0.8, 最佳dropout, 最佳dropout * 1.2],
+    #     'batch_size': [最佳batch_size]
+    #     # 其他超参数
+    # }
+
+    # 执行小规模网格搜索
+    best_config, results = grid_search_hyperparameters()
+    
+    
+    # 使用找到的最佳配置
+    final_metrics = main_efficient_binary_classifier(best_config)
+    print(f"最终模型准确率: {final_metrics['accuracy']:.4f}")
+    print(f"最终模型F1分数: {final_metrics['f1']:.4f}")
