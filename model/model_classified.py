@@ -139,6 +139,76 @@ class CustomFoodDataset(Dataset):
             image = self.transform(image)
             
         return image, 1  # 1表示来自本地数据集
+    
+# 为本地数据库测试集创建自定义数据集类
+class CustomFoodTestDataset(Dataset):
+    def __init__(self, root_dir, test_list_file, name_file, transform=None):
+        """
+        自定义食物测试数据集
+        
+        参数:
+            root_dir: 数据集根目录
+            test_list_file: 包含测试图片路径和真实标签的文件 (test_truth_list.txt)
+            name_file: 包含类别名称的文件
+            transform: 图像转换操作
+        """
+        self.root_dir = root_dir
+        self.transform = transform
+        
+        # 加载类别名称
+        self.class_names = []
+        self.class_dict = {}  # 用于存储类别ID到索引的映射
+        
+        with open(os.path.join(root_dir, name_file), 'r', encoding='utf-8') as f:
+            for line in f:
+                parts = line.strip().split('\t')
+                if len(parts) >= 3:
+                    class_id = int(parts[0])
+                    chinese_name = parts[1]
+                    english_name = parts[2]
+                    self.class_names.append(f"{chinese_name} ({english_name})")
+                    self.class_dict[class_id] = len(self.class_names) - 1
+        
+        # 加载图片路径和标签
+        self.image_paths = []
+        self.labels = []
+        
+        # 从test_truth_list.txt加载测试集标签
+        with open(os.path.join(root_dir, test_list_file), 'r') as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) >= 2:
+                    img_name = parts[0]  # 例如 000000.jpg
+                    label = int(parts[1])
+                    
+                    # 构建完整的图像路径
+                    full_img_path = os.path.join(root_dir, 'test', img_name)
+                    
+                    if label in self.class_dict:
+                        self.image_paths.append(full_img_path)
+                        self.labels.append(self.class_dict[label])
+                    else:
+                        print(f"警告: 忽略标签 {label}，因为它不在类别映射中")
+        
+        print(f"本地数据库测试集: 加载了 {len(self.image_paths)} 张图像，共 {len(self.class_names)} 个类别")
+    
+    def __len__(self):
+        return len(self.image_paths)
+    
+    def __getitem__(self, idx):
+        img_path = self.image_paths[idx]
+        label = self.labels[idx]
+        
+        try:
+            image = Image.open(img_path).convert('RGB')
+        except Exception as e:
+            print(f"无法加载图像 {img_path}: {e}")
+            image = Image.new('RGB', (224, 224))
+        
+        if self.transform:
+            image = self.transform(image)
+            
+        return image, 1  # 1表示来自本地数据库
 
 # 特征提取器类
 class FeatureExtractor(nn.Module):
@@ -188,6 +258,50 @@ class FeatureExtractor(nn.Module):
         x = self.features(x)
         x = torch.flatten(x, 1)
         return x
+    
+# 无标签测试集    
+class CustomFoodUnlabeledTestDataset(Dataset):
+    def __init__(self, root_dir, test_dir='test', transform=None):
+        """
+        自定义食物无标签测试数据集
+        
+        参数:
+            root_dir: 数据集根目录
+            test_dir: 测试集文件夹名称
+            transform: 图像转换操作
+        """
+        self.root_dir = root_dir
+        self.test_dir = test_dir
+        self.transform = transform
+        
+        # 加载所有测试图片
+        test_path = os.path.join(root_dir, test_dir)
+        image_files = [f for f in os.listdir(test_path) if os.path.isfile(os.path.join(test_path, f)) and 
+                       f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        
+        self.image_paths = [os.path.join(test_path, f) for f in image_files]
+        self.image_names = image_files
+        
+        print(f"无标签测试集: 加载了 {len(self.image_paths)} 张图像")
+    
+    def __len__(self):
+        return len(self.image_paths)
+    
+    def __getitem__(self, idx):
+        img_path = self.image_paths[idx]
+        img_name = self.image_names[idx]
+        
+        try:
+            image = Image.open(img_path).convert('RGB')
+        except Exception as e:
+            print(f"无法加载图像 {img_path}: {e}")
+            image = Image.new('RGB', (224, 224))
+        
+        if self.transform:
+            image = self.transform(image)
+            
+        # 返回图像、虚拟标签和图像名称
+        return image, 0, img_name  # 0是虚拟标签
 
 # 二分类器模型
 class BinaryClassifier(nn.Module):
@@ -243,7 +357,9 @@ def grid_search_hyperparameters():
     # 定义超参数搜索空间
     param_grid = {
         'base_model': ['resnet50'],  # 可以添加'resnet18', 'resnet101'等
-        'dropout_rate': [0.3, 0.5, 0.7],
+        'learning_rate': [0.0001 * 0.5, 0.0001, 0.0001 * 2],
+        'dropout_rate': [0.3 * 0.8, 0.3, 0.3 * 1.2],
+        'batch_size': [128],
         'hidden_size': [256, 512, 1024],
         'optimizer_type': ['adam', 'adamw'],
         'learning_rate': [0.001, 0.0005, 0.0001],
@@ -366,9 +482,7 @@ def analyze_parameter_sensitivity(param_name, param_values):
     
     return results
 
-# 准备数据集
 def prepare_binary_datasets(food101_dir, local_data_dir, batch_size=32, augment_level='standard'):
-    """准备二分类数据集"""
     """准备二分类数据集，支持不同级别的数据增强"""
     # 标准数据增强
     if augment_level == 'standard':
@@ -408,29 +522,6 @@ def prepare_binary_datasets(food101_dir, local_data_dir, batch_size=32, augment_
         'test': test_transform
     }
     
-    # 定义数据转换
-    data_transforms = {
-        'train': transforms.Compose([
-            transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ]),
-        'val': transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ]),
-        'test': transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        ]),
-    }
-    
     # 创建Food-101数据集
     food101_train = Food101Dataset(
         data_dir=food101_dir,
@@ -448,7 +539,7 @@ def prepare_binary_datasets(food101_dir, local_data_dir, batch_size=32, augment_
         food101_train, [train_size, val_size, test_size]
     )
     
-    # 创建本地数据集
+    # 创建本地数据集（训练和验证集）
     local_train = CustomFoodDataset(
         root_dir=local_data_dir,
         list_file='train_list.txt',
@@ -463,9 +554,10 @@ def prepare_binary_datasets(food101_dir, local_data_dir, batch_size=32, augment_
         transform=data_transforms['val']
     )
     
-    local_test = CustomFoodDataset(
+    # 使用新的加载器创建本地测试集
+    local_test = CustomFoodTestDataset(
         root_dir=local_data_dir,
-        list_file='test_list.txt',
+        test_list_file='test_truth_list.txt',  # 使用真实标签文件
         name_file='name.txt',
         transform=data_transforms['test']
     )
@@ -500,7 +592,6 @@ def prepare_binary_datasets(food101_dir, local_data_dir, batch_size=32, augment_
     test_dataset = ConcatDataset([food101_test, local_test])
     
     # 创建数据加载器
-    # 使用设置的batch_size创建DataLoader
     dataloaders = {
         'train': DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4),
         'val': DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=4),
@@ -860,13 +951,13 @@ if __name__ == "__main__":
     # batch_sizes = [8, 16, 32, 64, 128]
     # batch_results = analyze_parameter_sensitivity('batch_size', batch_sizes)
     
-    # # 基于之前的敏感性分析调整搜索空间
-    # param_grid = {
-    #     'learning_rate': [最佳lr * 0.5, 最佳lr, 最佳lr * 2],
-    #     'dropout_rate': [最佳dropout * 0.8, 最佳dropout, 最佳dropout * 1.2],
-    #     'batch_size': [最佳batch_size]
-    #     # 其他超参数
-    # }
+    # 基于之前的敏感性分析调整搜索空间
+    param_grid = {
+        'learning_rate': [0.0001 * 0.5, 0.0001, 0.0001 * 2],
+        'dropout_rate': [0.3 * 0.8, 0.3, 0.3 * 1.2],
+        'batch_size': [128]
+        # 其他超参数
+    }
 
     # 执行小规模网格搜索
     best_config, results = grid_search_hyperparameters()
