@@ -1,0 +1,1996 @@
+0000 Grilled beef tongue 293 
+0001 Flavored snail meat 416 
+0002 Napoleon cake 462 
+0003 Spicy chicken 388 
+0004 Noodles with pork chop 499 
+0005 Stir-fried pork with capers 238 
+0006 Bang bang chicken 861 
+0007 Hibiscus crab stick 341 
+0008 Tomato and egg flour pimple soup 843 
+0009 Grilled ribs 343 
+0010 Stir-fried lettuce 240 
+0011 Stir-fried clams with chili sauce 329 
+0012 Brownie 500 
+0013 Duck feet 1,818 
+0014 Hand cake 1,082 
+0015 Durian pancake 434 
+0016 Griddle rabbit 397 
+0017 Dried chiba bean curd 422 
+0018 Plate reinforcement 309 
+0019 Tobiko warship sushi 577 
+0020 Meringue puffs 462 
+0021 Fried pork with sauerkraut 475 
+0022 Potato salad 490 
+0023 Onion mixed fungus 742 
+0024 Crepe 362 
+0025 Crispy chicken bibimbap 673 
+0026 Golden cake 496 
+0027 Bean sprouts in soup 478 
+0028 Steamed fish head with double pepper 381 
+0029 Mung bean soup 1,947 
+0030 Good harvest of coarse grains 211 
+0031 Crab fried rice cake 466 
+0032 Chicken casserole 381 
+0033 Pan-fried three stuffed treasures 230 
+0034 Firewood chicken 480 
+0035 Golden cod 336 
+0036 Waxiang chicken 375 
+0037 Corn with pine nuts 1,033 
+0038 Secret jujube 765 
+0039 Pork with preserved vegetable 982 
+0040 Fried hairtail 601 
+0041 Yogurt purple rice 401 
+0042 Home-style bean curd 463 
+0043 Double chicken drumsticks 1,010 
+0044 Fried crab with curry 513 
+0045 Fried cantonese sausage 242 
+0046 Roasted eggplant with garlic 628 
+0047 Shrimp skewers 999 
+0048 Wonton noodles 812 
+0049 Fried kidney flower with pig liver 424 
+0050 Vinegar cabbage 420 
+0051 Crab roe salad 475 
+0052 Fried eggplant 427 
+0053 Four red porridge 351 
+0054 Boiled fish 1,304 
+0055 Grilled chicken feet 439 
+0056 Roast eggplants 433 
+0057 Kidney beans 316 
+0058 Straw hat cake 285 
+0059 Meicai bamboo shoots 355 
+0060 Cold pork cold head 485 
+0061 Braised duck gizzards 728 
+0062 Wasabi octopus 496 
+0063 Cheese baked sweet potatoes 399 
+0064 Fried twist 447 
+0065 Dumplings 490 
+0066 Tomato pasta 363 
+0067 Dried carob 473 
+0068 Toffee cake 406 
+0069 Crab yellow tofu 498 
+0070 Barbecue ribs 1,259 
+0071 Strawberry sundae 787 
+0072 Pineapple rice 268 
+0073 Tin foil potatoes 233 
+0074 Stir-fried pork with rice white 445 
+0075 Black pepper pork chop rice 251 
+0076 Ribs rice 463 
+0077 Braised noodles with ribs 445 
+0078 Spicy shrimp 464 
+0079 Choy sum with garlic sauce 332 
+0080 Steamed chicken in lotus leaves 424 
+0081 Spicy cabbage fried rice 493 
+0082 Pineapple fritters shrimp 406 
+0083 Spicy shao pointed 351 
+0084 Scallion lamb 500 
+0085 Bazhen tofu 475 
+0086 Donkey meat 802 
+0087 Fried egg roll 167 
+0088 Gourd head bread in the soup 402 
+0089 Fish head tofu soup 300 
+0090 Fried spring rolls with three pieces of silk 398 
+0091 Braised beef brisket on rice 311 
+0092 Smoked ?sh 993 
+0093 Fried rice noodles with eggs 230 
+0094 Corn ribs soup 501 
+0095 Rib skewers 1,019 
+0096 Fried shao mai 280 
+0097 Shredded potatoes with salad 896 
+0098 Glutinous rice balls with peanuts and sesame seed 500 
+0099 Fried potato chips with spicy cabbage 326 
+0100 Crab stick nigiri sushi 347 
+0101 Steamed pumpkin with red dates 563 
+0102 Coconut jelly 337 
+0103 Fried edamame with pickled vegetables 491 
+0104 Braised pork on rice 1,887 
+0105 Braised chicken nuggets 367 
+0106 Preserved egg with hot pepper 267 
+0107 Green tea cake 384 
+0108 White rice 1,422 
+0109 Pork liver noodle 405 
+0110 Spicy fish 409 
+0111 Sauerkraut beef 185 
+0112 Lotus pond side dishes 461 
+0113 Green pepper stir-fried dregs 321 
+0114 Fried bacon with bamboo shoots 347 
+0115 Grilled prawns 383 
+0116 Grilled duck intestine skewers 218 
+0117 Stir-fried beef fillet with tea mushroom 427 
+0118 Scrambled noodles with tomato and egg 360 
+0119 Snowflake chicken fillet 331 
+0120 Refreshing evergreen 290 
+0121 Fried chicken gizzards 659 
+0122 Scallion sea bass 324 
+0123 Red date and yam congee 428 
+0124 Coarse grain porridge 428 
+0125 Stewed chicken nuggets 449 
+0126 Spicy pork 373 
+0127 Pickled mustard 415 
+0128 Matcha mousse cake 197 
+0129 Snowflake cowboy bones 524 
+0130 Fried flower beetle 385 
+0131 Roast pork 455 
+0132 Flamingo cake 475 
+0133 Colorful face lift 379 
+0134 Cool coconut milk 429 
+0135 Tossed fish skin 442 
+0136 Sparerib noodles 981 
+0137 Boneless chicken feet 500 
+0138 Pork sauerkraut bun 429 
+0139 Soy milk 625 
+0140 Beef brisket noodle 421 
+0141 Five recipes of tender beef 407 
+0142 Fried pork with pleurotus eryngii 938 
+0143 Griddle chicken 343 
+0144 Red bean curd 470 
+0145 Custard bun 272 
+0146 Fried lotus white with oil residue 364 
+0147 Kimchi beef sushi 315 
+0148 Red bean double skin milk 500 
+0149 Mutton soup 1,279 
+0150 Fire bun 566 
+0151 Beef and rice noodle soup 391 
+0152 Fried mushrooms 259 
+0153 Stir-fried shredded pork with garlic moss 391 
+0154 Smooth double skin milk 307 
+0155 Soy bean curd 454 
+0156 Beef claypot rice 970 
+0157 Fried chicken chop 491 
+0158 Refreshing lotus root slices 1,389 
+0159 Fried shredded pancake 411 
+0160 Hot pot noodles 283 
+0161 Fried pork with chili 465 
+0162 Saute spicy chicken 436 
+0163 Pork with preserved vegetable rice 425 
+0164 Tiramisu cake 543 
+0165 Soy sauce fish 296 
+0166 Baked potato chips 415 
+0167 Cream of mushroom soup 415 
+0168 Baked fairy grass with Taro 862 
+0169 Baked corn with egg yolk 492 
+0170 Steam pot chicken 455 
+0171 Tomato and egg soup 1,074 
+0172 River noodles in pig soup 445 
+0173 Matcha yellow peach cake 423 
+0174 Fruit pizza 499 
+0175 Sweet plum and sweet potato 981 
+0176 Cucumber preserved egg soup 427 
+0177 Scrambled egg with chopped chili pepper 343 
+0178 Pineapple cake 454 
+0179 Fried balls and radish 327 
+0180 Steamed abalone with garlic and vermicelli 401 
+0181 Overlord chicken strips 1,252 
+0182 Braised chicken 421 
+0183 Three delicacies in casserole 521 
+0184 Crispy corn cob 381 
+0185 Steamed mandarin fish 370 
+0186 Chinese salad 459 
+0187 Hotbed chives with pork 299 
+0188 Clam tofu soup 905 
+0189 Tuna onigiri 298 
+0190 Beef ribs 434 
+0191 Spicy cabbage sushi roll 432 
+0192 Pickled mustard with shredded soup 322 
+0193 Red oil dumplings 409 
+0194 Fried shrimp 498 
+0195 Crispy radish skin 259 
+0196 Fried tofu 448 
+0197 Salted chicken 448 
+0198 Baked pig brain with tin foil 364 
+0199 Sour and spicy fish meal with grain 498 
+0200 Enoki mushroom 330 
+0201 Lotus root box 990 
+0202 Simmered dry noodles 404 
+0203 Pigeon soup 406 
+0204 Duck belly 469 
+0205 Beef jerky 1,086 
+0206 Chestnut cream soup 477 
+0207 Plum kidney bean 380 
+0208 Red bean sago 216 
+0209 Lemon sauerkraut fish 411 
+0210 Sauce chili 256 
+0211 Squid crisp 300 
+0212 Spicy korean noodles 1,147 
+0213 Steamed rice with mei cai meatloaf 416
+0214 King crab 399 
+0215 Beef noodle soup 946 
+0216 Fried frog 459 
+0217 Mustard duck feet 476 
+0218 Fried squid 414 
+0219 Cucumber with pork ears 470 
+0220 Oily noodles 1,644 
+0221 Red oil yuba 478 
+0222 Soup noodles 227 
+0223 Braised lamb 812 
+0224 Fried noodles 464 
+0225 Grilled salmon sushi 641 
+0226 Lotus seed pork belly soup 279 
+0227 Pickled fresh 373 
+0228 Pepper rabbit 438 
+0229 Beef tendon noodles 784 
+0230 Arctic bay sashimi 474 
+0231 Braised sheep’s hoof 303 
+0232 Cucumber dip 392 
+0233 Chicken rice 379 
+0234 Sweet potato balls with taro 443 
+0235 Egg pancakes 414 
+0236 Braised pork with chestnut 450 
+0237 Stewed foie gras 494 
+0238 Pickled fish rice noodles 486 
+0239 Pork head meat mixed with cucumber 470 
+0240 Black rice porridge 426 
+0241 Griddle ribs 385 
+0242 Sauce beef 468 
+0243 Salt and pepper shrimp 475 
+0244 Stewed chicken soup with cordyceps flower 379 
+0245 Sour soup pork 374 
+0246 Braised pigeon 746 
+0247 Sausage pizza 800 
+0248 Candied sweet potatoes 487 
+0249 Shrimp sushi 598 
+0250 Fried noodles with seafood 364 
+0251 Griddle of pleurotus eryngii 423 
+0252 Fried beans 354 
+0253 The five-star chicken nuggets 295 
+0254 Broth bottom 398 
+0255 Pilaf 422 
+0256 Griddle beef with skin 1,025 
+0257 Cold dried eggs 491 
+0258 Celery and peanuts 1,035 
+0259 Sauerkraut chicken 292 
+0260 Pickled cucumber 274 
+0261 Potted cake 499 
+0262 Rice burger 356 
+0263 Mango fried yogurt 181 
+0264 Sawdust cup 441 
+0265 Fresh pot rabbit 243 
+0266 Mango sticky rice cake 311 
+0267 Honey roasted whole chicken 680 
+0268 Shredded cake 240 
+0269 Tenderloin skewers 336 
+0270 Salmon salad 348 
+0271 Dry roasted large yellow croaker 316 
+0272 Fish skin dumplings 210 
+0273 Signature chicken feet 318 
+0274 Pimple face 274 
+0275 Fried lamb chops 423 
+0276 Stir-fried squid whiskers 402 
+0277 Fried five spice roll 401 
+0278 Crock soup 409 0279 Tofu bubble 466 
+0280 Dried radish omelette 185 
+0281 Shredded potato burrito 500 
+0282 Scrambled eggs with green onion 396 
+0283 Mixed beef 565 
+0284 Garlic bread 1,449 
+0285 Sauteed pork with green beans 285 
+0286 Braised vermicelli with chicken and mushroom 490 
+0287 Oreo ice cream 289 
+0288 Braised ham sausage 461 
+0289 Stir-fried pork with green peppers 496 
+0290 Sauerkraut vermicelli soup 438 
+0291 Organic fish 397 
+0292 Shredded squid 796 
+0293 Spicy fried escargot 451 
+0294 Honey chicken feet 278 
+0295 Cucumber mixed with garlic paste 440 
+0296 Watermelon smoothie 235 
+0297 Scallops and shrimp congee 373 
+0298 Multigrain bun 428 
+0299 Cold preserved egg 499 
+0300 Stir-fried lettuce with dace in black bean sauce 393 
+0301 Pickled cabbage powder 1,274 
+0302 Stone egg skewers 249 
+0303 Sauteed beef fillet with hot green pepper 374 
+0304 Chicken breast salad 472 
+0305 Chocolate brown cake 324 
+0306 Cucumber fritters 367 
+0307 Steamed pork ribs 434 
+0308 Sea star 353 
+0309 Fried dried tofu 266 
+0310 Fried sweet potato balls 429 
+0311 Guiling paste 467 
+0312 Green vegetable tofu soup 305 
+0313 Mapo tofu 1,262 
+0314 Grilled fatty intestine skewers 248 
+0315 Pan-fried pork bun 1,569 
+0316 Braised turtle 496 
+0317 Cilantro tofu soup 374 
+0318 Fried rice with sauerkraut and egg 346 
+0319 Mustard pork noodles 287 
+0320 Polenta 494 
+0321 Pork noodles 382 
+0322 Spicy squid 169 
+0323 Ketchup surface 850 
+0324 Grilled cod 286 
+0325 Ice cream cone 484 
+0326 Large rows of rice 333 
+0327 Chestnut shortbread 1,347 
+0328 Marinated goose wings 463 
+0329 Vegetarian abalone 427 
+0330 Ice cream ball 352 
+0331 Fried ham with cucumber 335 
+0332 Piggy paige cake 468 
+0333 Chicken sandwich 381 
+0334 Mango black jelly 467 
+0335 Roast chicken 1,259 
+0336 Walnut buns 405 
+0337 Braised tofu in abalone sauce 488 
+0338 The oil meat 381 
+0339 Cheese ribs 381 
+0340 Fried dumplings 1,427 
+0341 Sushi of floss 397 
+0342 Yongzhou blood duck 429 
+0343 Braised beef brisket en casserole 499 
+0344 Preserved rice 400 
+0345 Guokui 404 
+0346 Fried rice cake with chinese cabbage 393 
+0347 Stewed bean curd soup with crucian carp 575 
+0348 Smoothies 452 
+0349 Elbow 493 
+0350 Cheese baked scallops 339 
+0351 Sauerkraut bass 413 
+0352 Bean buns 858 
+0353 Durian pizza 429 
+0354 Boiled dried shreds 667 
+0355 Steamed chicken feet with black bean sauce 496 
+0356 Blueberry mousse 287
+0357 Fried rice noodles with eggs 471 
+0358 Rice with duck legs 500 
+0359 Tofu with shallots 379 
+0360 Tomahaw 401 
+0361 Bacon sandwich 386 
+0362 Braised eggplant with bean curd 1,572 
+0363 Donkey burger 1,772 
+0364 Braised fish with soy sauce 499 
+0365 Rice covered with black pepper steak 473 
+0366 Italian noodle with meat sauce 467 
+0367 Rice with teriyaki drumstick 745 
+0368 Duck blood and bean-starchy vermicelli soup 1,144 
+0369 Sauteed lettuce 539 
+0370 Ice powder 467 
+0371 Egg wrapped sausage 477 
+0372 Rainbow cake 796 
+0373 Blueberry smoothie 169 
+0374 Lava cake 306 
+0375 Stir fried vermicelli 455 
+0376 Fried shrimp 1,014 
+0377 Fried squid flower 475 
+0378 Stewed croaker in brown sauce 410 
+0379 Quick-fried liver with distilled grains sauce 376 
+0380 Pita bread so awked in beef soup 407 
+0381 Vinegar turnip 472 
+0382 Wonton 1,771 
+0383 Beef soup 976 
+0384 Muxu pork 496 
+0385 Seaweed sushi 785 
+0386 Steamed turbot 788 
+0387 Larimichthys 922 
+0388 Fried chicken 559 
+0389 Salted pork in jelly crystal trotter 457 
+0390 Flower cake 285 
+0391 Barbecued pork noodle rolls 294 
+0392 Potato chips on sizzling iron plate 329 
+0393 Fried bean sprouts with leek 426 
+0394 Sesame octopus 518 
+0395 Fried razor clam 1,981 
+0396 Cheese pizza 471 
+0397 Pork with garlic sauce 495 
+0398 Scalded beef 415 
+0399 Sugar oil cake 281 
+0400 Braised pork with vermicelli 489 
+0401 Marinated quail eggs 323 
+0402 Chinese chestnut 321 
+0403 Spicy beef soup 360 
+0404 Boiled egg 200 
+0405 Noodles soup 396 
+0406 Braised pork 1,080 
+0407 Rice with curry chicken chop 822 
+0408 Balsam pear scrambled eggs 1,039 
+0409 Roast chicken wings 375 
+0410 Pork rice 422 
+0411 Fried bacon with lettuce 395 
+0412 Fried eggs with pepper 281 
+0413 Pork stomach 188 
+0414 Australian skewers 288 
+0415 Steamed rice with barbecued pork 292 
+0416 Bread soaked in fish head soup 466 
+0417 Shredded pork skin 651 
+0418 Soy sauce chicken 436 
+0419 Tea flavored shrimp 443 
+0420 Pita bread so awked in lamp soup 983 
+0421 Scramble egg 479 
+0422 Stewed chicken with mushroom 377 
+0423 Grilled chicken breast 272 
+0424 Oyster sauce beef 410 
+0425 Stewed spareribs with potatoes 261 
+0426 Marinated beef tripe 256 
+0427 Sesame paste 348 
+0428 Coconut rice 336 
+0429 Mother’s hoof soup 401 
+0430 Roasted fresh cat?sh 272 
+0431 Fried pork with dried meat 1,941 
+0432 Coconut chicken 535 
+0433 Steamed luffa with minced garlic 364
+0434 Spareribs with taro 426 
+0435 Fried soybeans with luffa 464 
+0436 Cod fish steak 554 
+0437 Rice bag 418 
+0438 Pickle soup 434 
+0439 Braised pork with braised pork 654 
+0440 Fried shrimp 427 
+0441 Salt and pepper duck chin 1,526 
+0442 Tofu pot 378 
+0443 Fried noodles with beef 425 
+0444 Baked prawns with salt 653 
+0445 Spicy hot pot 1,764 
+0446 Pork chop soup with radish 498 0
+447 Powder soup 487 
+0448 Spicy fish 663 0449 Whitebait soup 963 
+0450 Mixed agaric with coriander 421 
+0451 Bamboo rice 270 
+0452 Fried noodles with beef 447 
+0453 Braised eggplant with meat 455 
+0454 Sugar pie 589 
+0455 Steamed bun with vegetables 387 
+0456 Crystal chicken 420 
+0457 Buddha jumps over the wall 1,268 
+0458 Spareribs with brown sauce 370 
+0459 Silky chicken roll 432 
+0460 Fried rice with eel 434 
+0461 Grilled cold noodles 768 
+0462 Cabbage tofu soup 174 
+0463 Northeast big lift 441 
+0464 Grilled chiba tofu 767 
+0465 Fried konjac balls 590 
+0466 Spike potatoes 227 
+0467 Hot and sour chicken feet 236 
+0468 Stir fried lily with celery 414 
+0469 Mango cake 464 
+0470 Japanese tofu with tin foil 456 
+0471 Corn pudding crispy 428 
+0472 Cold taro powder 448 
+0473 Three fresh rice noodles 488 
+0474 Rice cake 386 
+0475 Sauce cake 497 
+0476 Duck soup 434 
+0477 Duomang small meatballs 398 
+0478 Fish ball soup 294 
+0479 Flour cake 378 
+0480 Walnut shortbread 1,053 
+0481 Corn pumpkin porridge 390 
+0482 Shrimp and crab porridge 499 
+0483 Hot and sour cabbage 359 
+0484 Brown sugar ice powder 864 
+0485 Egg rice roll 1,232 
+0486 Smoked sauce meat platter 578 
+0487 Pepper chicken 336 
+0488 Scrambled eggs with loofah 480 
+0489 Stir fried pork and bone with chili 553 
+0490 Corn grilled ribs 384 
+0491 Roasted yellow throat 426 
+0492 Barbecued pork 406 
+0493 Seaweed soup 433 
+0494 Steamed pork 186 
+0495 Pineapple sweet and sour pork 442 
+0496 Egg waffles 1,297 
+0497 Camphor tea duck 498 
+0498 Sausage rice 409 
+0499 Mongolian roasted whole lamb 1,321 
+0500 Kelp salad 1,321 
+0501 Twice cooked beef 487 
+0502 Fried loofah 377 
+0503 Fried liangpi 429 
+0504 Fried bean curd 500 
+0505 Sweet corn pie 937 
+0506 Beef rice roll 326 
+0507 Sausage 379 
+0508 Chicken bibimbap 270 
+0509 Beef offal pot 423 
+0510 Fillet steak 434 
+0511 Banana pancake 839 
+0512 Plum dried vegetable meat bun 383 
+0513 Smoked chicken skeleton 804 
+0514 Eight treasure rice 940 
+0515 Fish pot 409 
+0516 Yam pork ribs congee 308 
+0517 Arctic shellfish sushi 750 
+0518 Liwan boat porridge specialty 472 
+0519 Salami pizza 344 
+0520 Lotus leaf rice 798 
+0521 Salted fish and eggplant claypot 356 
+0522 Mutton string 1,224 
+0523 Fried beef with bitter melon 475 
+0524 Stir-fried cauliflower 398 
+0525 Beef hot and sour noodle 420 
+0526 Cold bitter chrysanthemum 201 
+0527 Yellow throat 483 
+0528 Fried chicken with hot peppers 500 
+0529 Tiger cake 458 
+0530 Steamed egg dumplings 236 
+0531 Shredded cucumber 500 
+0532 Spicy noodles 364 
+0533 Grandma’s scrambled eggs 926 
+0534 Stir-fried chicken with rice pepper 364 
+0535 Smoked hairtail 236 
+0536 Sesame soy sauce lettuce 269 
+0537 Braised beef 500 
+0538 Haggis soup 641 
+0539 Braised pork ribs 469 
+0540 Cake box 494 
+0541 Taro chicken 499 
+0542 Tiger green peppers 500 
+0543 Spicy fried sea screw 313
+0544 Called naan package meat 320 
+0545 Dried marinated orchid 311 
+0546 Sauteed bacon with peas 432 
+0547 Chicken skin skewers 563 
+0548 Baked scallops 486 
+0549 Scrambled eggs with chives 370 
+0550 Wooden barrel rice 445 
+0551 Noisette three kinds of meat 757 
+0552 Tofu rice noodles 409 
+0553 Chicken rack 1,038 
+0554 Cold gluten 217 
+0555 Carbon baking bullfrog 216 
+0556 Spicy bullfrog 431 
+0557 Boiled edamame 392 
+0558 Yam spring rolls 769 
+0559 Fragrant fried sierra 256 
+0560 Hot rice 297 
+0561 Shredded cold papaya 517 
+0562 Golden fried chicken feet 392 
+0563 Winter melon pork ribs soup 868 
+0564 Salted pleurotus eryngii 491 
+0565 Grilled rice cake 299 
+0566 Eggplant rice with fish aroma 463 
+0567 Panda chocolate sundae 456 
+0568 Steamed noodles 672 
+0569 Millet mung bean porridge 398 
+0570 Purple potato porridge 308 
+0571 Duck liver 499 
+0572 Steamed pork ribs with glutinous rice 1,243 
+0573 Longjing shrimp 486 
+0574 Cauliflower 432 
+0575 Pipa duck 526 
+0576 Braised beef noodles 434 
+0577 Chicken feet in vinegar 352 
+0578 Tempura 995 
+0579 Shar pei mousse cake 357 
+0580 Crispy rice potatoes 496 
+0581 Steamed spare ribs with taro 391 
+0582 Goat tripe 480 
+0583 Red bean porridge 934 
+0584 Egg noodles 532 
+0585 Braised pork roll 391 
+0586 Mango mousse cake 473 
+0587 Three shreds fried rice noodles 530 
+0588 Spiced boiled fire 383 
+0589 Fried rice with bacon and egg 304 
+0590 Griddle yellowbone fish 341 
+0591 Candied date zongzi 500 
+0592 Celery 364 
+0593 Mushroom chicken claypot rice 1,095 
+0594 Steamed pumpkin with lily 797 
+0595 Tomato beef noodle 385 
+0596 Champion and porridge 332 
+0597 Crystal shrimp 440 
+0598 Spicy shrimp 371 
+0599 Egg yolk crisp 500 
+0600 Guoqiao tofu 418 
+0601 Beggar’s chicken 487 
+0602 Fried beef with hot pepper 368 
+0603 Vegetable and lean pork porridge 439 
+0604 Boiled white meat 308 
+0605 Adzuki bean fermented rice 325 
+0606 Braised eggplant 451 
+0607 Mushroom with garlic paste 346 
+0608 Fat rice roll 951 
+0609 Blueberry mashed potatoes 375 
+0610 Spinach with gluten 275 
+0611 Soup baby dishes 366 
+0612 Salmon ?ank sinew 1,035 
+0613 Seafood pancake 862 
+0614 Fried rice cake 291 
+0615 Braised chicken with ginseng 828 
+0616 Millet porridge 434 
+0617 Silver carp 198 
+0618 Fried carrot cake 487 
+0619 Dried bamboo shoots and duck pot 349 
+0620 Garlic broccoli 899 
+0621 Pumpkin pie 456 
+0622 Potato wedges 467 
+0623 Donkey meat soup 347 
+0624 Miba 379 
+0625 Duck intestine fried rice 391 
+0626 Roasted bean skewers 306 
+0627 Tuna salad 1,126 
+0628 Sliced noodles 416 
+0629 Smoked ?sh noodle 351 
+0630 Pineapple buns 493 
+0631 Ramen fried rice cake 433 
+0632 Three fresh powder 500 
+0633 Crispy sausage 472 
+0634 Quicksand bag 271 
+0635 Cranberry toast slices 400 
+0636 Ballast congee 455 
+0637 Baked bun 397 
+0638 Drunk crab claws 436 
+0639 Honey chicken wings 218 
+0640 Braised fish head 403 
+0641 Mango milk ice 217 
+0642 Lychee meat 333 
+0643 Pork feet rice 842 
+0644 Banana pizza 400 
+0645 Fried tofu 493 
+0646 Roasted pork with dried beans 404 
+0647 Fried vermicelli 1,422 
+0648 Mango sago 422 
+0649 Garlic clove skewers 329 
+0650 Pig vegetable 361 
+0651 Duck leg 490 
+0652 Roll egg 295 
+0653 Three fresh ice powder 461 
+0654 Yellow clam 182 
+0655 Crispy potato grid 331 
+0656 Horseradish fungus 430 
+0657 Fried bacon with bamboo shoots 372 
+0658 Stir-fried green peppers 598 
+0659 Braised pork 431 
+0660 Marinated bullwhip 457 
+0661 Tripe soup powder 342 
+0662 Spicy cucumber 500 
+0663 Kimchi cake 440 
+0664 Fat intestine noodle 989 
+0665 Duck clavicle 184 
+0666 Cauliflower fried pork 499 
+0667 Fried tenderloin 413 
+0668 Steamed sea bass 695 
+0669 Salty bone soup 844 
+0670 Chestnut roast chicken 414 
+0671 Roasted dried tofu rolls 335 
+0672 Tiger egg 496 
+0673 Hand-shredded chicken 1,391 
+0674 Egg pudding 316 
+0675 Flower love sushi 497 
+0676 Roast duck noodle sauce 432 
+0677 Sauteed beef with wild pepper 911 
+0678 Sesame sauce liangpi 1,777 
+0679 Bacteria soup 263 
+0680 Grilled pork bone skewers 779 
+0681 Pork noodles with pickled vegetables 402 
+0682 Delicious crispy rice 159 
+0683 Egg yolk pork ?oss seaweed rice 370 
+0684 Shrimp shaomai 492 
+0685 Fried chicken 1,357 
+0686 Corn grated with cheese 177 
+0687 Sour plum soup 394 
+0688 Hand catch seafood 457 
+0689 Small noodles 1,235 
+0690 Fried wanton 1,429 
+0691 Mushrooms and cabbage 337 
+0692 Mushroom chicken congee 422 
+0693 Sour soup dumplings 371 
+0694 Braised konjac 281 
+0695 Hot pot ice cream 325 
+0696 Mango salmon roll sushi 249 
+0697 Egg yolk lobster 463 
+0698 Plum dried vegetable biscuits 559 
+0699 Yogurt 938 
+0700 Curry pork chop rice 453 
+0701 Crispy bamboo shoots in chicken sauce 263 
+0702 Fried rice with ham 500 
+0703 Braised pork 459 
+0704 Fried cucumber with basil 326 
+0705 Tiger vegetables 289 
+0706 Tofu skin sushi 396 
+0707 Chinese yam lean meat porridge 500 
+0708 French lamb chops 403 
+0709 Garden chicken 851 
+0710 Tea tree mushroom ribs soup 395 
+0711 Fried kidney 498 
+0712 Pork floss 499 
+0713 Jade burned 497 
+0714 Pickled pepper fish skin 168 
+0715 Cold chicken feet 469 
+0716 Coriander with beef 713 
+0717 Fried fungus with yam 995 
+0718 Taste shrimp 484 
+0719 Fruit ?shing 967 
+0720 Fried cuttlefish ball 264 
+0721 White porridge 456 
+0722 Cucumber mixed jellyfish 214 
+0723 Baked enoki mushrooms in tin foil 317 
+0724 Salt and pepper lobster 427 
+0725 Frozen tofu 429 
+0726 Seafood pimple soup 441 
+0727 Mixed sauce hot and sour noodles 513 
+0728 Honey yellow peach 385 
+0729 Rose ice powder 495 
+0730 Roasted shiitake mushrooms 259 
+0731 Spicy shrimp 985 
+0732 Diving fish 382 
+0733 Sugar fried hawthorn 447 
+0734 Mushroom crispy bamboo shoots 441 
+0735 Family portrait sushi 485 
+0736 Durian cheese pizza 448 
+0737 Whose mariko 451 
+0738 Soft-boiled egg 193 
+0739 Pan-fried long lee fish 259 
+0740 Grilled fish on paper 265 
+0741 Curry rice 995 
+0742 Hot and sour tripe soup 341 
+0743 Butyl five ren sauce 406 
+0744 Mango layer cake 411 
+0745 Egg ham fried rice 439 
+0746 Peony shrimp sashimi 288 
+0747 Radish beef 500 
+0748 Dry fans 493 
+0749 White cut saltwater duck 462 
+0750 Matcha smoothie 196 
+0751 Sour radish duck soup 413 
+0752 Pork with pickled vegetables 609 
+0753 Grilled mackerel 322 
+0754 Swiss roll cake 419 
+0755 Strawberry milk pudding 178 
+0756 Cold kelp root 462 
+0757 Sea oyster 425 
+0758 Grilled fish with sauerkraut 350 
+0759 Mutton freeing 1,238 
+0760 Spicy duck jane 283 
+0761 Argentine red shrimp 360 
+0762 Tofu soup 363 
+0763 One shrimp for two 470 
+0764 Wild vegetable dumpling 294 
+0765 Kelp rib soup 851 
+0766 Fried pork chops 428 
+0767 Halogen duck tongue 914 
+0768 Lame claypot rice 1,176 
+0769 Floss sushi 456 
+0770 Stir fried fungus with cabbage 437 
+0771 Durian cake 454 
+0772 Seaweed warship sushi 938 
+0773 Avocado salad 484 
+0774 Pure sausage 453 
+0775 Stir-fried fat intestine 319 
+0776 Purple rice porridge 432 
+0777 Brine geese 417 
+0778 Foil flower beetle powder 262 
+0779 Scrambled eggs with sauce 938 
+0780 Cornmeal buns 469 
+0781 Rice porridge 780 
+0782 Stir-fried long beans 742 
+0783 Pan-seared foie gras 446 
+0784 Steamed buns 491 
+0785 Black rice cake 243 
+0786 Fried eggplant box 309 
+0787 Chinese seaweed salad 489 
+0788 Roasted garlic naan 293 
+0789 Zongzi 215 
+0790 Halogen rabbit head 1,141 
+0791 Green pepper shredded pork rice bowl 498 
+0792 Spiced rabbit head 1,988 
+0793 Snow white juice with mango and black sticky rice 385 
+0794 Preserved egg and lean meat porridge 375 
+0795 Braised old goose 1,113 
+0796 Sesame sauce noodles 428 
+0797 Orleans roasted whole leg 526 
+0798 Nougat 464 
+0799 The ring oil eel 420 
+0800 Oily baby cabbage 275 
+0801 Chicken chop rice 962 
+0802 Fried cheese chicken chop 288 
+0803 Braised pork ribs 295 
+0804 Griddle ribs and shrimp 386 
+0805 Spinach in soup 509 
+0806 Fried chicken with mushroom 451 
+0807 Old duck soup with tea tree mushrooms 938 
+0808 Mushroom rape 354 
+0809 Hot and sour fern root powder 477 
+0810 Stuffed gluten balls 386 
+0811 Sweet corn on the cob 201 
+0812 Spare ribs pot 845 
+0813 Finding nemo pizza 413 
+0814 Shao powder 434 
+0815 Griddle shrimp 292 
+0816 Minced pork nigiri sushi 500 
+0817 Cooked tripe of sheep or swine 820 
+0818 Preserved egg with cucumber 317 
+0819 Durian black glutinous rice 417 
+0820 Yam and vegetable porridge 265 
+0821 Meatball soup 433 
+0822 Pork belly chicken 1,189 
+0823 Pan-fried chicken chop 1,476 
+0824 Salt and pepper pork 1,524 
+0825 Clam and winter melon soup 415 
+0826 Chocolate poppy cake 420 
+0827 Fruit cream cake 438 
+0828 Spicy fried rice cake 1,022 
+0829 Rose cake 477 
+0830 California roll sushi 502 
+0831 Hemp group 448 
+0832 Tonkotsu ramen 386 
+0833 Barbecued pork crisp 409 
+0834 Beef noodle soup 427 
+0835 Pancake 478 
+0836 Mutton vermicelli 863 
+0837 New orleans pizza 398 
+0838 Chicken bone skewers 230 
+0839 Eel congee 414 
+0840 Stew 488 0841 Diced carrot 340 
+0842 Fried cake 179 
+0843 Crystal shrimp dumpling 458 
+0844 Fried sliced pork with mushrooms 364 
+0845 Geoduck sashimi 311 
+0846 Red oil belly silk 391 
+0847 Eggplant claypot 397 
+0848 Spicy grilled meat mixed with rice 1,028 
+0849 Old vinegar sting 413 
+0850 The spicy cold eating rabbit meat 446 
+0851 Fried yellow beef 457 
+0852 Oxtail soup 412 
+0853 Steamed egg 303 
+0854 Spicy bullfrog 457 
+0855 Toon seedlings mixed with tofu shreds 488 
+0856 White snow black glutinous rice 675 
+0857 Stir-fried pork belly with chili 455 
+0858 Brown sugar hair cake 871 
+0859 Fried taro roll 431 
+0860 Red bean ice 501 
+0861 Sansho black fungus 302 
+0862 Fried pork with beans 569 
+0863 Pan-fried fish 498 
+0864 Fresh pepper fish 475 
+0865 Scrambled eggs with onions 357 
+0866 Scrambled eggs with cucumber 287 
+0867 Bean curd stick 468 
+0868 Dip in pickles 403 
+0869 Macaron 476 
+0870 Chicken noodles 481 
+0871 Braised fish pot 255 
+0872 Chopped pepper and taro 364 
+0873 Push cake 822 
+0874 Spicy chicken rice 400 
+0875 Fennel fried dough sticks 478 
+0876 Lemon fish 418 
+0877 Sizzling shrimp 436 
+0878 Green beans in garlic sauce 418 
+0879 Honey cake 194 
+0880 Grilled chicken skewers 271 
+0881 Dried intestines 272 
+0882 Spiced marinated eggs 481 
+0883 Dried vegetable with fried egg 383 
+0884 Steamed egg with shrimp 212 
+0885 Crispy rice cake 399 
+0886 Thick honey toast 309 
+0887 Salt baked chicken feet 370 
+0888 Tin foil baby cabbage 299 
+0889 Cheese bacon pizza 346 
+0890 Black rice and red bean porridge 368 
+0891 Grilled small yellow croaker 297 
+0892 Scrambled eggs with local vegetables 912 
+0893 Fried chili 399 
+0894 Fish with tomato 431 
+0895 Stir-fried bacon with garlic moss 395 
+0896 Drunken fish 442 
+0897 Spiced corned egg 364 
+0898 Fried tofu 277 0899 Tapioca pudding 429 
+0900 Sweet and spicy fried chicken 398 
+0901 Puffs 933 
+0902 Fried vermicelli with bean sprouts 300 
+0903 Sauteed fish in chili sauce 396 
+0904 Sauteed bullfrog in chili sauce 280 
+0905 Cold noodles with sesame sauce 495 
+0906 Sea food noodles 489 
+0907 Spicy chicken 1,635 
+0908 Braised Tofu 489 
+0909 Tuna and seaweed rolled rice 433 
+0910 Haggis noodle soup 485 
+0911 Chicken salad noodles 461 
+0912 Salted egg yolk with crispy crust 384
+0913 Fried fish cake 297 
+0914 Red bean pie 363 
+0915 Cumin chicken fillet 973 
+0916 Durian pizza 447 
+0917 Fried noodles with beef 421 
+0918 Pork chop bun 490 
+0919 Big bone soup 173 
+0920 Chocolate covered croissant 495 
+0921 Roasted garlic 300 
+0922 Custard piglet bun 387 
+0923 Fried milk melon with garlic slices 424 
+0924 Scrambled eggs with shrimp 429 
+0925 Grilled vegetarian chicken skewers 378 
+0926 Potato ?our with seafood 446 
+0927 Shrimp dumpling king 494 
+0928 Cow ribs 416 
+0929 Griddle cabbage 388 
+0930 Double beef fort 275 
+0931 Seafood noodles 482 
+0932 Fried udon 531 
+0933 Duck foot pot with snail 490 
+0934 Delicious jelly 1,511 
+0935 Fried chicken with edamame 376 
+0936 Mashed potatoes with cheese 500 
+0937 Sauce burst screws 376 
+0938 Crab Dumplings in Soup 1,961 
+0939 Pearl balls 736 
+0940 Oreo sawdust cup 476 
+0941 Cucumber with beef 365 
+0942 Spicy beef noodle 409 
+0943 Sashimi platter 480 
+0944 Braised winter melon 258 
+0945 Teriyaki chicken chop rice 462 
+0946 Roast chicken butt 214 
+0947 Peanut edamame 338 
+0948 Foie gras sushi 418 
+0949 Whirlwind potato tower 411 
+0950 Angel cake 467 
+0951 Fruit spell 413 
+0952 Boiled quail eggs 486 
+0953 Steamed chicken feet with sauce 1,145 
+0954 Chocolate sundae 274 
+0955 Old kitchen cabbage 481 
+0956 Spicy rice noodles 818 
+0957 Steamed Fish Head with sauce 353 
+0958 Fried sheep miscellaneous 559 
+0959 Chestnut 389 
+0960 Salt and pepper prawns 409 
+0961 Burning smell platter 1,019 
+0962 Milk and peach gum 422 
+0963 Skewer shrimp 219 
+0964 Foil grilled fish 716 
+0965 Chopped green onion Fried eggs 418 
+0966 Ramen with beef 447 
+0967 Braised hairtail 394 
+0968 Mix powder 286 
+0969 River snail 496 
+0970 Chicken pot 1,727 
+0971 Chicken wing rice 501 
+0972 Geoduck sashimi 495 
+0973 Chocolate 308 
+0974 Croissant 493 
+0975 Spiced beef 815 
+0976 Cheese pizza 486 
+0977 Braised lamb 401 
+0978 Fried yam 368 
+0979 Steamed multiple preserved hams 271 
+0980 Mussels screw 231 
+0981 Salted duck egg 1,096 
+0982 Black sesame quicksand bun 375 
+0983 Glutinous rice cake 285
+0984 Salad crispy chicken rice 924 
+0985 Rattan pepper chicken 345 
+0986 Braised chicken in casserole 406 
+0987 Garlic crayfish 1,333 
+0988 Sakura roll 674 
+0989 Fried octopus 872 
+0990 Cheese back ribs 330 
+0991 Sauerkraut fried rice 423 
+0992 Griddle duck 449 
+0993 Fried pork slices 498 
+0994 Red date cake 406 
+0995 Cold cut foie gras 1,012 
+0996 Red bean taro balls 488 
+0997 Fried intestines 452 
+0998 Stir-fried pork belly with spicy cabbage 445 
+0999 Instant noodles 360 
+1000 Frisee mixed with almonds 412 
+1001 Fried lamb 408 
+1002 Baked steamed bun slices 777 
+1003 Pumpkin cream soup 293 
+1004 Fried tofu 662 
+1005 Fresh taro 242 
+1006 Grilled rack of lamb 1,816 
+1007 Tossed cellophane noodles 427 
+1008 Scalded tripe 396 
+1009 Cream puff sticks 272 
+1010 Boiled Chinese kale 308 
+1011 Steamed ribs 697 
+1012 Sausage fried rice 1,108 
+1013 Creamy corn soup 492 
+1014 Creamy bacon pasta 457 
+1015 Rice wine dumplings 341 
+1016 Soba noodles 458 
+1017 Yam steamed with osmanthus honey 467 
+1018 Duck heart 431 
+1019 Rice topped with shredded potato 340 
+1020 Tofu pudding topped with crab guts 385 
+1021 Fried shrimp cake 297 
+1022 Roasted oysters 1,564 
+1023 Fish flavored shredded pork 971 
+1024 Beef cubes fried with black pepper 420 
+1025 Assorted boiled delicacies 247 
+1026 Twice cooked pork with bell pepper 254 
+1027 Salmon sushi 1,986 
+1028 Marinated noodles 744 
+1029 Spinach mixed with peanuts 805 
+1030 Garlic kelp shreds 1,377 
+1031 Steamed pumpkin 665 
+1032 Rice noodles fried with beef 502 
+1033 Bean curd stir-fried with chives 476 
+1034 Yakitori 274 
+1035 Chee cheong fun 625 
+1036 Fried noodle with shredded pork 423 
+1037 Fried fish and shrimp 398 
+1038 Glutinous rice 560 
+1039 Fried pork with yuba 386 
+1040 Bacon pasta 810 
+1041 Salt fried meat 672 
+1042 Xiao long bao 1,048 
+1043 Curry fish ball 804 
+1044 Cuttlefish 442 
+1045 Fried prawns 562 
+1046 Broad beans with scallion oil 429 
+1047 Potato cake 500 
+1048 Kung pao chicken 464 
+1049 Onion rings 1,982 
+1050 Goose palm 270 
+1051 Steamed carp 388 
+1052 Meat dumplings 387 
+1053 Spicy grilled fish 501 
+1054 Hand peeling bamboo shoots 397 
+1055 Mango milk 250 
+1056 Steamed crab feet 268 
+1057 Barbecued pork noodles 1,523 
+1058 Sheep scorpion 1,438 
+1059 Hanamaki 849 
+1060 Roasted enoki mushroom 407 
+1061 Blueberry fried yogurt 459 
+1062 Bullfrog claypot 407 
+1063 Pork eggplant 435 
+1064 Fried noodles with shredded pork 282 
+1065 Cucumber dressing 409 
+1066 Dried tofu with hot pepper 500 
+1067 Salt and pepper chops 341 
+1068 Fried chicken legs 437 
+1069 Fried peanuts 651 
+1070 Griddle bullfrog 414 
+1071 Salt and pepper nine belly fish 314 
+1072 Cup cake 516 
+1073 Abalone and fin belly soup 364 
+1074 Bean curd in sugar water 157 
+1075 Braised hemp food 471 
+1076 Duck intestines 237 
+1077 Shredded radish stewed shrimp 209 
+1078 Taro meat 431 
+1079 Lamb chops hand pilaf 589 
+1080 Sesame catsup sauce 457 
+1081 Sauerkraut fish with green pepper 975 
+1082 Fried small spring rolls 251 
+1083 Clams steamed egg 409 
+1084 Spaghetti with tomato meat sauce 500 
+1085 Tofu stewed with cabbage 451 
+1086 Chicken wing tip 806 
+1087 Stir-fried fatty intestine with hot pepper 359 
+1088 Fried squid 422 
+1089 Eggplant with sauce 440 
+1090 Shrimp with ice powder 717 
+1091 Hot squid 449 
+1092 Meat floss egg pie 500 
+1093 Hot pot fish 497
+1094 Prawn casserole 400 
+1095 Seafood tofu soup 438 
+1096 Garlic grilled fish 499 
+1097 Fish vermicelli 1,086 
+1098 California hand-rolled sushi 369 
+1099 Eight treasure congee 934 
+1100 Sesame beans 993 
+1101 Fried shrimp balls with cheese 391 
+1102 Spicy beef tendon 402 
+1103 Mango pancake 833 
+1104 Sauce spine 498 
+1105 Sweet potato porridge 499 
+1106 Dry pot frog 438 
+1107 Braised pork intestines 408 
+1108 Fried sweet potato 167 
+1109 Lamei and claypot rice 319 
+1110 Green bean porridge 441 
+1111 Scallion chicken 429 
+1112 Fried rice of yangzhou style 343 
+1113 Green onion Chinese pancake 913 
+1114 Steamed bread slices 509 
+1115 Cucumber roll sushi 465 
+1116 Stir fry 494 
+1117 Tossed tripe 154 
+1118 Boiled chicken rice 380 
+1119 Cucumber and peanuts 445 
+1120 Spicy ramen 442 
+1121 Fried clams with ginger and spring onion 1,111 
+1122 Fruit salad 311 
+1123 Shrimp porridge 439 
+1124 Palace fried shrimp ball 458 
+1125 Spanish mackerel 438 
+1126 Radish sauce 421 
+1127 Spicy slice pig ear 906 
+1128 Curry chicken baked rice 927 
+1129 Curry beef rice 376 
+1130 Belt noodle 383 
+1131 Durian melaleuca cake 837 
+1132 Garlic spinach 1,116 
+1133 Mahjong biscuits 448 
+1134 Beef noodles in sour soup 389 
+1135 Brown sugar buns 498 
+1136 Crucian carp 349 
+1137 Minced pork vermicelli 462 
+1138 Crispy mung bean cake 378 
+1139 Fried chicken wings tip 359 
+1140 Strawberry smoothie 263 
+1141 Earth pot chicken 1,554 
+1142 Boiled beef 996 
+1143 Tomato beef stew 572 
+1144 Fried dumplings 176 
+1145 Salted duck 436 
+1146 Krabby patty 488 
+1147 New Orleans pair of wings 916 
+1148 Beef tenderloin 462 
+1149 Steel pipe chicken 353 
+1150 Fruit muffins 401 
+1151 Unagi sushi 1,304 
+1152 Muffin 246 
+1153 Seafood pasta 1,810 
+1154 Braised lobster 470 
+1155 Mixed grain vermicelli 497 
+1156 Som tam 518 
+1157 Creamy waffle 469 
+1158 Cheese bread 321 
+1159 Melaleuca 412 
+1160 Salmon fried rice 440 
+1161 Egg fried rice 1,134 
+1162 Tom yum kung 459 
+1163 Beef bibimbap 498 
+1164 Meringue 536 
+1165 Carrot cake 297 
+1166 Fried rice cake with swimming crab 434 
+1167 Roast goose rice 354 
+1168 Strawberry yoghurt 163 
+1169 Assorted sauce 1,831 
+1170 Small yellow croaker 356 
+1171 Doraemon cake 487 
+1172 Fried noodles with soy sauce 496 
+1173 Roasted silkworm pupa skewers 505 
+1174 Three silk fried noodles 473 
+1175 Stir-fried cabbage 369 
+1176 Blueberry yam 165 
+1177 Boiled okra 295 
+1178 Egg yolk meat dumpling 371 
+1179 Taro pie 487 
+1180 Longevity dishes 345 
+1181 Delicious shrimp fort 845 
+1182 Beef brisket with radish 1,034 
+1183 Pickled cabbage soup 181 
+1184 Crispy pigeon 446 
+1185 Chicken rice noodle 383 
+1186 Fried pork belly 271 
+1187 Fried lettuce 306 
+1188 Squirrel mandarin fish 309 
+1189 Mustard shreds 421 
+1190 Love chicken chop 229 
+1191 Naked cake 450 
+1192 Laoganma fried rice 920 
+1193 Pho 483 
+1194 Mapo tofu donburi 501 
+1195 Pork feet noodles 364 
+1196 Stone pot fish 1,116 
+1197 Ginger fried duck 484 
+1198 Roti prata 459 
+1199 Red bean barley congee 406 
+1200 Cookies 475 
+1201 Poached pork slices 1,946 
+1202 Fragrant egg yolk roll sushi 228 
+1203 Braised pork trotters 499
+1204 Sauce fried squid 414 
+1205 Dorayaki 265 
+1206 Authentic intestine 378 
+1207 White radish ribs simmering soup 302 
+1208 Curry shrimp 451 
+1209 Coconut bread 191 
+1210 Japanese pumpkin tart 494 
+1211 Pig’s head meat 453 
+1212 Mango roll sushi 332 
+1213 Lentil braised noodles 413 
+1214 Sheep roll 481 
+1215 Tamago nigiri sushi 440 
+1216 Freshly fried small crispy pork 504 
+1217 Scrambled eggs with green peppers 391 
+1218 Bacon bibimbap 386 
+1219 Fried rice noodles 358 
+1220 Grilled baby Chinese cabbage skewers 511 
+1221 Grilled chicken drumsticks 336 
+1222 Fried poached egg with laba beans 488 
+1223 Mochi bun 359 
+1224 Nanning rice noodle 496 
+1225 Coconut sago 946 
+1226 Roasted leeks 368 
+1227 Grilled string bean skewers 411 
+1228 Whitebait scrambled eggs 283 
+1229 Fish-flavored eggplant pot 325 
+1230 Fried shrimp in typhoon shelter 503 
+1231 Fried potato chips 832 
+1232 Ham sausage 440 
+1233 Stewed meat 404 
+1234 Seaweed pork floss bread 397 
+1235 Pounded chicken feet 371 
+1236 Fresh meat soup dumplings 835 
+1237 Iron squid 1,004 
+1238 Egg and ham sandwich 296 
+1239 Dongpo’s braised pork 437 
+1240 Braised tofu 325 
+1241 Rocky cheese 1,036 
+1242 Fried pulp 482 
+1243 Fruit jelly 380 
+1244 Raw cooking cabbage 240 
+1245 Liocarcinus 751 
+1246 Black-bone chicken roll 473 
+1247 Fried bun slices 222 
+1248 Taro sago 888 
+1249 Sizzling tofu 294 
+1250 Beef noodles 450 
+1251 Poplar twig nectar 1,132 
+1252 Pickle chicken feet 441 
+1253 Rice wine and egg drop soup 500 
+1254 Red oil dumplings 1,084 
+1255 Sour beans 471 
+1256 Potato flour casserole 1,060 
+1257 Shrimp 336 
+1258 Chicken chop 820 
+1259 Fried sea oysters 1,098 
+1260 Stir-fried beef with green pepper 243 
+1261 Tomato puree 208 
+1262 Fried tempura 316 
+1263 Green bean cake 729 
+1264 Salty burning white 409 
+1265 Three yellow chicken nuggets 211 
+1266 Garlic shrimp 423 
+1267 Fired pork in a scoop 479 
+1268 Bread crab 350 
+1269 Spicy sausage 868 
+1270 Barbecued pork noodle 947 
+1271 Beer duck 367 
+1272 Fried yogurt with oreo cookies 422 
+1273 Chinese hamburger 1,057 
+1274 Princess lee roll sushi 780 
+1275 Sea salt milk cake 384 
+1276 Stir fried fungus with celery 370 
+1277 Double cake 492 
+1278 Taian Fish 358 
+1279 Boiled bullfrog 397 
+1280 Steamed sturgeon 352 
+1281 Tuna sashimi 1,129 
+1282 Stewed chicken soup 1,012 
+1283 Shrimp fried rice 1,540 
+1284 Corn warship sushi 368 
+1285 Milk small party 370 
+1286 Shrimp and crab pot 401 
+1287 Chili noodles 467 
+1288 Chicken skewers 822 
+1289 Leek pie 381 
+1290 Stir-fried pork with garlic shoots 361 
+1291 Pop cake 458 
+1292 Matcha flavored daifuku 338 
+1293 Black pepper chicken nuggets 888 
+1294 Roasted chicken leg 416 
+1295 Potato powder 467 
+1296 Cart noodle 218 
+1297 cheesecake 649 
+1298 Fried snails 1,406 
+1299 Stir fry 499 
+1300 Balsamic peanuts 1,077 
+1301 Rice casserole 426 
+1302 Spicy chicken wing 482 
+1303 Strawberry double skin milk 318 
+1304 Roast duck cake 563 
+1305 Grilled tofu 592 
+1306 Matcha ice cream 496 
+1307 Preserved egg porridge 426 
+1308 Pork knuckle soup powder 217 
+1309 Black pepper steak rice 190 
+1310 Cold crucian carp 423 
+1311 Braised bamboo shoots 455 
+1312 Sweet and sour pork 499
+1313 Old bowl fish 409
+1314 Tofu with preserved eggs 827 
+1315 Black pepper sausage 501 
+1316 Roast suckling pig 492 
+1317 Ciba ice powder 988 
+1318 Braised chicken and rice 378 
+1319 Sea Emperor fans clay pot 688 
+1320 Orleans drumsticks 465 
+1321 Salt and pepper ribs 343 
+1322 Eel rice 1,356 
+1323 Pork skewers 898 
+1324 Cold jellyfish 405 
+1325 Boiled cabbage heart 542 
+1326 Baked clams in tin foil 331 
+1327 Hand holding fan bone 429 
+1328 Casserole yam 260 
+1329 Bak kut teh 429 
+1330 Red velvet cake 329 
+1331 Round taro with coconut milk 411 
+1332 Stone pot bullfrog 467 
+1333 Seafood steamed egg 203 
+1334 Stir-fried potato shreds with green pepper 581 
+1335 Yellow braised beef 394 
+1336 Longan and red date congee 318 
+1337 Stir fried diced noodles 384 
+1338 Ice cream waffles 470 
+1339 Strawberry mille cake 447 
+1340 Corn salad 198 
+1341 Lava rock sausage 418 
+1342 Lettuce in oyster sauce 301 
+1343 Casserole fish head pot 496 
+1344 saozi noodles 459 
+1345 Fried pork rice 416 
+1346 Hot pepper twice cooked pork 412 
+1347 Spicy Ginger Chicken Feet 375 
+1348 Platycodon 489 
+1349 Flavored eggplant 461 
+1350 Beef vermicelli soup 401 
+1351 Ginger lotus root 811 
+1352 Pork congee 417 
+1353 Multi-flavored fish skewers 450 
+1354 Fried noodles 1,585 
+1355 Shacha noodles 317 
+1356 Beef pan noodle 499 
+1357 Pork fried rice 454 
+1358 Homemade fish 206 
+1359 Lemon chicken feet 499 
+1360 Cheese stick 303 
+1361 Pork beans 361 
+1362 Soy sauce steamed pork ribs 744 
+1363 Milk oatmeal 381 
+1364 Rattan pepper fish fillet 300 
+1365 Peanut butter noodles 293 
+1366 Spicy frog 480 
+1367 Cranberry¨ biscuit 497 
+1368 Pot lamb chops 399 
+1369 Tomato egg noodle 693 
+1370 Di San Xian 439 
+1371 Chocolate fruit cake 460 
+1372 Grandma dishes 488 
+1373 Yuxiang pork rice bowl 971 
+1374 Roast chicken 472 
+1375 Boneless chicken fillet 1,024 
+1376 Bacon fried rice 908 
+1377 Urayaki eel 492 
+1378 Braised spare ribs noodles 350 
+1379 Mushroom stewed chicken noodle 579 
+1380 Beijing sauce pork 457 
+1381 Capelin 422 
+1382 Garland chrysanthemum 361 
+1383 Green pepper preserved egg 378 
+1384 Fried noodles with ham 334 
+1385 Grilled whole ?sh 344 
+1386 Spicy cabbage bibimbap 314 
+1387 Grilled eggplant 441 
+1388 Sauerkraut pork noodle 324 
+1389 Black stinky tofu 1,163 
+1390 Eggplant claypot 493 
+1391 Griddle pork Intestines 397 
+1392 Stir-fried ginger and green onion 161 
+1393 Three yellow chicken 363 
+1394 Cumin cartilage 468 
+1395 Burrito 931 
+1396 Cumin lamb 399 
+1397 Beef burger 398 
+1398 Sour soup with beef 270 
+1399 Scallop lean pork congee 320 
+1400 Potato beef 945 
+1401 Steamed crab 730 
+1402 French fries 1,103 
+1403 Popping milk cake 252 
+1404 Strange rice 399 
+1405 Dried squid and shrimp 767 
+1406 Stir-fried organic cauli?ower 295 
+1407 Griddle potato chips 499 
+1408 Sliced toast with raisins 377 
+1409 Loin roast 158 
+1410 Roast duck rice 325 
+1411 Oil gluten 470 
+1412 Supreme pizza 455 
+1413 Egg seaweed soup 431 
+1414 Spicy chicken feet 462 
+1415 Fried crispy banana 424 
+1416 Stir-fried dried tofu with hot pepper 571 
+1417 Chilled lobster 436 
+1418 Fish pan cake 408 
+1419 Stewed goose in iron pan 283 
+1420 Smoked duck 261 
+1421 Fried pork with fungus 327 
+1422 Grilled horse pacifier 419 
+1423 Tedious 1,321
+1424 Tiger skin and chicken feet 415 
+1425 Ground sanxian rice bowl 275 
+1426 Yellow stinky tofu 399 
+1427 Duck neck 1,398 
+1428 Stone bowl chicken nuggets 1,080 
+1429 Mango shrimp salad 248 
+1430 Snowflakes 491 
+1431 Fried jelly 386 
+1432 Scallion black fungus 413 
+1433 Spicy noodles 880 
+1434 Eggplant garlic juice 445 
+1435 Spicy spare ribs 267 
+1436 Gourd chicken 453 
+1437 Mango ice 410 
+1438 Grilled pork neck 422 
+1439 Flame steak 478 
+1440 Chicken neck 410 
+1441 Margherita pizza 469 
+1442 Casserole pork knuckle pot 419 
+1443 Tomato rice noodles 237 
+1444 Roasted peppers 280 
+1445 Scrambled eggs with ham 241 
+1446 Fried rice cake 271 
+1447 Stewed ?sh in iron pan 807 
+1448 Sweet shrimp sashimi 331 
+1449 Spicy yuba 326 
+1450 Baked shrimp roll with cheese 462 
+1451 Beef pizza with black pepper 490 
+1452 Pepper chicken 480 
+1453 Sukiyaki goose 325 
+1454 Roast chicken wing tip 334 
+1455 Fried lotus root 403 
+1456 Caramel pudding 463 
+1457 Arctic bay 499 
+1458 Shrimp rolls 616 
+1459 Hot pot chicken giblets 498 
+1460 Homely stewed fish 465 
+1461 Eggplant salad 479 
+1462 Fried potato chips 280 
+1463 Macadamia 895 
+1464 Tremella lianzi geng 386 
+1465 Gravy radish 397 
+1466 Sweet heart pastry 460 
+1467 Glutinous rice lotus root 829 
+1468 Durian cheesecake 365 
+1469 Steamed crab claws 424 
+1470 Sweet and sour fillet 1,015 
+1471 Braised pork ribs 500 
+1472 Ribeye steak 451 
+1473 Salted shrimp with pepper 499 
+1474 Fried instant noodles 311 
+1475 Fried rice noodles with chicken 475 
+1476 Cheese baked rice 429 
+1477 Roast chicken head 428 
+1478 Salad barbecue bibimbap 383 
+1479 Fried chicken chop 758 
+1480 Marinated beef brisket in spiced sauce 335 
+1481 Spicy potato chips 241 
+1482 Fruit cup 496 
+1483 Meatballs 428 
+1484 Bowl chicken 1,056 
+1485 Marinated trotters 501 
+1486 Spicy lobster tail 802 
+1487 Sesame biscuits 494 
+1488 Fried bacon with dried radish 1,238 
+1489 Red wine sydney 470 
+1490 Crab pot 1,306 
+1491 Braised sausage 450 
+1492 Braised chili in oil 260 
+1493 Orleans chicken drumsticks 451 
+1494 Sea urchin sashimi 500 
+1495 Barrel ?sh 349 
+1496 White cut chicken 496 
+1497 Grilled tofu 444 
+1498 Songhua egg with ginger sauce 321 
+1499 Cold rice tofu 214 
+1500 Roast pork knuckle 1,459 
+1501 Steamed shrimp with garlic vermicelli 197 
+1502 Tuna warship sushi 398 
+1503 Vegetable salad 1,828 
+1504 Choy sum sting peel 510 
+1505 Brushed cheese hot dog sticks 825 
+1506 Chocolate mousse cake 1,251 
+1507 Popcorn 500 
+1508 Minced pork hand-rolled sushi 312 
+1509 Grilled chicken feet skewers 161 
+1510 Fruit steak 419 
+1511 Fried noodle with egg 433 
+1512 Crispy bone sausage 333 
+1513 Chicken with chestnut 197 
+1514 Scalded prawns 378 
+1515 Fruit box 493 
+1516 Hang Sanxian 332 
+1517 Cut noodles in caserole 369 
+1518 Burning noodles 440 
+1519 Pineapple pie 315 
+1520 Enoki mushroom mixed with cucumber 461 
+1521 Taro balls 311 
+1522 Sauerkraut rice noodles 419 
+1523 Cured fried rice 465 
+1524 Yam polenta 412 
+1525 Pickle 462 
+1526 Hot and sour chicken mixed 498 
+1527 Millet cake 409 
+1528 Yam pork ribs soup 318 1
+529 Fried biscuits 176 
+1530 Fried chicken 263 
+1531 Casserole white tofu 395 
+1532 Milk flavor bread slice 499 
+1533 Saury 1,466
+1534 Black forest cake 485 
+1535 Pumpkin porridge 451 
+1536 Curry chicken rice 414 
+1537 Fried duck 451 
+1538 Griddle shredded chicken 495 
+1539 Steamed dumpling 333 
+1540 Red shrimp 291 
+1541 Mushroom and vegetable porridge 949 
+1542 Moon cake 1,298 
+1543 Lettuce tip 483 
+1544 Spaghetti black pepper beef 1,990 
+1545 Johnnycake 439 
+1546 Braised chicken with bamboo sticks in coconut 446 
+1547 Borscht 1,072 
+1548 Shrimp salad 198 
+1549 Steamed bun fried bun 450 
+1550 Mixed edamame 1,425 
+1551 Beef rice 826 
+1552 Griddle cooked tea tree mushrooms 486 
+1553 Roast pork skin 345 
+1554 Taste snake 436 
+1555 Kelp green bean paste 506 
+1556 Egg tart 485 
+1557 Abalone rice 469 
+1558 Chicken wing pot 279 
+1559 Pineapple seafood fried rice 227 
+1560 Beef and egg fried rice 517 
+1561 Whole wheat bread 300 
+1562 Steamed rice noodles 456 
+1563 Chicken roll 1,624 
+1564 T-bone steak 437 
+1565 Braised Japanese tofu 353 
+1566 Fried ice cream 380 
+1567 Sauerkraut beef noodle 422 
+1568 Sesame octopus warship sushi 493 
+1569 Grilled Anhui 333 
+1570 Scones 455 
+1571 Crab Siu Mai 605 
+1572 Shin ramen 314 
+1573 Rice with tomato and eggs 1,338 
+1574 Fatty intestine 354 
+1575 Hand roll noodle 795 
+1576 Steamed fish 467 
+1577 Pork liver and lean meat porridge 791 
+1578 Harbin sausage 498 
+1579 Bitter vegetable soup 405 
+1580 Shredded bag 401 
+1581 Fried yuba 447 
+1582 Stir-fried pork with corn 310 
+1583 Shrimp wanton noodles 433 
+1584 Pea noodles 452 
+1585 Flatbread 194 
+1586 Roasted cauliflower 271 
+1587 Red date and white fungus soup 393 
+1588 Scallion noodles 456 
+1589 Steamed abalone with garlic 417 
+1590 Stir-fried vermicelli with cabbage 1,233 
+1591 Mango melaleuca box cake 494 
+1592 Cantonese sponge cake 439 
+1593 Seaweed rice 452 
+1594 Fried eggs with fungus 792 
+1595 Stir-fried shredded lettuce 343 
+1596 Fried crab with ginger and spring onion 333 
+1597 Chicken porridge 492 
+1598 Roasted peppers 401 
+1599 Beef noodle 369 
+1600 Bacon ham pizza 459 
+1601 Pine nut fish 450 
+1602 Kimchi fish 495 
+1603 Umeboshi vegetable roast meat 758 
+1604 Fried king pleurotus 281 
+1605 Vegetable pancake 361 
+1606 Glutinous rice 199 
+1607 Miso soup 487 
+1608 Curry omelet rice 384 
+1609 Matcha melaleuca cake 412 
+1610 Lotus root pork ribs soup 429 
+1611 Soy sauce fried rice 500 
+1612 Pumpkin soup 446 
+1613 Fan shabu 439 
+1614 Cooked duck with lemon 399 
+1615 Shrimp noodles 215 
+1616 Spicy crab 1,984 
+1617 Bitter gourd fried pork 494 
+1618 Fried hot and sour potato shreds 637 
+1619 Salt and pepper peanuts 941 
+1620 Baked crab with egg yolk 401 
+1621 Celery fried yuba 348 
+1622 Beef offal 437 
+1623 Kanto cooking 887 
+1624 Nigiri sushi 343 
+1625 Fish with bean curd 473 
+1626 Sizzling frog 212 
+1627 Lilies fat and sleek cows 302 
+1628 Duck wings 449 
+1629 Pickled pepper baby food 328 
+1630 Hakka tofu 849 
+1631 Saliva chicken 447 
+1632 Bamboo shoot pork 356 
+1633 Stir-fried vegetables with mushrooms 370 
+1634 Crab congee 360 
+1635 Baked spaghetti with cheese and meat sauce 390 
+1636 Haagen-Dazs ice cream 267 
+1637 Northeast chaos 337 
+1638 Sauce elbow 423 
+1639 Cheese baked shrimp 368 
+1640 Vetch 447 
+1641 Spaghetti with tomato sauce and bacon 361 
+1642 Egg beef porridge 467 
+1643 Biangbiang 289 
+1644 Pork rice noodles 369 
+1645 Pig skin jelly 495 
+1646 Crispy pork slices 336 
+1647 Beautiful frog fish head 329 
+1648 Seafood paella 477 
+1649 Cruller 487 
+1650 Casserole fish head 421 
+1651 Stir-fried shredded potatoes with celery 288 
+1652 Potato stew chicken nuggets 434 
+1653 Dregs biscuits 896 
+1654 Kimchi hot pot 183 
+1655 Fried dumpling 519 
+1656 Crispy pork rice 432 
+1657 Tribute dish 463 
+1658 Peanut 480 
+1659 Fried sausage 889 
+1660 Hot and sour soup 339 
+1661 Glutinous rice 469 
+1662 Chicken soup rice noodles 391 
+1663 Fried spicy chicken wing root 386 
+1664 Dorayaki 500 
+1665 Scrambled eggs with tomatoes 889 
+1666 Nuomici 177 
+1667 Fried lesser croaker 378 
+1668 Shredded duck 406 
+1669 Roast duck 885 
+1670 Spicy fish ball 327 
+1671 Stir-fried pork with mustard 255 
+1672 Steamed venetian bag 678 
+1673 Double chicken hamburger 810 
+1674 Abalone 328 
+1675 Baked string beans 304 
+1676 Tuna pizza 486 
+1677 Roasted goose 1,670 
+1678 Sauteed sauerkraut sausage 497 
+1679 White shellfish 407 
+1680 Sauteed bean sprouts 324 
+1681 Chicken rack 487 
+1682 Stinky mandarin fish 487 
+1683 Cold pot string 465 
+1684 Cold papaya 359 
+1685 Delicious fern powder 382 
+1686 Lettuce fried meat 707 
+1687 Stewed clams with Papaya 447 
+1688 Roasted corn kebabs 407 
+1689 Bandit duck 571 
+1690 Chicken heart string 265 
+1691 Phoenix tail prawns 330 
+1692 Pickled sweet garlic 701 
+1693 Fried chicken fork bone 1,371 
+1694 Chicken burger 486 
+1695 Fried pork chop 383 
+1696 Skin shrimp 1,381 
+1697 Fried pork with pepper 683 
+1698 Pork lungs in chili sauce 322 
+1699 Vermicelli soup 432 
+1700 Lean meat soup 896 
+1701 Stir fried vegetables 385 
+1702 Sauted beef with hot pepper 211 
+1703 Coconut cake 192 
+1704 Hot pot chicken 256 
+1705 Braised fish in plain pot 425 
+1706 Stir-fried chives with bean curd sheets 455 
+1707 Fried preserved eggs with pepper 907 
+1708 Cold mixed pig ear 426 
+1709 Semi cooked cheese 365 
+1710 Stewed mutton 344 
+1711 Beef ribs with black pepper 430 
+1712 Noodles with beef 1,110 
+1713 Roast lamb leg 1,053 
+1714 Prawn tail 369 
+1715 Baked beans 457 
+1716 Stewed goose 368 
+1717 Boiled egg 678 
+1718 Radish strips 175 
+1719 Fish porridge 958 
+1720 Chicken kebabs 1,427 
+1721 Angry birds cake 457 
+1722 Soybean 501 
+1723 Snail powder with beef brisket 310 
+1724 Egg cake 991 
+1725 Fried shrimps with cashew nuts 498 
+1726 Simi fruit fishing 316 
+1727 Bean curd with stone plate 399 
+1728 Stewed chicken leg 499 
+1729 Stewed noodles with mutton 500 
+1730 Mutton noodles 494 
+1731 Cylindrical bone meal 486 
+1732 Sliced pork and potato 260 
+1733 Seafood congee 396 
+1734 Ice porridge 497 
+1735 Toothpick meat 466 
+1736 Chicken feet pot 390 
+1737 Roll cold noodle 339 
+1738 Papaya and tremella soup 382 
+1739 Golden sweet potato stick 485 
+1740 Pineapple fried rice 359 
+1741 Stewed pork feet with ginger 322 
+1742 Stir-fried celery with smoked bean curd 269 
+1743 Steamed scallop with minced garlic and vermicelli 1,268 
+1744 Dried tofu 612 
+1745 Cranberry cookies 456 
+1746 Boiled mutton 770 
+1747 Boiled crayfish 1,830 
+1748 Salted white shrimp 338 
+1749 Marinated goose 493 
+1750 Water-chestnut pudding 372 
+1751 Preserved egg with chopped pepper 575 
+1752 Tofu pudding 444 
+1753 Deep-fried dough sticks 761 
+1754 Fried squid ring 500 
+1755 Grilled squid 1,431 
+1756 Takoyaki 1,457 
+1757 Popcorn chicken 964 
+1758 Roasted fish with soy sauce 368 
+1759 Steamed Wuchang Fish 392 
+1760 Kebabs with soy sauce 324 
+1761 Eggplant with hot pepper 595 
+1762 Fried bacon with lotus beans 385 
+1763 Steamed green spotted fish 429 
+1764 Steamed white guitar 161 
+1765 Yu-Shiang eggplant 442 
+1766 Eel roll sushi 344 
+1767 Mango sorbet 424 
+1768 Marinated beef 630 
+1769 Fish and mutton 333 
+1770 Blueberry sundae 552 
+1771 Mixed beans 449 
+1772 Fried rice with bacon 309 
+1773 Spicy wings 498 
+1774 Hot and sour lotus root 207 
+1775 Razor clam 302 
+1776 Roast dried pork 368 
+1777 Spicy carp 583 
+1778 Cumin beef 392 
+1779 Red dates and tremella soup 366 
+1780 Strawberry ice cream 173 
+1781 Crab seed sushi 416 
+1782 Sea cucumber with millet 459 
+1783 Braised steak fillet 266 
+1784 Braised chicken 213 
+1785 Fried meatballs 357 
+1786 Spicy palm 1,091 
+1787 Black sesame glutinous rice balls 526 
+1788 Grilled beef ribs 376 
+1789 Steamed yellow croaker 430 
+1790 Flammulina velutipes roll with streaky pork 512 
+1791 Grilled eggplant 268 
+1792 Baby cabbage with garlic 624 
+1793 Stir fried beef with mustard 312 
+1794 Watermelon sago 157 
+1795 Mango sausage 450 
+1796 Boiled fish with pickled cabbage and chili 1,960 
+1797 Spare ribs with garlic 1,025 
+1798 Stewed meat noodles 898 
+1799 Rice peel 352 
+1800 Steamed sausage noodles with lean meat 1,029 
+1801 Grilled beef short rib 337 
+1802 Cold mixed peanuts 446 
+1803 Braised small yellow croaker 327 
+1804 Steamedf Fish head with diced hot red peppers 430 
+1805 Sugar fried chestnut 419 
+1806 Coconut pudding 283 
+1807 Caesar salad 462 
+1808 Sichuan dandan noodles 339 
+1809 Eggplant rice 498 
+1810 Miso soup 414 
+1811 Fried rice with beef 496 
+1812 Golden pancake 393 
+1813 Kalimeris with smoked bean curd 526 
+1814 Chicken soup 392 
+1815 Pine bass 384 
+1816 Baked leek string 267 
+1817 Taro round Sago 363 
+1818 Cold bean sprouts 365 
+1819 White cake 824 
+1820 Fried milk 432 
+1821 Dried baby cabbage 492 
+1822 Fried mater convolvulus 419 
+1823 Fish and egg noodles 352 
+1824 Boiled peanuts 478 
+1825 Black pepper steak 429 
+1826 Spicy salted duck 220 
+1827 Shredded bean curd with cold sauce 869 
+1828 Amaebi 442 
+1829 Seafood noodle bumps 439 
+1830 Steamed chicken with rice in lotus leaf 191 
+1831 Braised sea cucumber with scallion 482 
+1832 Dry pot beef 362 
+1833 Boiled broccoli 322 
+1834 Mixed wonton 877 
+1835 Glutinous rice cake with brown sugar 467 
+1836 Squid body 256 
+1837 Vegetable pot 322 
+1838 Curry sirloin 493 
+1839 Meat floss cake 498 
+1840 Fried rice with sausage 499 
+1841 Baby cabbage in casserole 523 
+1842 Fried shrimp 299 
+1843 Mutton hot pot 1,111 
+1844 Tea flavored boiled eggs 420 
+1845 Rice with vegetables 275 
+1846 Sausages with cheese 364 
+1847 Broccoli soup 390 
+1848 Roast tripe 264 
+1849 Minced beef congee 480 
+1850 Stewed beef offal 409 
+1851 Scalded prawns 447 
+1852 Ice cream egg puff 413 
+1853 Honey toast 430 
+1854 Rice with chicken leg 462 
+1855 The brine cattle show 346 
+1856 Bibimbap with pork belly 998 
+1857 Shredded meat 257 
+1858 Egg steamed meatloaf 416 
+1859 Steamed side fish 428 
+1860 Deep-fried cakes 1,083 
+1861 Roast chicken pizza 277 
+1862 Sauce-flavored beef tendon 406 
+1863 Coca cola chicken wings 155
+1864 Fried river prawns with leek 350 
+1865 Chicken hot pot 965 
+1866 Stewed meatballs with brown sauce 685 
+1867 Boiled lamb chops 930 
+1868 Salt baked chicken 468 
+1869 Spicy shrimp pot 414 
+1870 Papaya cool water 372 
+1871 Garlic seasonal vegetables 1,215 
+1872 Appetizer duck blood 413 
+1873 Salted egg yolk baked pumpkin 923 
+1874 Fried beef rice with bitter melon 334 
+1875 Sauce big bone 420 
+1876 Broiled river eel 269 
+1877 Kung Pao chicken with rice 439 
+1878 Caterpillar bread 525 
+1879 Sliced pork soup 746 
+1880 Stone pot tofu 411 
+1881 Stir-fried pork liver 492 
+1882 Stir-Fried pork with smoked bean curd 340 
+1883 Steamed twisted roll with scallions 455 
+1884 Mixed mentai fish shreds 587 
+1885 Slippery rice mushrooms chicken 302 
+1886 Beef hotpot 848 
+1887 Luncheon meat 500 
+1888 Peru system sauce duck 460 
+1889 Shredded rabbit meat 372 
+1890 Egg pancake 421 
+1891 Three-cup chicken 396 
+1892 Noodles with chicken leg soup 203 
+1893 Fried stone egg 239 
+1894 Honey concave cake 153 
+1895 Chocolate egg waffles 244 
+1896 Lobster rice bowl 392 
+1897 Scrambled eggs with Chinese chives 1,160 
+1898 Pan-Fried calf chop 1,773 
+1899 Black grass jelly 291 
+1900 Green pepper shredded pork 500 
+1901 Sweet and sour pork ribs 896 
+1902 Original soup wonton 346 
+1903 Salt grilled salmon head 900 
+1904 Quicksand bun with egg custard 320 
+1905 Stir-fried shredded pork with celery 467 
+1906 Garlic chicken feet 239 
+1907 Black pearl with smoothie 325 
+1908 Roasted lamb loin 344 
+1909 Donuts 481 
+1910 Cold rice noodles 413 
+1911 Black pepper chicken chop rice 172 
+1912 Fried thousand page tofu 465 
+1913 Corn cup 425 
+1914 Sauce bones 853 
+1915 Seafood udon 481 
+1916 Baked cheesy seafood baked rice 403 
+1917 Hot noodles with sesame paste 1,335 
+1918 Sizzling beef 481 
+1919 Corn pie 955 
+1920 Fruit and vegetable salad 442 
+1921 Chicken wingette skewers 237 
+1922 Yuanbao shrimp 405 
+1923 Sliced roast duck 669 
+1924 Mao xuewang 1,859 
+1925 Leek box 445 
+1926 Beer fish 495 
+1927 Griddle squid 252 
+1928 Purple sweet potato bun 401 
+1929 Twice-cooked pork with rice 399 
+1930 Beef noodles 434 
+1931 Delicious daifuku 309 
+1932 Fried crab with ginger and green onion 890 
+1933 Flower cake 483 
+1934 Oreo snow mei niang 259 
+1935 Fried lotus root 475 
+1936 Chocolate donut 416 
+1937 Chocolate toast 286 
+1938 Roll dough 464 
+1939 Durian pulp ice cream 287 
+1940 Fried fish 490 
+1941 Casserole balls 440 
+1942 Spinach egg drop soup 364 
+1943 Beef soup 987 
+1944 Spring pancake 1,226 
+1945 Stir-fried rougamo 359 
+1946 Spicy ribs and shrimp 346 
+1947 Spicy cucumber strips 475 
+1948 Shrimp wanton 499 
+1949 Pickled cabbage noodles 1,301 
+1950 Golden mantou 834 
+1951 Braised pork rice 499 
+1952 Sugar mixed tomatoes 168 
+1953 Shrimp pizza 343 
+1954 Yang chun noodles 407 
+1955 Stir-fried bitter gourd 416 
+1956 Spicy fried clams 438 
+1957 Soft tofu soup 430 
+1958 Marinated chicken gizzards 237 
+1959 Fried winter melon 438 
+1960 Cold noodles 844 
+1961 Fried egg 1,192 
+1962 Braised duck head 1,989 
+1963 Stir-fried chicken with pickled peppers 343 
+1964 Cold rice cake 995 
+1965 Shrimp tail 1,380 
+1966 Shredded lettuce salad 619 
+1967 Steamed chicken 450 
+1968 Tonkatsu 874 
+1969 Sam chicken soup 422 
+1970 Tomato sirloin 425 
+1971 Griddle cooked lettuce bacon 427 
+1972 Cold fungus 1,992 
+1973 Sizzling garlic shrimp 391
+1974 Pork ears with chilli oil dressing 387 
+1975 Braised pork with potatoes 351 
+1976 Stir-fried pig ears 338 
+1977 Chilli oil liangpi 195 
+1978 Corn and vegetable porridge 353 
+1979 Spicy hot pot 681 
+1980 Lamb pot 488 
+1981 Crab and cheese soft pretzel 398 
+1982 Toasted bread 362 
+1983 Sea bream sashimi 462 
+1984 Lotus root slices 289 
+1985 Pork ?oss seaweed roll 314 
+1986 Bean curd beef 436 
+1987 Sixi roasted bran 488 
+1988 Griddle duck head 1,999 
+1989 Tofu soup rice cake 350 
+1990 Mushroom pot 253 
+1991 Orlean roasted wing 414 
+1992 Three products of sashimi 476 
+1993 Durian cake 465 
+1994 White cut lamb 514 
+1995 Trash ?sh 387 
+1996 Vanilla ice cream 381 
+1997 Mushu pork rice bowl 281 
+1998 Fried pork with beans 327 
+1999 Sauerkraut meat 237
